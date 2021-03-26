@@ -8,6 +8,7 @@ build = "build.rs"
 [lib]
 name = "leaf"
 path = "src/lib.rs"
+crate-type = ["lib"]
 
 [features]
 default = [
