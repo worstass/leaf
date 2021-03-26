@@ -55,7 +55,7 @@ pub mod trojan;
 pub mod tryall;
 #[cfg(all(
     feature = "inbound-tun",
-    any(target_os = "ios", target_os = "macos", target_os = "linux")
+    any(target_os = "ios", target_os = "macos", target_os = "linux", target_os = "windows")
 ))]
 pub mod tun;
 #[cfg(feature = "outbound-vless")]
