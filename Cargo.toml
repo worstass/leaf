@@ -1,11 +1,11 @@
 [workspace]
 members = [
     "leaf",
-#    "leaf-bin",
+    "leaf-bin",
 #    "leaf-mobile",
 #    "tun2socks-bin",
 ]
-#default-members = ["leaf-bin"]
+default-members = ["leaf-bin"]
 
 [profile.release]
 opt-level = 3

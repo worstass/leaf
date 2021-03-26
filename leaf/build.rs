@@ -46,7 +46,7 @@ fn compile_lwip() {
         .include("src/proxy/tun/netstack/lwip/include")
         .warnings(false)
         .flag_if_supported("-Wno-everything")
-        .compile("liblwip.a");
+        .compile("liblwip");
 }
 
 fn generate_lwip_bindings() {
