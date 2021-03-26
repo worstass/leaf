@@ -41,6 +41,7 @@ fn compile_lwip() {
         // .file("src/proxy/tun/netstack/lwip/core/ipv6/mld6.c")
         .file("src/proxy/tun/netstack/lwip/core/ipv6/nd6.c")
         .file("src/proxy/tun/netstack/lwip/custom/sys_arch.c")
+        .file("src/lwiperr.c")
         .include("src/proxy/tun/netstack/lwip/custom")
         .include("src/proxy/tun/netstack/lwip/include")
         .warnings(false)
