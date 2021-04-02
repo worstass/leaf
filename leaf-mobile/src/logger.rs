@@ -1,14 +1,18 @@
 use std::{
     ffi,
     io::{self, Write},
-    ptr,
 };
 
 use bytes::BytesMut;
 use log::{Level, Metadata, Record};
 
-use super::ios::{asl_log, ASL_LEVEL_NOTICE};
+#[cfg(target_os = "ios")]
+use super::bindings::{asl_log, ASL_LEVEL_NOTICE};
 
+#[cfg(target_os = "android")]
+use super::bindings::{__android_log_print, android_LogPriority_ANDROID_LOG_VERBOSE};
+
+#[cfg(target_os = "ios")]
 fn log_out(data: &[u8]) {
     unsafe {
         let s = match ffi::CString::new(data) {
@@ -16,13 +20,28 @@ fn log_out(data: &[u8]) {
             Err(_) => return,
         };
         asl_log(
-            ptr::null_mut(),
-            ptr::null_mut(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
             ASL_LEVEL_NOTICE as i32,
             // ffi::CString::new("%s").unwrap().as_c_str().as_ptr(),
             s.as_c_str().as_ptr(),
         )
     };
+}
+
+#[cfg(target_os = "android")]
+fn log_out(data: &[u8]) {
+    unsafe {
+        let s = match ffi::CString::new(data) {
+            Ok(s) => s,
+            Err(_) => return,
+        };
+        let _ = __android_log_print(
+            android_LogPriority_ANDROID_LOG_VERBOSE as std::os::raw::c_int,
+            "leaf".as_ptr() as _,
+            s.as_c_str().as_ptr(),
+        );
+    }
 }
 
 pub struct ConsoleLogger;
