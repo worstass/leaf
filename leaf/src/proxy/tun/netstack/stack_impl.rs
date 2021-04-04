@@ -29,7 +29,7 @@ use crate::{
     app::nat_manager::NatManager,
     app::nat_manager::UdpPacket,
     common::mutex::AtomicMutex,
-    session::{DatagramSource, Session, SocksAddr},
+    session::{DatagramSource, Network, Session, SocksAddr},
 };
 
 use super::lwip::*;
@@ -106,6 +106,7 @@ impl NetStackImpl {
 
                 tokio::spawn(async move {
                     let mut sess = Session {
+                        network: Network::Tcp,
                         source: stream.local_addr().to_owned(),
                         local_addr: stream.remote_addr().to_owned(),
                         destination: SocksAddr::Ip(*stream.remote_addr()),
@@ -121,6 +122,15 @@ impl NetStackImpl {
                         {
                             sess.destination =
                                 SocksAddr::Domain(domain, stream.remote_addr().port());
+                        } else {
+                            // Although requests targeting fake IPs are assumed
+                            // never happen in real network traffic, which are
+                            // likely caused by poisoned DNS cache records, we
+                            // still have a chance to sniff the request domain
+                            // for TLS traffic in dispatcher.
+                            if stream.remote_addr().port() != 443 {
+                                return;
+                            }
                         }
                     }
 
@@ -248,7 +258,9 @@ impl NetStackImpl {
                     if let Some(domain) = fakedns2.lock().await.query_domain(&dst_addr.ip()) {
                         SocksAddr::Domain(domain, dst_addr.port())
                     } else {
-                        SocksAddr::Ip(dst_addr)
+                        // Skip this packet. Requests targeting fake IPs are
+                        // assumed never happen in real network traffic.
+                        continue;
                     }
                 } else {
                     SocksAddr::Ip(dst_addr)
@@ -258,6 +270,7 @@ impl NetStackImpl {
 
                 if !nat_manager.contains_key(&dgram_src).await {
                     let sess = Session {
+                        network: Network::Udp,
                         source: dgram_src.address,
                         destination: socks_dst_addr.clone(),
                         inbound_tag: inbound_tag.clone(),

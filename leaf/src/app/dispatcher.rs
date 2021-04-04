@@ -8,9 +8,6 @@ use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::Semaphore;
 use tokio::time::timeout;
 
-#[cfg(not(any(target_os = "ios", target_os = "android")))]
-use colored::Colorize;
-
 use crate::{
     common::sniff,
     option,
@@ -22,57 +19,26 @@ use super::outbound::manager::OutboundManager;
 use super::router::Router;
 
 #[inline]
-fn log_tcp(
-    inbound_tag: &str,
+fn log_request(
+    sess: &Session,
     outbound_tag: &str,
-    outbound_tag_color: colored::Color,
+    outbound_tag_color: Option<colored::Color>,
     handshake_time: u128,
-    addr: &SocksAddr,
 ) {
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    {
+    if let Some(color) = outbound_tag_color {
+        use colored::Colorize;
         info!(
             "[{}] [{}] [{}] [{}ms] {}",
-            inbound_tag,
-            "tcp".color(colored::Color::Blue),
-            outbound_tag.color(outbound_tag_color),
+            &sess.inbound_tag,
+            sess.network.to_string().color(colored::Color::Blue),
+            outbound_tag.color(color),
             handshake_time,
-            addr,
+            &sess.destination,
         );
-    }
-    #[cfg(any(target_os = "ios", target_os = "android"))]
-    {
+    } else {
         info!(
             "[{}] [{}] [{}] [{}ms] {}",
-            "tcp", inbound_tag, outbound_tag, handshake_time, addr
-        );
-    }
-}
-
-#[inline]
-fn log_udp(
-    inbound_tag: &str,
-    outbound_tag: &str,
-    outbound_tag_color: colored::Color,
-    handshake_time: u128,
-    addr: &SocksAddr,
-) {
-    #[cfg(not(any(target_os = "ios", target_os = "android")))]
-    {
-        info!(
-            "[{}] [{}] [{}] [{}ms] {}",
-            inbound_tag,
-            "udp".color(colored::Color::Yellow),
-            outbound_tag.color(outbound_tag_color),
-            handshake_time,
-            addr,
-        );
-    }
-    #[cfg(any(target_os = "ios", target_os = "android"))]
-    {
-        info!(
-            "[{}] [{}] [{}] [{}ms] {}",
-            "udp", inbound_tag, outbound_tag, handshake_time, addr
+            sess.network, &sess.inbound_tag, outbound_tag, handshake_time, &sess.destination,
         );
     }
 }
@@ -128,34 +94,33 @@ impl Dispatcher {
     where
         T: 'static + AsyncRead + AsyncWrite + Unpin + Send + Sync,
     {
-        let mut lhs: Box<dyn ProxyStream> = if !sess.destination.is_domain()
-            && (sess.destination.port() == 443 || sess.destination.port() == 80)
-        {
-            let mut lhs = sniff::SniffingStream::new(lhs);
-            match lhs.sniff().await {
-                Ok(res) => {
-                    if let Some(domain) = res {
-                        debug!(
-                            "sniffed domain {} for tcp link {} <-> {}",
-                            &domain, &sess.source, &sess.destination,
+        let mut lhs: Box<dyn ProxyStream> =
+            if !sess.destination.is_domain() && sess.destination.port() == 443 {
+                let mut lhs = sniff::SniffingStream::new(lhs);
+                match lhs.sniff().await {
+                    Ok(res) => {
+                        if let Some(domain) = res {
+                            debug!(
+                                "sniffed domain {} for tcp link {} <-> {}",
+                                &domain, &sess.source, &sess.destination,
+                            );
+                            sess.destination = SocksAddr::from((domain, sess.destination.port()));
+                        }
+                    }
+                    Err(e) => {
+                        trace!(
+                            "sniff tcp uplink {} -> {} failed: {}",
+                            &sess.source,
+                            &sess.destination,
+                            e,
                         );
-                        sess.destination = SocksAddr::from((domain, sess.destination.port()));
+                        return;
                     }
                 }
-                Err(e) => {
-                    trace!(
-                        "sniff tcp uplink {} -> {} failed: {}",
-                        &sess.source,
-                        &sess.destination,
-                        e,
-                    );
-                    return;
-                }
-            }
-            Box::new(SimpleProxyStream(lhs))
-        } else {
-            Box::new(SimpleProxyStream(lhs))
-        };
+                Box::new(SimpleProxyStream(lhs))
+            } else {
+                Box::new(SimpleProxyStream(lhs))
+            };
 
         let outbound = match self.router.pick_route(&sess) {
             Ok(tag) => {
@@ -198,13 +163,15 @@ impl Dispatcher {
             match h.handle_tcp(sess, None).await {
                 Ok(rhs) => {
                     let elapsed = tokio::time::Instant::now().duration_since(handshake_start);
-                    log_tcp(
-                        &sess.inbound_tag,
-                        h.tag(),
-                        h.color(),
-                        elapsed.as_millis(),
-                        &sess.destination,
-                    );
+
+                    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                    {
+                        log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
+                    }
+                    #[cfg(any(target_os = "ios", target_os = "android"))]
+                    {
+                        log_request(&sess, h.tag(), None, elapsed.as_millis());
+                    }
 
                     let (lr, mut lw) = tokio::io::split(lhs);
                     let (rr, mut rw) = tokio::io::split(rhs);
@@ -521,13 +488,16 @@ impl Dispatcher {
             match h.handle_udp(sess, None).await {
                 Ok(c) => {
                     let elapsed = tokio::time::Instant::now().duration_since(handshake_start);
-                    log_udp(
-                        &sess.inbound_tag,
-                        h.tag(),
-                        h.color(),
-                        elapsed.as_millis(),
-                        &sess.destination,
-                    );
+
+                    #[cfg(not(any(target_os = "ios", target_os = "android")))]
+                    {
+                        log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
+                    }
+                    #[cfg(any(target_os = "ios", target_os = "android"))]
+                    {
+                        log_request(&sess, h.tag(), None, elapsed.as_millis());
+                    }
+
                     Ok(c)
                 }
                 Err(e) => {
