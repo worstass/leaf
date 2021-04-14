@@ -1,14 +1,16 @@
 use std::{
     collections::{hash_map, HashMap},
     convert::From,
-    net::{IpAddr, SocketAddr, SocketAddrV4},
+    net::{SocketAddr, SocketAddrV4},
     str::FromStr,
     sync::Arc,
 };
 
 use anyhow::{anyhow, Result};
+use futures::future::AbortHandle;
 use log::*;
 use protobuf::Message;
+use tokio::sync::RwLock;
 
 #[cfg(feature = "outbound-chain")]
 use crate::proxy::chain;
@@ -18,6 +20,8 @@ use crate::proxy::failover;
 use crate::proxy::random;
 #[cfg(feature = "outbound-retry")]
 use crate::proxy::retry;
+#[cfg(feature = "outbound-select")]
+use crate::proxy::select;
 #[cfg(feature = "outbound-tryall")]
 use crate::proxy::tryall;
 
@@ -46,39 +50,32 @@ use crate::proxy::ws;
 
 use crate::{
     app::dns_client::DnsClient,
-    config::{self, Dns, Outbound},
+    config::{self, Outbound},
     proxy::{self, OutboundHandler, ProxyHandlerType},
 };
 
+use super::selector::OutboundSelector;
+
 pub struct OutboundManager {
     handlers: HashMap<String, Arc<dyn OutboundHandler>>,
+    selectors: Arc<super::Selectors>,
     default_handler: Option<String>,
+    abort_handles: Vec<AbortHandle>,
 }
 
 impl OutboundManager {
-    pub fn new(outbounds: &protobuf::RepeatedField<Outbound>, dns: &Dns) -> Result<Self> {
+    #[allow(clippy::type_complexity)]
+    fn load_handlers(
+        outbounds: &protobuf::RepeatedField<Outbound>,
+        dns_client: Arc<RwLock<DnsClient>>,
+    ) -> (
+        HashMap<String, Arc<dyn OutboundHandler>>,
+        Option<String>,
+        Vec<AbortHandle>,
+    ) {
         let mut handlers: HashMap<String, Arc<dyn OutboundHandler>> = HashMap::new();
         let mut default_handler: Option<String> = None;
-        let mut dns_servers = Vec::new();
-        let mut dns_hosts = HashMap::new();
-        for dns_server in dns.servers.iter() {
-            if let Ok(ip) = dns_server.parse::<IpAddr>() {
-                dns_servers.push(SocketAddr::new(ip, 53));
-            }
-        }
-        for (name, ips) in dns.hosts.iter() {
-            dns_hosts.insert(name.to_owned(), ips.values.to_vec());
-        }
-        if dns_servers.is_empty() {
-            return Err(anyhow!("no dns servers"));
-        }
-        let dns_bind_addr = {
-            let addr = format!("{}:0", &dns.bind);
-            let addr = SocketAddrV4::from_str(&addr)
-                .map_err(|e| anyhow!("invalid bind addr [{}] in dns: {}", &dns.bind, e))?;
-            SocketAddr::from(addr)
-        };
-        let dns_client = Arc::new(DnsClient::new(dns_servers, dns_hosts, dns_bind_addr));
+        let mut abort_handles = Vec::new();
 
         for outbound in outbounds.iter() {
             let tag = String::from(&outbound.tag);
@@ -88,14 +85,17 @@ impl OutboundManager {
             }
             let bind_addr = {
                 let addr = format!("{}:0", &outbound.bind);
-                let addr = SocketAddrV4::from_str(&addr).map_err(|e| {
-                    anyhow!(
-                        "invalid bind addr [{}] in outbound {}: {}",
-                        &outbound.bind,
-                        &outbound.tag,
-                        e
-                    )
-                })?;
+                // FIXME panic
+                let addr = SocketAddrV4::from_str(&addr)
+                    .map_err(|e| {
+                        anyhow!(
+                            "invalid bind addr [{}] in outbound {}: {}",
+                            &outbound.bind,
+                            &outbound.tag,
+                            e
+                        )
+                    })
+                    .unwrap();
                 SocketAddr::from(addr)
             };
             match outbound.protocol.as_str() {
@@ -312,10 +312,10 @@ impl OutboundManager {
                     for alpn in settings.alpn.iter() {
                         alpns.push(alpn.clone());
                     }
-                    let tcp = Box::new(tls::TcpHandler {
-                        server_name: settings.server_name.clone(),
-                        alpns: alpns.clone(),
-                    });
+                    let tcp = Box::new(tls::TcpHandler::new(
+                        settings.server_name.clone(),
+                        alpns.clone(),
+                    ));
                     let handler = proxy::outbound::Handler::new(
                         tag.clone(),
                         colored::Color::TrueColor {
@@ -436,14 +436,17 @@ impl OutboundManager {
                 let tag = String::from(&outbound.tag);
                 let bind_addr = {
                     let addr = format!("{}:0", &outbound.bind);
-                    let addr = SocketAddrV4::from_str(&addr).map_err(|e| {
-                        anyhow!(
-                            "invalid bind addr [{}] in outbound {}: {}",
-                            &outbound.bind,
-                            &outbound.tag,
-                            e
-                        )
-                    })?;
+                    // FIXME panic
+                    let addr = SocketAddrV4::from_str(&addr)
+                        .map_err(|e| {
+                            anyhow!(
+                                "invalid bind addr [{}] in outbound {}: {}",
+                                &outbound.bind,
+                                &outbound.tag,
+                                e
+                            )
+                        })
+                        .unwrap();
                     SocketAddr::from(addr)
                 };
                 match outbound.protocol.as_str() {
@@ -545,7 +548,7 @@ impl OutboundManager {
                         if actors.is_empty() {
                             continue;
                         }
-                        let tcp = Box::new(failover::TcpHandler::new(
+                        let (tcp, mut tcp_abort_handles) = failover::TcpHandler::new(
                             actors.clone(),
                             settings.fail_timeout,
                             settings.health_check,
@@ -554,14 +557,14 @@ impl OutboundManager {
                             settings.fallback_cache,
                             settings.cache_size as usize,
                             settings.cache_timeout as u64,
-                        ));
-                        let udp = Box::new(failover::UdpHandler::new(
+                        );
+                        let (udp, mut udp_abort_handles) = failover::UdpHandler::new(
                             actors,
                             settings.fail_timeout,
                             settings.health_check,
                             settings.check_interval,
                             settings.failover,
-                        ));
+                        );
                         let handler = proxy::outbound::Handler::new(
                             tag.clone(),
                             colored::Color::TrueColor {
@@ -570,10 +573,12 @@ impl OutboundManager {
                                 b: 250,
                             },
                             ProxyHandlerType::Ensemble,
-                            Some(tcp),
-                            Some(udp),
+                            Some(Box::new(tcp)),
+                            Some(Box::new(udp)),
                         );
                         handlers.insert(tag.clone(), handler);
+                        abort_handles.append(&mut tcp_abort_handles);
+                        abort_handles.append(&mut udp_abort_handles);
                     }
                     #[cfg(feature = "outbound-amux")]
                     "amux" => {
@@ -592,7 +597,7 @@ impl OutboundManager {
                                 actors.push(a.clone());
                             }
                         }
-                        let tcp = Box::new(amux::outbound::TcpHandler::new(
+                        let (tcp, mut tcp_abort_handles) = amux::outbound::TcpHandler::new(
                             settings.address.clone(),
                             settings.port as u16,
                             actors.clone(),
@@ -600,7 +605,7 @@ impl OutboundManager {
                             settings.concurrency as usize,
                             bind_addr,
                             dns_client.clone(),
-                        ));
+                        );
                         let handler = proxy::outbound::Handler::new(
                             tag.clone(),
                             colored::Color::TrueColor {
@@ -609,10 +614,11 @@ impl OutboundManager {
                                 b: 245,
                             },
                             ProxyHandlerType::Ensemble,
-                            Some(tcp),
+                            Some(Box::new(tcp)),
                             None,
                         );
                         handlers.insert(tag.clone(), handler);
+                        abort_handles.append(&mut tcp_abort_handles);
                     }
                     #[cfg(feature = "outbound-chain")]
                     "chain" => {
@@ -697,9 +703,122 @@ impl OutboundManager {
             }
         }
 
+        (handlers, default_handler, abort_handles)
+    }
+
+    fn load_selectors(
+        outbounds: &protobuf::RepeatedField<Outbound>,
+        handlers: &mut HashMap<String, Arc<dyn OutboundHandler>>,
+    ) -> super::Selectors {
+        let mut selectors: super::Selectors = HashMap::new();
+
+        // FIXME a better way to find outbound deps?
+        for _i in 0..4 {
+            for outbound in outbounds.iter() {
+                let tag = String::from(&outbound.tag);
+                #[allow(clippy::single_match)]
+                match outbound.protocol.as_str() {
+                    #[cfg(feature = "outbound-select")]
+                    "select" => {
+                        let settings = match config::SelectOutboundSettings::parse_from_bytes(
+                            &outbound.settings,
+                        ) {
+                            Ok(s) => s,
+                            Err(e) => {
+                                warn!("invalid [{}] outbound settings: {}", &tag, e);
+                                continue;
+                            }
+                        };
+                        let mut actors = HashMap::new();
+                        for actor in settings.actors.iter() {
+                            if let Some(a) = handlers.get(actor) {
+                                actors.insert(actor.to_owned(), a.clone());
+                            }
+                        }
+                        if actors.is_empty() {
+                            continue;
+                        }
+                        let selector = Arc::new(RwLock::new(OutboundSelector::new(actors)));
+                        let tcp = Box::new(select::TcpHandler {
+                            selector: selector.clone(),
+                        });
+                        let udp = Box::new(select::UdpHandler {
+                            selector: selector.clone(),
+                        });
+                        selectors.insert(tag.clone(), selector);
+                        let handler = proxy::outbound::Handler::new(
+                            tag.clone(),
+                            colored::Color::TrueColor {
+                                r: 182,
+                                g: 235,
+                                b: 250,
+                            },
+                            ProxyHandlerType::Ensemble,
+                            Some(tcp),
+                            Some(udp),
+                        );
+                        handlers.insert(tag.clone(), handler);
+                    }
+                    _ => (),
+                }
+            }
+        }
+
+        selectors
+    }
+
+    // TODO make this non-async?
+    pub async fn reload(
+        &mut self,
+        outbounds: &protobuf::RepeatedField<Outbound>,
+        dns_client: Arc<RwLock<DnsClient>>,
+    ) -> Result<()> {
+        // Save selected outounds.
+        let mut selected_outbounds = HashMap::new();
+        for (k, v) in self.selectors.iter() {
+            selected_outbounds.insert(k.to_owned(), v.read().await.get_selected_tag());
+        }
+
+        let (mut handlers, default_handler, abort_handles) =
+            Self::load_handlers(outbounds, dns_client);
+
+        // Abort spawned tasks inside handlers.
+        for abort_handle in self.abort_handles.iter() {
+            abort_handle.abort();
+        }
+
+        let mut selectors = Self::load_selectors(outbounds, &mut handlers);
+
+        // Restore selected outbounds.
+        for (k, v) in selected_outbounds.iter() {
+            for (k2, v2) in selectors.iter_mut() {
+                if k == k2 {
+                    if let Some(v) = v {
+                        let _ = v2.write().await.set_selected(v);
+                    }
+                }
+            }
+        }
+
+        self.handlers = handlers;
+        self.selectors = Arc::new(selectors);
+        self.default_handler = default_handler;
+        self.abort_handles = abort_handles;
+        Ok(())
+    }
+
+    pub fn new(
+        outbounds: &protobuf::RepeatedField<Outbound>,
+        dns_client: Arc<RwLock<DnsClient>>,
+    ) -> Result<Self> {
+        let (mut handlers, default_handler, abort_handles) =
+            Self::load_handlers(outbounds, dns_client);
+        let selectors = Self::load_selectors(outbounds, &mut handlers);
         Ok(OutboundManager {
             handlers,
+            selectors: Arc::new(selectors),
             default_handler,
+            abort_handles,
         })
     }
 
@@ -707,18 +826,22 @@ impl OutboundManager {
         self.handlers.insert(tag, handler);
     }
 
-    pub fn get(&self, tag: &str) -> Option<&Arc<dyn OutboundHandler>> {
-        self.handlers.get(tag)
+    pub fn get(&self, tag: &str) -> Option<Arc<dyn OutboundHandler>> {
+        self.handlers.get(tag).map(Clone::clone)
     }
 
-    pub fn default_handler(&self) -> Option<&String> {
-        self.default_handler.as_ref()
+    pub fn default_handler(&self) -> Option<String> {
+        self.default_handler.as_ref().map(Clone::clone)
     }
 
     pub fn handlers(&self) -> Handlers {
         Handlers {
             inner: self.handlers.values(),
         }
+    }
+
+    pub fn get_selector(&self, tag: &str) -> Option<Arc<RwLock<OutboundSelector>>> {
+        self.selectors.get(tag).map(Clone::clone)
     }
 }
 

@@ -10,6 +10,12 @@ use serde_json::value::RawValue;
 use crate::config::{external_rule, geosite, internal};
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct Api {
+    pub address: Option<String>,
+    pub port: Option<u16>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Dns {
     pub servers: Option<Vec<String>>,
     pub bind: Option<String>,
@@ -193,9 +199,8 @@ pub struct FailOverOutboundSettings {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct StatOutboundSettings {
-    pub address: Option<String>,
-    pub port: Option<u16>,
+pub struct SelectOutboundSettings {
+    pub actors: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -228,6 +233,7 @@ pub struct Config {
     pub outbounds: Option<Vec<Outbound>>,
     pub rules: Option<Vec<Rule>>,
     pub dns: Option<Dns>,
+    pub api: Option<Api>,
 }
 
 pub fn to_internal(json: Config) -> Result<internal::Config> {
@@ -416,14 +422,9 @@ pub fn to_internal(json: Config) -> Result<internal::Config> {
                         if cert.is_absolute() {
                             settings.certificate = cert.to_string_lossy().to_string();
                         } else {
-                            let file = std::env::current_exe()
-                                .map_err(|e| anyhow!("failed to find executable path: {}", e))
-                                .map(|mut f| {
-                                    f.pop();
-                                    f.push(cert);
-                                    f
-                                })?;
-                            settings.certificate = file.to_string_lossy().to_string();
+                            let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+                            let path = asset_loc.join(cert).to_string_lossy().to_string();
+                            settings.certificate = path;
                         }
                     }
                     if let Some(ext_certificate_key) = ext_settings.certificate_key {
@@ -431,14 +432,9 @@ pub fn to_internal(json: Config) -> Result<internal::Config> {
                         if key.is_absolute() {
                             settings.certificate_key = key.to_string_lossy().to_string();
                         } else {
-                            let file = std::env::current_exe()
-                                .map_err(|e| anyhow!("failed to find executable path: {}", e))
-                                .map(|mut f| {
-                                    f.pop();
-                                    f.push(key);
-                                    f
-                                })?;
-                            settings.certificate_key = file.to_string_lossy().to_string();
+                            let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+                            let path = asset_loc.join(key).to_string_lossy().to_string();
+                            settings.certificate_key = path;
                         }
                     }
                     let settings = settings.write_to_bytes().unwrap();
@@ -786,14 +782,9 @@ pub fn to_internal(json: Config) -> Result<internal::Config> {
                             if cert.is_absolute() {
                                 settings.certificate = cert.to_string_lossy().to_string();
                             } else {
-                                let file = std::env::current_exe()
-                                    .map_err(|e| anyhow!("failed to find executable path: {}", e))
-                                    .map(|mut f| {
-                                        f.pop();
-                                        f.push(cert);
-                                        f
-                                    })?;
-                                settings.certificate = file.to_string_lossy().to_string();
+                                let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+                                let path = asset_loc.join(cert).to_string_lossy().to_string();
+                                settings.certificate = path;
                             }
                         }
                     }
@@ -833,6 +824,22 @@ pub fn to_internal(json: Config) -> Result<internal::Config> {
                         settings.attempts = ext_attempts;
                     } else {
                         settings.attempts = 2;
+                    }
+                    let settings = settings.write_to_bytes().unwrap();
+                    outbound.settings = settings;
+                    outbounds.push(outbound);
+                }
+                "select" => {
+                    if ext_outbound.settings.is_none() {
+                        return Err(anyhow!("invalid select outbound settings"));
+                    }
+                    let mut settings = internal::SelectOutboundSettings::new();
+                    let ext_settings: SelectOutboundSettings =
+                        serde_json::from_str(ext_outbound.settings.unwrap().get()).unwrap();
+                    if let Some(ext_actors) = ext_settings.actors {
+                        for ext_actor in ext_actors {
+                            settings.actors.push(ext_actor);
+                        }
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
@@ -885,10 +892,8 @@ pub fn to_internal(json: Config) -> Result<internal::Config> {
             if let Some(ext_geoips) = ext_rule.geoip {
                 for ext_geoip in ext_geoips {
                     let mut mmdb = internal::RoutingRule_Mmdb::new();
-                    let mut file = std::env::current_exe().unwrap();
-                    file.pop();
-                    file.push("geo.mmdb");
-                    mmdb.file = file.to_str().unwrap().to_string();
+                    let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+                    mmdb.file = asset_loc.join("geo.mmdb").to_string_lossy().to_string();
                     mmdb.country_code = ext_geoip;
                     rule.mmdbs.push(mmdb)
                 }
@@ -954,12 +959,26 @@ pub fn to_internal(json: Config) -> Result<internal::Config> {
         dns.hosts = hosts;
     }
 
+    let api = if let Some(ext_api) = json.api {
+        if let (Some(ext_address), Some(ext_port)) = (ext_api.address, ext_api.port) {
+            let mut api = internal::Api::new();
+            api.address = ext_address;
+            api.port = ext_port.to_owned() as u32;
+            protobuf::SingularPtrField::some(api)
+        } else {
+            protobuf::SingularPtrField::none()
+        }
+    } else {
+        protobuf::SingularPtrField::none()
+    };
+
     let mut config = internal::Config::new();
     config.log = protobuf::SingularPtrField::some(log);
     config.inbounds = inbounds;
     config.outbounds = outbounds;
     config.routing_rules = rules;
     config.dns = protobuf::SingularPtrField::some(dns);
+    config.api = api;
     Ok(config)
 }
 

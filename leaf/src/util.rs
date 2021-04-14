@@ -2,30 +2,76 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::RwLock;
 
 use crate::{
-    app::{
-        dispatcher::Dispatcher, inbound::manager::InboundManager, nat_manager::NatManager,
-        outbound::manager::OutboundManager, router::Router,
-    },
+    app::{dns_client::DnsClient, outbound::manager::OutboundManager},
     config::Config,
     session::{Session, SocksAddr},
-    Runner,
 };
 
-pub fn create_runners(config: Config) -> Result<Vec<Runner>> {
-    let outbound_manager = OutboundManager::new(&config.outbounds, config.dns.as_ref().unwrap())?;
-    let router = Router::new(&config.routing_rules);
-    let dispatcher = Arc::new(Dispatcher::new(outbound_manager, router));
-    let nat_manager = Arc::new(NatManager::new(dispatcher.clone()));
-    let inbound_manager = InboundManager::new(&config.inbounds, dispatcher, nat_manager);
-    let runners = inbound_manager.get_runners();
-    Ok(runners)
+fn get_start_options(
+    config_path: String,
+    #[cfg(feature = "auto-reload")] auto_reload: bool,
+    multi_thread: bool,
+    auto_threads: bool,
+    threads: usize,
+    stack_size: usize,
+) -> crate::StartOptions {
+    if !multi_thread {
+        return crate::StartOptions {
+            config: crate::Config::File(config_path),
+            #[cfg(feature = "auto-reload")]
+            auto_reload,
+            #[cfg(target_os = "android")]
+            socket_protect_path: None,
+            runtime_opt: crate::RuntimeOption::SingleThread,
+        };
+    }
+    if auto_threads {
+        return crate::StartOptions {
+            config: crate::Config::File(config_path),
+            #[cfg(feature = "auto-reload")]
+            auto_reload,
+            #[cfg(target_os = "android")]
+            socket_protect_path: None,
+            runtime_opt: crate::RuntimeOption::MultiThreadAuto(stack_size),
+        };
+    }
+    crate::StartOptions {
+        config: crate::Config::File(config_path),
+        #[cfg(feature = "auto-reload")]
+        auto_reload,
+        #[cfg(target_os = "android")]
+        socket_protect_path: None,
+        runtime_opt: crate::RuntimeOption::MultiThread(threads, stack_size),
+    }
+}
+
+pub fn run_with_options(
+    rt_id: crate::RuntimeId,
+    config_path: String,
+    #[cfg(feature = "auto-reload")] auto_reload: bool,
+    multi_thread: bool,
+    auto_threads: bool,
+    threads: usize,
+    stack_size: usize,
+) -> Result<(), crate::Error> {
+    let opts = get_start_options(
+        config_path,
+        #[cfg(feature = "auto-reload")]
+        auto_reload,
+        multi_thread,
+        auto_threads,
+        threads,
+        stack_size,
+    );
+    crate::start(rt_id, opts)
 }
 
 pub async fn test_outbound(tag: &str, config: &Config) {
-    let outbound_manager =
-        OutboundManager::new(&config.outbounds, config.dns.as_ref().unwrap()).unwrap();
+    let dns_client = Arc::new(RwLock::new(DnsClient::new(&config.dns).unwrap()));
+    let outbound_manager = OutboundManager::new(&config.outbounds, dns_client).unwrap();
     let handler = if let Some(v) = outbound_manager.get(tag) {
         v
     } else {

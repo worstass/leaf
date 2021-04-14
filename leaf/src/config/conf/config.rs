@@ -29,10 +29,12 @@ pub struct General {
     pub dns_interface: Option<String>,
     pub always_real_ip: Option<Vec<String>>,
     pub always_fake_ip: Option<Vec<String>>,
-    pub interface: Option<String>,
-    pub port: Option<u16>,
+    pub http_interface: Option<String>,
+    pub http_port: Option<u16>,
     pub socks_interface: Option<String>,
     pub socks_port: Option<u16>,
+    pub api_interface: Option<String>,
+    pub api_port: Option<u16>,
 }
 
 #[derive(Debug)]
@@ -168,34 +170,30 @@ fn get_section(text: &str) -> Option<&str> {
     Some(caps.unwrap().get(1).unwrap().as_str())
 }
 
-fn get_lines_by_section<'a, I>(section: &str, lines: I) -> Result<Vec<String>>
+fn get_lines_by_section<'a, I>(section: &str, lines: I) -> Vec<String>
 where
     I: Iterator<Item = &'a io::Result<String>>,
 {
     let mut new_lines = Vec::new();
     let mut curr_sect: String = "".to_string();
-    for line in lines.flatten() {
+    for line in lines.flatten().map(|x| x.trim()) {
         let line = remove_comments(line);
         if let Some(s) = get_section(line.as_ref()) {
             curr_sect = s.to_string();
             continue;
         }
-        if curr_sect.as_str() == section {
-            let line = line.trim();
-            if !line.is_empty() {
-                new_lines.push(line.to_string());
-            }
+        if curr_sect.as_str() == section && !line.is_empty() {
+            new_lines.push(line.to_string());
         }
     }
-    Ok(new_lines)
+    new_lines
 }
 
 fn get_char_sep_slice(text: &str, pat: char) -> Option<Vec<String>>
 where
 {
     let mut items = Vec::new();
-    for item in text.trim().split(pat) {
-        let item = item.trim();
+    for item in text.split(pat).map(str::trim) {
         if !item.is_empty() {
             items.push(item.to_string());
         }
@@ -208,9 +206,8 @@ where
 }
 
 fn get_string(text: &str) -> Option<String> {
-    let s = text.trim();
-    if !s.is_empty() {
-        Some(s.to_string())
+    if !text.is_empty() {
+        Some(text.to_string())
     } else {
         None
     }
@@ -220,8 +217,8 @@ fn get_value<T>(text: &str) -> Option<T>
 where
     T: std::str::FromStr,
 {
-    if !text.trim().is_empty() {
-        if let Ok(v) = text.trim().parse::<T>() {
+    if !text.is_empty() {
+        if let Ok(v) = text.parse::<T>() {
             return Some(v);
         }
     }
@@ -230,13 +227,13 @@ where
 
 pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
     let mut general = General::default();
-    let general_lines = get_lines_by_section("General", lines.iter()).unwrap();
+    let general_lines = get_lines_by_section("General", lines.iter());
     for line in general_lines {
-        let parts: Vec<&str> = line.split('=').collect();
+        let parts: Vec<&str> = line.split('=').map(str::trim).collect();
         if parts.len() != 2 {
             continue;
         }
-        match parts[0].trim() {
+        match parts[0] {
             "tun-fd" => {
                 general.tun_fd = get_value::<i32>(parts[1]);
             }
@@ -256,7 +253,7 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
                 }
             }
             "loglevel" => {
-                general.loglevel = Some(parts[1].trim().to_string());
+                general.loglevel = Some(parts[1].to_string());
             }
             "dns-server" => {
                 general.dns_server = get_char_sep_slice(parts[1], ',');
@@ -270,11 +267,14 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
             "always-fake-ip" => {
                 general.always_fake_ip = get_char_sep_slice(parts[1], ',');
             }
-            "interface" => {
-                general.interface = get_string(parts[1]);
+            "routing-domain-resolve" => {
+                std::env::set_var("ROUTING_DOMAIN_RESOLVE", parts[1]);
             }
-            "port" => {
-                general.port = get_value::<u16>(parts[1]);
+            "http-interface" | "interface" => {
+                general.http_interface = get_string(parts[1]);
+            }
+            "http-port" | "port" => {
+                general.http_port = get_value::<u16>(parts[1]);
             }
             "socks-interface" => {
                 general.socks_interface = get_string(parts[1]);
@@ -282,19 +282,25 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
             "socks-port" => {
                 general.socks_port = get_value::<u16>(parts[1]);
             }
+            "api-interface" => {
+                general.api_interface = get_string(parts[1]);
+            }
+            "api-port" => {
+                general.api_port = get_value::<u16>(parts[1]);
+            }
             _ => {}
         }
     }
 
     let mut proxies = Vec::new();
-    let proxy_lines = get_lines_by_section("Proxy", lines.iter()).unwrap();
+    let proxy_lines = get_lines_by_section("Proxy", lines.iter());
     for line in proxy_lines {
-        let parts: Vec<&str> = line.splitn(2, '=').collect();
+        let parts: Vec<&str> = line.splitn(2, '=').map(str::trim).collect();
         if parts.len() != 2 {
             continue;
         }
         let mut proxy = Proxy::default();
-        let tag = parts[0].trim();
+        let tag = parts[0];
         if tag.is_empty() {
             // empty tag is not allowed
             continue;
@@ -314,12 +320,12 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
         // extract key-value params
         // let params = &params[2..];
         for param in &params {
-            let parts: Vec<&str> = param.split('=').collect();
+            let parts: Vec<&str> = param.split('=').map(str::trim).collect();
             if parts.len() != 2 {
                 continue;
             }
-            let k = parts[0].trim();
-            let v = parts[1].trim();
+            let k = parts[0];
+            let v = parts[1];
             if k.is_empty() || v.is_empty() {
                 continue;
             }
@@ -411,14 +417,14 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
     }
 
     let mut proxy_groups = Vec::new();
-    let proxy_group_lines = get_lines_by_section("Proxy Group", lines.iter()).unwrap();
+    let proxy_group_lines = get_lines_by_section("Proxy Group", lines.iter());
     for line in proxy_group_lines {
-        let parts: Vec<&str> = line.splitn(2, '=').collect();
+        let parts: Vec<&str> = line.splitn(2, '=').map(str::trim).collect();
         if parts.len() != 2 {
             continue;
         }
         let mut group = ProxyGroup::default();
-        let tag = parts[0].trim();
+        let tag = parts[0];
         if tag.is_empty() {
             // empty tag is not allowed
             continue;
@@ -443,11 +449,8 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
 
         let mut actors = Vec::new();
         for param in params {
-            if !param.contains('=') {
-                let actor = param.trim();
-                if !actor.is_empty() {
-                    actors.push(actor.to_string());
-                }
+            if !param.contains('=') && !param.is_empty() {
+                actors.push(param.to_string());
             }
         }
         if actors.is_empty() {
@@ -458,12 +461,12 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
 
         for param in params {
             if param.contains('=') {
-                let parts: Vec<&str> = param.split('=').collect();
+                let parts: Vec<&str> = param.split('=').map(str::trim).collect();
                 if parts.len() != 2 {
                     continue;
                 }
-                let k = parts[0].trim();
-                let v = parts[1].trim();
+                let k = parts[0];
+                let v = parts[1];
                 if k.is_empty() || v.is_empty() {
                     continue;
                 }
@@ -548,7 +551,7 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
     }
 
     let mut rules = Vec::new();
-    let rule_lines = get_lines_by_section("Rule", lines.iter()).unwrap();
+    let rule_lines = get_lines_by_section("Rule", lines.iter());
     for line in rule_lines {
         let params = if let Some(p) = get_char_sep_slice(&line, ',') {
             p
@@ -589,17 +592,17 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
     }
 
     let mut hosts = HashMap::new();
-    let host_lines = get_lines_by_section("Host", lines.iter()).unwrap();
+    let host_lines = get_lines_by_section("Host", lines.iter());
     for line in host_lines {
-        let parts: Vec<&str> = line.split('=').collect();
+        let parts: Vec<&str> = line.split('=').map(str::trim).collect();
         if parts.len() != 2 {
             continue;
         }
-        let name = parts[0].trim();
+        let name = parts[0];
         let ips: Vec<String> = parts[1]
-            .trim()
             .split(',')
-            .map(|x| x.trim().to_owned())
+            .map(str::trim)
+            .map(|x| x.to_owned())
             .collect();
         hosts.insert(name.to_owned(), ips);
     }
@@ -635,12 +638,12 @@ pub fn to_internal(conf: Config) -> Result<internal::Config> {
 
     let mut inbounds = protobuf::RepeatedField::new();
     if let Some(ext_general) = &conf.general {
-        if ext_general.interface.is_some() && ext_general.port.is_some() {
+        if ext_general.http_interface.is_some() && ext_general.http_port.is_some() {
             let mut inbound = internal::Inbound::new();
             inbound.protocol = "http".to_string();
             inbound.tag = "http".to_string();
-            inbound.address = ext_general.interface.as_ref().unwrap().to_string();
-            inbound.port = ext_general.port.unwrap() as u32;
+            inbound.address = ext_general.http_interface.as_ref().unwrap().to_string();
+            inbound.port = ext_general.http_port.unwrap() as u32;
             inbounds.push(inbound);
         }
         if ext_general.socks_interface.is_some() && ext_general.socks_port.is_some() {
@@ -1073,6 +1076,17 @@ pub fn to_internal(conf: Config) -> Result<internal::Config> {
                     outbound.settings = settings;
                     outbounds.push(outbound);
                 }
+                "select" => {
+                    let mut settings = internal::SelectOutboundSettings::new();
+                    if let Some(ext_actors) = &ext_proxy_group.actors {
+                        for ext_actor in ext_actors {
+                            settings.actors.push(ext_actor.to_string());
+                        }
+                    }
+                    let settings = settings.write_to_bytes().unwrap();
+                    outbound.settings = settings;
+                    outbounds.push(outbound);
+                }
                 _ => {}
             }
         }
@@ -1131,10 +1145,9 @@ pub fn to_internal(conf: Config) -> Result<internal::Config> {
                 }
                 "GEOIP" => {
                     let mut mmdb = internal::RoutingRule_Mmdb::new();
-                    let mut file = std::env::current_exe().unwrap();
-                    file.pop();
-                    file.push("geo.mmdb");
-                    mmdb.file = file.to_str().unwrap().to_string();
+
+                    let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+                    mmdb.file = asset_loc.join("geo.mmdb").to_string_lossy().to_string();
                     mmdb.country_code = ext_filter;
                     rule.mmdbs.push(mmdb)
                 }
@@ -1195,12 +1208,26 @@ pub fn to_internal(conf: Config) -> Result<internal::Config> {
         dns.hosts = hosts;
     }
 
+    let api = if let Some(ext_general) = &conf.general {
+        if ext_general.api_interface.is_some() && ext_general.api_port.is_some() {
+            let mut api_inner = internal::Api::new();
+            api_inner.address = ext_general.api_interface.as_ref().unwrap().to_string();
+            api_inner.port = ext_general.api_port.unwrap() as u32;
+            protobuf::SingularPtrField::some(api_inner)
+        } else {
+            protobuf::SingularPtrField::none()
+        }
+    } else {
+        protobuf::SingularPtrField::none()
+    };
+
     let mut config = internal::Config::new();
     config.log = protobuf::SingularPtrField::some(log);
     config.inbounds = inbounds;
     config.outbounds = outbounds;
     config.routing_rules = rules;
     config.dns = protobuf::SingularPtrField::some(dns);
+    config.api = api;
 
     drop(conf); // make sure no partial moved fields
 
@@ -1211,8 +1238,7 @@ pub fn from_file<P>(path: P) -> Result<internal::Config>
 where
     P: AsRef<Path>,
 {
-    let lines = read_lines(path)?;
-    let lines = lines.collect();
+    let lines = read_lines(path)?.collect();
     let config = from_lines(lines)?;
     to_internal(config)
 }
