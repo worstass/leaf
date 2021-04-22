@@ -1,9 +1,6 @@
 use std::process::exit;
 
 use clap::{App, Arg};
-use log::*;
-
-use leaf::config;
 
 const VERSION: Option<&'static str> = option_env!("CARGO_PKG_VERSION");
 const COMMIT_HASH: Option<&'static str> = option_env!("CFG_COMMIT_HASH");
@@ -28,23 +25,42 @@ fn default_thread_stack_size() -> usize {
 }
 
 fn main() {
-    let matches = App::new("leaf")
+    let mut app = App::new("leaf");
+
+    #[cfg(feature = "auto-reload")]
+    {
+        app = app.arg(
+            Arg::new("auto-reload")
+                .long("auto-reload")
+                .about("Enables auto reloading when config file changes.")
+                .takes_value(false),
+        );
+    }
+
+    app = app.arg(
+        Arg::new("config")
+            .short('c')
+            .long("config")
+            .value_name("FILE")
+            .about("The configuration file")
+            .takes_value(true)
+            .default_value("config.conf"),
+    );
+
+    let matches = app
         .version(get_version_string().as_str())
         .about("A lightweight and fast proxy utility.")
         .arg(
-            Arg::new("config")
-                .short('c')
-                .long("config")
-                .value_name("FILE")
-                .about("The configuration file")
-                .takes_value(true)
-                .default_value("config.conf"),
+            Arg::new("single-thread")
+                .long("single-thread")
+                .about("Runs in a single thread.")
+                .takes_value(false),
         )
         .arg(
             Arg::new("threads")
                 .long("threads")
                 .value_name("N")
-                .about("Sets the number of runtime threads.")
+                .about("Sets the number of runtime worker threads.")
                 .takes_value(true)
                 .default_value("auto"),
         )
@@ -52,9 +68,16 @@ fn main() {
             Arg::new("thread-stack-size")
                 .long("thread-stack-size")
                 .value_name("BYTES")
-                .about("Sets the stack size of runtime threads.")
+                .about("Sets the stack size of runtime worker threads.")
                 .takes_value(true)
                 .default_value(&default_thread_stack_size().to_string()),
+        )
+        .arg(
+            Arg::new("test")
+                .short('T')
+                .long("test")
+                .about("Tests the configuration and exit.")
+                .takes_value(false),
         )
         .arg(
             Arg::new("test-outbound")
@@ -66,97 +89,52 @@ fn main() {
         )
         .get_matches();
 
-    let path = matches.value_of("config").unwrap();
+    let config_path = matches.value_of("config").unwrap();
 
-    let config = match leaf::config::from_file(path) {
-        Ok(v) => v,
-        Err(err) => {
-            println!("create config failed: {}", err);
+    if matches.is_present("test") {
+        if let Err(e) = leaf::test_config(&config_path) {
+            println!("{}", e);
             exit(1);
-        }
-    };
-
-    let rt = {
-        let threads = matches.value_of("threads").unwrap();
-        let stack_size = matches
-            .value_of("thread-stack-size")
-            .unwrap()
-            .parse::<usize>()
-            .unwrap();
-        if threads == "auto" {
-            tokio::runtime::Builder::new_multi_thread()
-                .thread_stack_size(stack_size)
-                .enable_all()
-                .build()
-                .unwrap()
-        } else if let Ok(n) = threads.parse::<usize>() {
-            if n > 1 {
-                tokio::runtime::Builder::new_multi_thread()
-                    .worker_threads(n)
-                    .thread_stack_size(stack_size)
-                    .enable_all()
-                    .build()
-                    .unwrap()
-            } else {
-                tokio::runtime::Builder::new_current_thread()
-                    .thread_stack_size(stack_size)
-                    .enable_all()
-                    .build()
-                    .unwrap()
-            }
         } else {
-            println!("invalid number of threads");
-            exit(1);
+            println!("ok");
+            exit(0);
         }
-    };
+    }
 
     if let Some(tag) = matches.value_of("test-outbound") {
+        let config = leaf::config::from_file(&config_path).unwrap();
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
         rt.block_on(leaf::util::test_outbound(&tag, &config));
+        exit(0);
+    }
+
+    #[cfg(feature = "auto-reload")]
+    let auto_reload = matches.is_present("auto-reload");
+
+    let threads = matches.value_of("threads").unwrap();
+    let thread_stack_size = matches
+        .value_of("thread-stack-size")
+        .unwrap()
+        .parse::<usize>()
+        .unwrap();
+    let multi_thread = !matches.is_present("single-thread");
+    let auto_threads = threads.parse::<usize>().map(|_| false).unwrap_or(true);
+    let threads = threads.parse::<usize>().unwrap_or(1);
+
+    if let Err(e) = leaf::util::run_with_options(
+        0,
+        config_path.to_string(),
+        #[cfg(feature = "auto-reload")]
+        auto_reload,
+        multi_thread,
+        auto_threads,
+        threads,
+        thread_stack_size,
+    ) {
+        println!("start leaf failed: {}", e);
         exit(1);
     }
-
-    let loglevel = if let Some(log) = config.log.as_ref() {
-        match log.level {
-            config::Log_Level::TRACE => log::LevelFilter::Trace,
-            config::Log_Level::DEBUG => log::LevelFilter::Debug,
-            config::Log_Level::INFO => log::LevelFilter::Info,
-            config::Log_Level::WARN => log::LevelFilter::Warn,
-            config::Log_Level::ERROR => log::LevelFilter::Error,
-        }
-    } else {
-        log::LevelFilter::Info
-    };
-    let mut logger = leaf::common::log::setup_logger(loglevel);
-    let console_output = fern::Output::stdout("\n");
-    logger = logger.chain(console_output);
-    if let Some(log) = config.log.as_ref() {
-        match log.output {
-            config::Log_Output::CONSOLE => {
-                // console output already applied
-            }
-            config::Log_Output::FILE => {
-                let f = fern::log_file(&log.output_file).expect("open log file failed");
-                let file_output = fern::Output::file(f, "\n");
-                logger = logger.chain(file_output);
-            }
-        }
-    }
-    leaf::common::log::apply_logger(logger);
-
-    let runners = match leaf::util::create_runners(config) {
-        Ok(v) => v,
-        Err(e) => {
-            error!("create runners fialed: {}", e);
-            return;
-        }
-    };
-
-    rt.block_on(async move {
-        tokio::select! {
-            _ = futures::future::join_all(runners) => (),
-            _ = tokio::signal::ctrl_c() => {
-                warn!("ctrl-c received, exit");
-            },
-        }
-    });
 }

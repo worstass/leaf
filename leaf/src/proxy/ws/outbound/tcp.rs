@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::TryFutureExt;
@@ -9,7 +8,7 @@ use tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{OutboundConnect, ProxyStream, SimpleProxyStream, TcpOutboundHandler},
     session::Session,
 };
@@ -19,7 +18,7 @@ use super::stream;
 pub struct Handler {
     pub path: String,
     pub headers: HashMap<String, String>,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 struct Request<'a> {
@@ -43,10 +42,6 @@ impl<'a> tungstenite::client::IntoClientRequest for Request<'a> {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
@@ -69,7 +64,7 @@ impl TcpOutboundHandler for Handler {
                 headers: &self.headers,
             };
             let ws_config = WebSocketConfig {
-                max_send_queue: Some(16),
+                max_send_queue: Some(4),
                 max_message_size: Some(64 << 20),
                 max_frame_size: Some(16 << 20),
                 accept_unmasked_frames: false,

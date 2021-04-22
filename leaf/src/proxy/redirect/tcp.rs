@@ -1,11 +1,10 @@
 use std::io::Result;
 use std::net::SocketAddr;
-use std::sync::Arc;
 
 use async_trait::async_trait;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{
         stream::SimpleProxyStream, OutboundConnect, ProxyStream, TcpConnector, TcpOutboundHandler,
     },
@@ -17,17 +16,13 @@ pub struct Handler {
     pub address: String,
     pub port: u16,
     pub bind_addr: SocketAddr,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 impl TcpConnector for Handler {}
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
         None
     }

@@ -10,7 +10,7 @@ use futures::future::TryFutureExt;
 use tokio::io::{AsyncRead, AsyncWrite};
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{
         OutboundConnect, OutboundDatagram, OutboundDatagramRecvHalf, OutboundDatagramSendHalf,
         OutboundTransport, TcpConnector, UdpConnector, UdpOutboundHandler, UdpTransportType,
@@ -22,7 +22,7 @@ pub struct Handler {
     pub address: String,
     pub port: u16,
     pub bind_addr: SocketAddr,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 impl TcpConnector for Handler {}
@@ -30,10 +30,6 @@ impl UdpConnector for Handler {}
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn udp_connect_addr(&self) -> Option<OutboundConnect> {
         Some(OutboundConnect::Proxy(
             self.address.clone(),
@@ -48,7 +44,7 @@ impl UdpOutboundHandler for Handler {
 
     async fn handle_udp<'a>(
         &'a self,
-        _sess: &'a Session,
+        sess: &'a Session,
         _transport: Option<OutboundTransport>,
     ) -> Result<Box<dyn OutboundDatagram>> {
         // TODO support chaining, this requires implementing our own socks5 client
@@ -60,7 +56,9 @@ impl UdpOutboundHandler for Handler {
                 &self.port,
             )
             .await?;
-        let socket = self.create_udp_socket(&self.bind_addr).await?;
+        let socket = self
+            .create_udp_socket(&self.bind_addr, &sess.source)
+            .await?;
         let socket = SocksDatagram::associate(stream, socket, None::<Auth>, None::<AddrKind>)
             .map_err(|x| Error::new(ErrorKind::Other, x))
             .await?;

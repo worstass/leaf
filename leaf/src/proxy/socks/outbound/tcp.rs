@@ -1,14 +1,13 @@
 use std::{
     io::{Error, ErrorKind, Result},
     net::SocketAddr,
-    sync::Arc,
 };
 
 use async_trait::async_trait;
 use futures::future::TryFutureExt;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{OutboundConnect, ProxyStream, TcpConnector, TcpOutboundHandler},
     session::{Session, SocksAddr},
 };
@@ -17,17 +16,13 @@ pub struct Handler {
     pub address: String,
     pub port: u16,
     pub bind_addr: SocketAddr,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 impl TcpConnector for Handler {}
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
         Some(OutboundConnect::Proxy(
             self.address.clone(),

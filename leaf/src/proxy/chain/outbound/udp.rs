@@ -5,7 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{
         OutboundConnect, OutboundDatagram, OutboundHandler, OutboundTransport, ProxyStream,
         SimpleOutboundDatagram, TcpConnector, UdpConnector, UdpOutboundHandler, UdpTransportType,
@@ -22,7 +22,7 @@ fn invalid_chain(reason: &str) -> io::Error {
 
 pub struct Handler {
     pub actors: Vec<Arc<dyn OutboundHandler>>,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 impl Handler {
@@ -37,7 +37,7 @@ impl Handler {
 
     fn next_session(&self, mut sess: Session, start: usize) -> Session {
         if let Some(OutboundConnect::Proxy(address, port, _)) = self.next_udp_connect_addr(start) {
-            if let Ok(addr) = SocksAddr::try_from(format!("{}:{}", address, port)) {
+            if let Ok(addr) = SocksAddr::try_from((address, port)) {
                 sess.destination = addr;
             }
         }
@@ -109,10 +109,6 @@ impl UdpConnector for Handler {}
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn udp_connect_addr(&self) -> Option<OutboundConnect> {
         for a in self.actors.iter() {
             if let Some(addr) = a.udp_connect_addr() {
@@ -152,7 +148,8 @@ impl UdpOutboundHandler for Handler {
                     Some(OutboundConnect::Proxy(address, port, bind_addr)) => {
                         match init_transport_type {
                             UdpTransportType::Packet => {
-                                let socket = self.create_udp_socket(&bind_addr).await?;
+                                let socket =
+                                    self.create_udp_socket(&bind_addr, &sess.source).await?;
                                 let dgram: Option<Box<dyn OutboundDatagram>> =
                                     Some(Box::new(SimpleOutboundDatagram::new(
                                         socket,

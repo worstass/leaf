@@ -4,7 +4,7 @@ use std::{io, sync::Arc};
 use async_trait::async_trait;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{
         stream::SimpleProxyStream, OutboundConnect, OutboundHandler, ProxyStream, TcpConnector,
         TcpOutboundHandler,
@@ -14,7 +14,7 @@ use crate::{
 
 pub struct Handler {
     pub actors: Vec<Arc<dyn OutboundHandler>>,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 impl Handler {
@@ -29,7 +29,7 @@ impl Handler {
 
     fn next_session(&self, mut sess: Session, start: usize) -> Session {
         if let Some(OutboundConnect::Proxy(address, port, _)) = self.next_tcp_connect_addr(start) {
-            if let Ok(addr) = SocksAddr::try_from(format!("{}:{}", address, port)) {
+            if let Ok(addr) = SocksAddr::try_from((address, port)) {
                 sess.destination = addr;
             }
         }
@@ -41,10 +41,6 @@ impl TcpConnector for Handler {}
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
         for a in self.actors.iter() {
             if let Some(addr) = a.tcp_connect_addr() {

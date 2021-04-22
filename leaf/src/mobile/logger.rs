@@ -4,7 +4,6 @@ use std::{
 };
 
 use bytes::BytesMut;
-use log::{Level, Metadata, Record};
 
 #[cfg(target_os = "ios")]
 use super::bindings::{asl_log, ASL_LEVEL_NOTICE};
@@ -23,7 +22,6 @@ fn log_out(data: &[u8]) {
             std::ptr::null_mut(),
             std::ptr::null_mut(),
             ASL_LEVEL_NOTICE as i32,
-            // ffi::CString::new("%s").unwrap().as_c_str().as_ptr(),
             s.as_c_str().as_ptr(),
         )
     };
@@ -44,31 +42,13 @@ fn log_out(data: &[u8]) {
     }
 }
 
-pub struct ConsoleLogger;
-
-impl log::Log for ConsoleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= Level::Debug
-    }
-
-    fn log(&self, record: &Record) {
-        if self.enabled(record.metadata()) {
-            log_out(
-                format!(
-                    "[{}] [{}] {}",
-                    record.level(),
-                    record.target(),
-                    record.args()
-                )
-                .as_bytes(),
-            )
-        }
-    }
-
-    fn flush(&self) {}
-}
-
 pub struct ConsoleWriter(pub BytesMut);
+
+impl Default for ConsoleWriter {
+    fn default() -> Self {
+        ConsoleWriter(BytesMut::new())
+    }
+}
 
 unsafe impl Send for ConsoleWriter {}
 

@@ -1,20 +1,20 @@
-use std::{io, net::SocketAddr, sync::Arc};
+use std::{io, net::SocketAddr};
 
 use async_trait::async_trait;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{OutboundConnect, ProxyStream, TcpConnector, TcpOutboundHandler},
     session::Session,
 };
 
 pub struct Handler {
     bind_addr: SocketAddr,
-    dns_client: Arc<DnsClient>,
+    dns_client: SyncDnsClient,
 }
 
 impl Handler {
-    pub fn new(bind_addr: SocketAddr, dns_client: Arc<DnsClient>) -> Self {
+    pub fn new(bind_addr: SocketAddr, dns_client: SyncDnsClient) -> Self {
         Handler {
             bind_addr,
             dns_client,
@@ -26,10 +26,6 @@ impl TcpConnector for Handler {}
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
         Some(OutboundConnect::Direct(self.bind_addr))
     }

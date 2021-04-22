@@ -1,9 +1,9 @@
-use std::{io, net::SocketAddr, sync::Arc};
+use std::{io, net::SocketAddr};
 
 use async_trait::async_trait;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{
         OutboundConnect, OutboundDatagram, OutboundTransport, SimpleOutboundDatagram, UdpConnector,
         UdpOutboundHandler, UdpTransportType,
@@ -13,11 +13,11 @@ use crate::{
 
 pub struct Handler {
     bind_addr: SocketAddr,
-    dns_client: Arc<DnsClient>,
+    dns_client: SyncDnsClient,
 }
 
 impl Handler {
-    pub fn new(bind_addr: SocketAddr, dns_client: Arc<DnsClient>) -> Self {
+    pub fn new(bind_addr: SocketAddr, dns_client: SyncDnsClient) -> Self {
         Handler {
             bind_addr,
             dns_client,
@@ -29,10 +29,6 @@ impl UdpConnector for Handler {}
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn udp_connect_addr(&self) -> Option<OutboundConnect> {
         Some(OutboundConnect::Direct(self.bind_addr))
     }
@@ -46,7 +42,9 @@ impl UdpOutboundHandler for Handler {
         sess: &'a Session,
         _transport: Option<OutboundTransport>,
     ) -> io::Result<Box<dyn OutboundDatagram>> {
-        let socket = self.create_udp_socket(&self.bind_addr).await?;
+        let socket = self
+            .create_udp_socket(&self.bind_addr, &sess.source)
+            .await?;
         let destination = match &sess.destination {
             SocksAddr::Domain(domain, port) => {
                 Some(SocksAddr::Domain(domain.to_owned(), port.to_owned()))

@@ -23,6 +23,7 @@ default-ring = [
 	# quinn supports only rustls as tls backend for now
     "inbound-quic",
     "outbound-quic",
+    "api",
 ]
 
 default-openssl = [
@@ -30,6 +31,7 @@ default-openssl = [
     "all-endpoints",
     "openssl-aead",
     "openssl-tls",
+    "api",
 ]
 
 # Grouping all features
@@ -66,6 +68,7 @@ all-endpoints = [
     "outbound-tryall",
     "outbound-chain",
     "outbound-retry",
+    "outbound-select",
 ]
 
 # Ring-related
@@ -98,6 +101,7 @@ outbound-chain = []
 outbound-retry = []
 outbound-amux= ["tokio-util"]
 outbound-quic = ["quinn", "rustls", "webpki-roots"]
+outbound-select = []
 
 # Inbounds
 inbound-trojan = ["sha2", "hex"]
@@ -110,9 +114,13 @@ inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
 inbound-chain = []
 
+api = ["warp"]
+auto-reload = ["notify"]
+ctrlc = ["tokio/signal"]
+
 [dependencies]
 # Common
-tokio = { version = "1", features = ["macros", "sync", "io-util", "net", "time", "rt"] }
+tokio = { version = "1", features = ["sync", "io-util", "net", "time", "rt", "rt-multi-thread"] }
 futures-util = "0.3"
 protobuf = "2"
 thiserror = "1.0"
@@ -123,6 +131,8 @@ bytes = "1"
 lazy_static = "1.4.0"
 anyhow = "1.0"
 rand = "0.8"
+socket2 = "0.4"
+directories = "3.0"
 
 # config-json
 serde_json = { version = "1.0", features = ["raw_value"], optional = true }
@@ -210,14 +220,28 @@ tokio-util = { version = "0.6", default-features = false, features = ["io"], opt
 quinn = { version = "0.7", default-features = false, features = ["tls-rustls"], optional = true }
 rustls = { version = "0.19", optional = true }
 
+# API
+warp = { version = "0.3", default-features = false, optional = true }
+
+# Auto reload
+notify = { version = "5.0.0-pre.6", optional = true }
+
 # TUN
 [target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]
 tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
+
+[target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
+pnet_datalink = { version = "0.27", package = "pnet_datalink" }
+libc = "0.2"
+
+# Used in mobile logger
+[target.'cfg(any(target_os = "ios", target_os = "android"))'.dependencies]
+memchr = { version = "2" }
 
 [dev-dependencies]
 rcgen = "0.8"
 
 [build-dependencies]
 cc = "1.0"
-bindgen = "0.57"
+bindgen = "0.58"
 protoc-rust = "2"

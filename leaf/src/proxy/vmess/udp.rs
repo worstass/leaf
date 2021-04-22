@@ -1,4 +1,4 @@
-use std::{cmp::min, io, net::SocketAddr, sync::Arc};
+use std::{cmp::min, io, net::SocketAddr};
 
 use async_trait::async_trait;
 use bytes::BytesMut;
@@ -7,7 +7,7 @@ use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, Wr
 use uuid::Uuid;
 
 use crate::{
-    app::dns_client::DnsClient,
+    app::SyncDnsClient,
     proxy::{
         OutboundConnect, OutboundDatagram, OutboundDatagramRecvHalf, OutboundDatagramSendHalf,
         OutboundTransport, TcpConnector, UdpOutboundHandler, UdpTransportType,
@@ -25,17 +25,13 @@ pub struct Handler {
     pub uuid: String,
     pub security: String,
     pub bind_addr: SocketAddr,
-    pub dns_client: Arc<DnsClient>,
+    pub dns_client: SyncDnsClient,
 }
 
 impl TcpConnector for Handler {}
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    fn name(&self) -> &str {
-        super::NAME
-    }
-
     fn udp_connect_addr(&self) -> Option<OutboundConnect> {
         Some(OutboundConnect::Proxy(
             self.address.clone(),

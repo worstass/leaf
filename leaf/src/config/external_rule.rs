@@ -15,17 +15,14 @@ pub fn load_file_or_default(filter: &str, default: &str) -> Result<(String, Stri
         let path = if Path::new(parts[1]).is_absolute() {
             parts[1].to_string()
         } else {
-            let mut file = std::env::current_exe().unwrap();
-            file.pop();
-            file.push(parts[1]);
-            file.to_str().unwrap().to_string()
+            let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+            asset_loc.join(parts[1]).to_string_lossy().to_string()
         };
         (path, parts[2].to_string())
     } else if parts.len() == 2 {
-        let mut file = std::env::current_exe().unwrap();
-        file.pop();
-        file.push(default);
-        (file.to_str().unwrap().to_string(), parts[1].to_string())
+        let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+        let path = asset_loc.join(default).to_string_lossy().to_string();
+        (path, parts[1].to_string())
     } else {
         return Err(anyhow!("invalid external rule: {}", filter));
     };
@@ -41,7 +38,7 @@ pub fn load_site_rule(filter: &str) -> Result<(String, String)> {
 }
 
 pub fn add_external_rule(
-    rule: &mut internal::RoutingRule,
+    rule: &mut internal::Router_Rule,
     ext_external: &str,
     site_group_lists: &mut HashMap<String, geosite::SiteGroupList>,
 ) -> Result<()> {
@@ -52,7 +49,7 @@ pub fn add_external_rule(
                 return Err(anyhow!("load mmdb rule failed: {}", e));
             }
         };
-        let mut mmdb = internal::RoutingRule_Mmdb::new();
+        let mut mmdb = internal::Router_Rule_Mmdb::new();
         mmdb.file = file;
         mmdb.country_code = code;
         rule.mmdbs.push(mmdb)
@@ -97,18 +94,18 @@ pub fn add_external_rule(
                 for domain in site_group.domain.iter() {
                     let mut domain_rule = match domain.field_type {
                         geosite::Domain_Type::Plain => {
-                            let mut d = internal::RoutingRule_Domain::new();
-                            d.field_type = internal::RoutingRule_Domain_Type::PLAIN;
+                            let mut d = internal::Router_Rule_Domain::new();
+                            d.field_type = internal::Router_Rule_Domain_Type::PLAIN;
                             d
                         }
                         geosite::Domain_Type::Domain => {
-                            let mut d = internal::RoutingRule_Domain::new();
-                            d.field_type = internal::RoutingRule_Domain_Type::DOMAIN;
+                            let mut d = internal::Router_Rule_Domain::new();
+                            d.field_type = internal::Router_Rule_Domain_Type::DOMAIN;
                             d
                         }
                         geosite::Domain_Type::Full => {
-                            let mut d = internal::RoutingRule_Domain::new();
-                            d.field_type = internal::RoutingRule_Domain_Type::FULL;
+                            let mut d = internal::Router_Rule_Domain::new();
+                            d.field_type = internal::Router_Rule_Domain_Type::FULL;
                             d
                         }
                         _ => {

@@ -13,10 +13,11 @@ use crate::{
     app::fake_dns::{FakeDns, FakeDnsMode},
     app::nat_manager::NatManager,
     config::{Inbound, TunInboundSettings},
-    Runner,
+    option, Runner,
 };
 
 use super::netstack::NetStack;
+use std::intrinsics::unaligned_volatile_load;
 
 const MTU: usize = 1500;
 
@@ -25,12 +26,31 @@ pub fn new(
     dispatcher: Arc<Dispatcher>,
     nat_manager: Arc<NatManager>,
 ) -> Result<Runner> {
-    unimplemented!()
-    // let settings = TunInboundSettings::parse_from_bytes(&inbound.settings).unwrap();
+    unimplemented!();
+    // let settings = TunInboundSettings::parse_from_bytes(&inbound.settings)?;
     //
     // let cfg = if settings.fd >= 0 {
     //     let mut cfg = tun::Configuration::default();
     //     cfg.raw_fd(settings.fd);
+    //     cfg
+    // } else if settings.auto {
+    //     let mut cfg = tun::Configuration::default();
+    //     cfg.name(option::DEFAULT_TUN_NAME)
+    //         .address(option::DEFAULT_TUN_IPV4_ADDR)
+    //         .destination(option::DEFAULT_TUN_IPV4_GW)
+    //         .mtu(1500);
+    //
+    //     #[cfg(not(any(
+    //         target_arch = "mips",
+    //         target_arch = "mips64",
+    //         target_arch = "mipsel",
+    //         target_arch = "mipsel64",
+    //     )))]
+    //     {
+    //         cfg.netmask(option::DEFAULT_TUN_IPV4_MASK);
+    //     }
+    //
+    //     cfg.up();
     //     cfg
     // } else {
     //     let mut cfg = tun::Configuration::default();
@@ -53,11 +73,6 @@ pub fn new(
     //     cfg
     // };
     //
-    // // #[cfg(target_os = "linux")]
-    // // cfg.platform(|cfg| {
-    // //     cfg.packet_information(true);
-    // // });
-    //
     // // FIXME it's a bad design to have 2 lists in config while we need only one
     // let fake_dns_exclude = settings.fake_dns_exclude;
     // let fake_dns_include = settings.fake_dns_include;
@@ -72,9 +87,13 @@ pub fn new(
     //     (FakeDnsMode::Exclude, fake_dns_exclude)
     // };
     //
-    // Ok(Box::pin(async move {
-    //     let tun = tun::create_as_async(&cfg).unwrap();
+    // let tun = tun::create_as_async(&cfg).unwrap();
     //
+    // if settings.auto {
+    //     assert!(settings.fd == -1, "tun-auto is not compatible with tun-fd");
+    // }
+    //
+    // Ok(Box::pin(async move {
     //     let fakedns = Arc::new(TokioMutex::new(FakeDns::new(fake_dns_mode)));
     //
     //     for filter in fake_dns_filters.into_iter() {
@@ -88,7 +107,7 @@ pub fn new(
     //     let (mut tun_sink, mut tun_stream) = framed.split();
     //     let (mut stack_reader, mut stack_writer) = io::split(stack);
     //
-    //     let s2t = async move {
+    //     let s2t = Box::pin(async move {
     //         let mut buf = vec![0; mtu as usize];
     //         loop {
     //             match stack_reader.read(&mut buf).await {
@@ -109,9 +128,9 @@ pub fn new(
     //                 }
     //             }
     //         }
-    //     };
+    //     });
     //
-    //     let t2s = async move {
+    //     let t2s = Box::pin(async move {
     //         while let Some(packet) = tun_stream.next().await {
     //             match packet {
     //                 Ok(packet) => match stack_writer.write(packet.get_bytes()).await {
@@ -127,13 +146,10 @@ pub fn new(
     //                 }
     //             }
     //         }
-    //     };
+    //     });
     //
     //     info!("tun inbound started");
-    //
-    //     tokio::select! {
-    //         r1 = t2s => debug!("s2t ended {:?}", r1),
-    //         r2 = s2t => debug!("s2t ended {:?}", r2)
-    //     }
+    //     futures::future::select(t2s, s2t).await;
+    //     info!("tun inbound exited");
     // }))
 }

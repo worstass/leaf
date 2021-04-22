@@ -2,7 +2,7 @@
 members = [
     "leaf",
     "leaf-bin",
-#    "leaf-mobile",
+#    "leaf-ffi",
 #    "tun2socks-bin",
 ]
 default-members = ["leaf-bin"]
@@ -16,3 +16,4 @@ panic = "abort"
 [profile.dev]
 opt-level = 0
 debug = true
+split-debuginfo = "unpacked"

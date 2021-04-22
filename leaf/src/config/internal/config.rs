@@ -24,6 +24,200 @@
 // const _PROTOBUF_VERSION_CHECK: () = ::protobuf::VERSION_2_22_1;
 
 #[derive(PartialEq,Clone,Default)]
+pub struct Api {
+    // message fields
+    pub address: ::std::string::String,
+    pub port: u32,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Api {
+    fn default() -> &'a Api {
+        <Api as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Api {
+    pub fn new() -> Api {
+        ::std::default::Default::default()
+    }
+
+    // string address = 1;
+
+
+    pub fn get_address(&self) -> &str {
+        &self.address
+    }
+    pub fn clear_address(&mut self) {
+        self.address.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_address(&mut self, v: ::std::string::String) {
+        self.address = v;
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_address(&mut self) -> &mut ::std::string::String {
+        &mut self.address
+    }
+
+    // Take field
+    pub fn take_address(&mut self) -> ::std::string::String {
+        ::std::mem::replace(&mut self.address, ::std::string::String::new())
+    }
+
+    // uint32 port = 2;
+
+
+    pub fn get_port(&self) -> u32 {
+        self.port
+    }
+    pub fn clear_port(&mut self) {
+        self.port = 0;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_port(&mut self, v: u32) {
+        self.port = v;
+    }
+}
+
+impl ::protobuf::Message for Api {
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.port = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.address);
+        }
+        if self.port != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.port, ::protobuf::wire_format::WireTypeVarint);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        if !self.address.is_empty() {
+            os.write_string(1, &self.address)?;
+        }
+        if self.port != 0 {
+            os.write_uint32(2, self.port)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Api {
+        Api::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "address",
+                |m: &Api| { &m.address },
+                |m: &mut Api| { &mut m.address },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
+                "port",
+                |m: &Api| { &m.port },
+                |m: &mut Api| { &mut m.port },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Api>(
+                "Api",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Api {
+        static instance: ::protobuf::rt::LazyV2<Api> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Api::new)
+    }
+}
+
+impl ::protobuf::Clear for Api {
+    fn clear(&mut self) {
+        self.address.clear();
+        self.port = 0;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Api {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Api {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
 pub struct Dns {
     // message fields
     pub servers: ::protobuf::RepeatedField<::std::string::String>,
@@ -752,6 +946,7 @@ impl ::protobuf::reflect::ProtobufValue for Log_Output {
 pub struct TunInboundSettings {
     // message fields
     pub fd: i32,
+    pub auto: bool,
     pub name: ::std::string::String,
     pub address: ::std::string::String,
     pub gateway: ::std::string::String,
@@ -788,6 +983,21 @@ impl TunInboundSettings {
     // Param is passed by value, moved
     pub fn set_fd(&mut self, v: i32) {
         self.fd = v;
+    }
+
+    // bool auto = 9;
+
+
+    pub fn get_auto(&self) -> bool {
+        self.auto
+    }
+    pub fn clear_auto(&mut self) {
+        self.auto = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_auto(&mut self, v: bool) {
+        self.auto = v;
     }
 
     // string name = 2;
@@ -976,6 +1186,13 @@ impl ::protobuf::Message for TunInboundSettings {
                     let tmp = is.read_int32()?;
                     self.fd = tmp;
                 },
+                9 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.auto = tmp;
+                },
                 2 => {
                     ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.name)?;
                 },
@@ -1016,6 +1233,9 @@ impl ::protobuf::Message for TunInboundSettings {
         if self.fd != 0 {
             my_size += ::protobuf::rt::value_size(1, self.fd, ::protobuf::wire_format::WireTypeVarint);
         }
+        if self.auto != false {
+            my_size += 2;
+        }
         if !self.name.is_empty() {
             my_size += ::protobuf::rt::string_size(2, &self.name);
         }
@@ -1045,6 +1265,9 @@ impl ::protobuf::Message for TunInboundSettings {
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
         if self.fd != 0 {
             os.write_int32(1, self.fd)?;
+        }
+        if self.auto != false {
+            os.write_bool(9, self.auto)?;
         }
         if !self.name.is_empty() {
             os.write_string(2, &self.name)?;
@@ -1110,6 +1333,11 @@ impl ::protobuf::Message for TunInboundSettings {
                 |m: &TunInboundSettings| { &m.fd },
                 |m: &mut TunInboundSettings| { &mut m.fd },
             ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                "auto",
+                |m: &TunInboundSettings| { &m.auto },
+                |m: &mut TunInboundSettings| { &mut m.auto },
+            ));
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "name",
                 |m: &TunInboundSettings| { &m.name },
@@ -1162,6 +1390,7 @@ impl ::protobuf::Message for TunInboundSettings {
 impl ::protobuf::Clear for TunInboundSettings {
     fn clear(&mut self) {
         self.fd = 0;
+        self.auto = false;
         self.name.clear();
         self.address.clear();
         self.gateway.clear();
@@ -3722,242 +3951,6 @@ impl ::protobuf::reflect::ProtobufValue for VMessOutboundSettings {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct VLessOutboundSettings {
-    // message fields
-    pub address: ::std::string::String,
-    pub port: u32,
-    pub uuid: ::std::string::String,
-    // special fields
-    pub unknown_fields: ::protobuf::UnknownFields,
-    pub cached_size: ::protobuf::CachedSize,
-}
-
-impl<'a> ::std::default::Default for &'a VLessOutboundSettings {
-    fn default() -> &'a VLessOutboundSettings {
-        <VLessOutboundSettings as ::protobuf::Message>::default_instance()
-    }
-}
-
-impl VLessOutboundSettings {
-    pub fn new() -> VLessOutboundSettings {
-        ::std::default::Default::default()
-    }
-
-    // string address = 1;
-
-
-    pub fn get_address(&self) -> &str {
-        &self.address
-    }
-    pub fn clear_address(&mut self) {
-        self.address.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_address(&mut self, v: ::std::string::String) {
-        self.address = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_address(&mut self) -> &mut ::std::string::String {
-        &mut self.address
-    }
-
-    // Take field
-    pub fn take_address(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.address, ::std::string::String::new())
-    }
-
-    // uint32 port = 2;
-
-
-    pub fn get_port(&self) -> u32 {
-        self.port
-    }
-    pub fn clear_port(&mut self) {
-        self.port = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_port(&mut self, v: u32) {
-        self.port = v;
-    }
-
-    // string uuid = 3;
-
-
-    pub fn get_uuid(&self) -> &str {
-        &self.uuid
-    }
-    pub fn clear_uuid(&mut self) {
-        self.uuid.clear();
-    }
-
-    // Param is passed by value, moved
-    pub fn set_uuid(&mut self, v: ::std::string::String) {
-        self.uuid = v;
-    }
-
-    // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_uuid(&mut self) -> &mut ::std::string::String {
-        &mut self.uuid
-    }
-
-    // Take field
-    pub fn take_uuid(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.uuid, ::std::string::String::new())
-    }
-}
-
-impl ::protobuf::Message for VLessOutboundSettings {
-    fn is_initialized(&self) -> bool {
-        true
-    }
-
-    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        while !is.eof()? {
-            let (field_number, wire_type) = is.read_tag_unpack()?;
-            match field_number {
-                1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint32()?;
-                    self.port = tmp;
-                },
-                3 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.uuid)?;
-                },
-                _ => {
-                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
-                },
-            };
-        }
-        ::std::result::Result::Ok(())
-    }
-
-    // Compute sizes of nested messages
-    #[allow(unused_variables)]
-    fn compute_size(&self) -> u32 {
-        let mut my_size = 0;
-        if !self.address.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.address);
-        }
-        if self.port != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.port, ::protobuf::wire_format::WireTypeVarint);
-        }
-        if !self.uuid.is_empty() {
-            my_size += ::protobuf::rt::string_size(3, &self.uuid);
-        }
-        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
-        self.cached_size.set(my_size);
-        my_size
-    }
-
-    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.address.is_empty() {
-            os.write_string(1, &self.address)?;
-        }
-        if self.port != 0 {
-            os.write_uint32(2, self.port)?;
-        }
-        if !self.uuid.is_empty() {
-            os.write_string(3, &self.uuid)?;
-        }
-        os.write_unknown_fields(self.get_unknown_fields())?;
-        ::std::result::Result::Ok(())
-    }
-
-    fn get_cached_size(&self) -> u32 {
-        self.cached_size.get()
-    }
-
-    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
-        &self.unknown_fields
-    }
-
-    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
-        &mut self.unknown_fields
-    }
-
-    fn as_any(&self) -> &dyn (::std::any::Any) {
-        self as &dyn (::std::any::Any)
-    }
-    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
-        self as &mut dyn (::std::any::Any)
-    }
-    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
-        self
-    }
-
-    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
-        Self::descriptor_static()
-    }
-
-    fn new() -> VLessOutboundSettings {
-        VLessOutboundSettings::new()
-    }
-
-    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
-        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
-        descriptor.get(|| {
-            let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "address",
-                |m: &VLessOutboundSettings| { &m.address },
-                |m: &mut VLessOutboundSettings| { &mut m.address },
-            ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
-                "port",
-                |m: &VLessOutboundSettings| { &m.port },
-                |m: &mut VLessOutboundSettings| { &mut m.port },
-            ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "uuid",
-                |m: &VLessOutboundSettings| { &m.uuid },
-                |m: &mut VLessOutboundSettings| { &mut m.uuid },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<VLessOutboundSettings>(
-                "VLessOutboundSettings",
-                fields,
-                file_descriptor_proto()
-            )
-        })
-    }
-
-    fn default_instance() -> &'static VLessOutboundSettings {
-        static instance: ::protobuf::rt::LazyV2<VLessOutboundSettings> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(VLessOutboundSettings::new)
-    }
-}
-
-impl ::protobuf::Clear for VLessOutboundSettings {
-    fn clear(&mut self) {
-        self.address.clear();
-        self.port = 0;
-        self.uuid.clear();
-        self.unknown_fields.clear();
-    }
-}
-
-impl ::std::fmt::Debug for VLessOutboundSettings {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-        ::protobuf::text_format::fmt(self, f)
-    }
-}
-
-impl ::protobuf::reflect::ProtobufValue for VLessOutboundSettings {
-    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
-        ::protobuf::reflect::ReflectValueRef::Message(self)
-    }
-}
-
-#[derive(PartialEq,Clone,Default)]
 pub struct TlsOutboundSettings {
     // message fields
     pub server_name: ::std::string::String,
@@ -6243,69 +6236,52 @@ impl ::protobuf::reflect::ProtobufValue for FailOverOutboundSettings {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct StatOutboundSettings {
+pub struct SelectOutboundSettings {
     // message fields
-    pub address: ::std::string::String,
-    pub port: u32,
+    pub actors: ::protobuf::RepeatedField<::std::string::String>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a StatOutboundSettings {
-    fn default() -> &'a StatOutboundSettings {
-        <StatOutboundSettings as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a SelectOutboundSettings {
+    fn default() -> &'a SelectOutboundSettings {
+        <SelectOutboundSettings as ::protobuf::Message>::default_instance()
     }
 }
 
-impl StatOutboundSettings {
-    pub fn new() -> StatOutboundSettings {
+impl SelectOutboundSettings {
+    pub fn new() -> SelectOutboundSettings {
         ::std::default::Default::default()
     }
 
-    // string address = 1;
+    // repeated string actors = 1;
 
 
-    pub fn get_address(&self) -> &str {
-        &self.address
+    pub fn get_actors(&self) -> &[::std::string::String] {
+        &self.actors
     }
-    pub fn clear_address(&mut self) {
-        self.address.clear();
+    pub fn clear_actors(&mut self) {
+        self.actors.clear();
     }
 
     // Param is passed by value, moved
-    pub fn set_address(&mut self, v: ::std::string::String) {
-        self.address = v;
+    pub fn set_actors(&mut self, v: ::protobuf::RepeatedField<::std::string::String>) {
+        self.actors = v;
     }
 
     // Mutable pointer to the field.
-    // If field is not initialized, it is initialized with default value first.
-    pub fn mut_address(&mut self) -> &mut ::std::string::String {
-        &mut self.address
+    pub fn mut_actors(&mut self) -> &mut ::protobuf::RepeatedField<::std::string::String> {
+        &mut self.actors
     }
 
     // Take field
-    pub fn take_address(&mut self) -> ::std::string::String {
-        ::std::mem::replace(&mut self.address, ::std::string::String::new())
-    }
-
-    // uint32 port = 2;
-
-
-    pub fn get_port(&self) -> u32 {
-        self.port
-    }
-    pub fn clear_port(&mut self) {
-        self.port = 0;
-    }
-
-    // Param is passed by value, moved
-    pub fn set_port(&mut self, v: u32) {
-        self.port = v;
+    pub fn take_actors(&mut self) -> ::protobuf::RepeatedField<::std::string::String> {
+        ::std::mem::replace(&mut self.actors, ::protobuf::RepeatedField::new())
     }
 }
 
-impl ::protobuf::Message for StatOutboundSettings {
+impl ::protobuf::Message for SelectOutboundSettings {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -6315,14 +6291,7 @@ impl ::protobuf::Message for StatOutboundSettings {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.address)?;
-                },
-                2 => {
-                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
-                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
-                    }
-                    let tmp = is.read_uint32()?;
-                    self.port = tmp;
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.actors)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -6336,24 +6305,18 @@ impl ::protobuf::Message for StatOutboundSettings {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.address.is_empty() {
-            my_size += ::protobuf::rt::string_size(1, &self.address);
-        }
-        if self.port != 0 {
-            my_size += ::protobuf::rt::value_size(2, self.port, ::protobuf::wire_format::WireTypeVarint);
-        }
+        for value in &self.actors {
+            my_size += ::protobuf::rt::string_size(1, &value);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.address.is_empty() {
-            os.write_string(1, &self.address)?;
-        }
-        if self.port != 0 {
-            os.write_uint32(2, self.port)?;
-        }
+        for v in &self.actors {
+            os.write_string(1, &v)?;
+        };
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -6384,53 +6347,47 @@ impl ::protobuf::Message for StatOutboundSettings {
         Self::descriptor_static()
     }
 
-    fn new() -> StatOutboundSettings {
-        StatOutboundSettings::new()
+    fn new() -> SelectOutboundSettings {
+        SelectOutboundSettings::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
-                "address",
-                |m: &StatOutboundSettings| { &m.address },
-                |m: &mut StatOutboundSettings| { &mut m.address },
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
+                "actors",
+                |m: &SelectOutboundSettings| { &m.actors },
+                |m: &mut SelectOutboundSettings| { &mut m.actors },
             ));
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeUint32>(
-                "port",
-                |m: &StatOutboundSettings| { &m.port },
-                |m: &mut StatOutboundSettings| { &mut m.port },
-            ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<StatOutboundSettings>(
-                "StatOutboundSettings",
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<SelectOutboundSettings>(
+                "SelectOutboundSettings",
                 fields,
                 file_descriptor_proto()
             )
         })
     }
 
-    fn default_instance() -> &'static StatOutboundSettings {
-        static instance: ::protobuf::rt::LazyV2<StatOutboundSettings> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(StatOutboundSettings::new)
+    fn default_instance() -> &'static SelectOutboundSettings {
+        static instance: ::protobuf::rt::LazyV2<SelectOutboundSettings> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(SelectOutboundSettings::new)
     }
 }
 
-impl ::protobuf::Clear for StatOutboundSettings {
+impl ::protobuf::Clear for SelectOutboundSettings {
     fn clear(&mut self) {
-        self.address.clear();
-        self.port = 0;
+        self.actors.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for StatOutboundSettings {
+impl ::std::fmt::Debug for SelectOutboundSettings {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for StatOutboundSettings {
+impl ::protobuf::reflect::ProtobufValue for SelectOutboundSettings {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
@@ -6722,26 +6679,227 @@ impl ::protobuf::reflect::ProtobufValue for Outbound {
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct RoutingRule {
+pub struct Router {
+    // message fields
+    pub rules: ::protobuf::RepeatedField<Router_Rule>,
+    pub domain_resolve: bool,
+    // special fields
+    pub unknown_fields: ::protobuf::UnknownFields,
+    pub cached_size: ::protobuf::CachedSize,
+}
+
+impl<'a> ::std::default::Default for &'a Router {
+    fn default() -> &'a Router {
+        <Router as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl Router {
+    pub fn new() -> Router {
+        ::std::default::Default::default()
+    }
+
+    // repeated .Router.Rule rules = 1;
+
+
+    pub fn get_rules(&self) -> &[Router_Rule] {
+        &self.rules
+    }
+    pub fn clear_rules(&mut self) {
+        self.rules.clear();
+    }
+
+    // Param is passed by value, moved
+    pub fn set_rules(&mut self, v: ::protobuf::RepeatedField<Router_Rule>) {
+        self.rules = v;
+    }
+
+    // Mutable pointer to the field.
+    pub fn mut_rules(&mut self) -> &mut ::protobuf::RepeatedField<Router_Rule> {
+        &mut self.rules
+    }
+
+    // Take field
+    pub fn take_rules(&mut self) -> ::protobuf::RepeatedField<Router_Rule> {
+        ::std::mem::replace(&mut self.rules, ::protobuf::RepeatedField::new())
+    }
+
+    // bool domain_resolve = 2;
+
+
+    pub fn get_domain_resolve(&self) -> bool {
+        self.domain_resolve
+    }
+    pub fn clear_domain_resolve(&mut self) {
+        self.domain_resolve = false;
+    }
+
+    // Param is passed by value, moved
+    pub fn set_domain_resolve(&mut self, v: bool) {
+        self.domain_resolve = v;
+    }
+}
+
+impl ::protobuf::Message for Router {
+    fn is_initialized(&self) -> bool {
+        for v in &self.rules {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        while !is.eof()? {
+            let (field_number, wire_type) = is.read_tag_unpack()?;
+            match field_number {
+                1 => {
+                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.rules)?;
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_bool()?;
+                    self.domain_resolve = tmp;
+                },
+                _ => {
+                    ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u32 {
+        let mut my_size = 0;
+        for value in &self.rules {
+            let len = value.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        };
+        if self.domain_resolve != false {
+            my_size += 2;
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
+        self.cached_size.set(my_size);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
+        for v in &self.rules {
+            os.write_tag(1, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        };
+        if self.domain_resolve != false {
+            os.write_bool(2, self.domain_resolve)?;
+        }
+        os.write_unknown_fields(self.get_unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn get_cached_size(&self) -> u32 {
+        self.cached_size.get()
+    }
+
+    fn get_unknown_fields(&self) -> &::protobuf::UnknownFields {
+        &self.unknown_fields
+    }
+
+    fn mut_unknown_fields(&mut self) -> &mut ::protobuf::UnknownFields {
+        &mut self.unknown_fields
+    }
+
+    fn as_any(&self) -> &dyn (::std::any::Any) {
+        self as &dyn (::std::any::Any)
+    }
+    fn as_any_mut(&mut self) -> &mut dyn (::std::any::Any) {
+        self as &mut dyn (::std::any::Any)
+    }
+    fn into_any(self: ::std::boxed::Box<Self>) -> ::std::boxed::Box<dyn (::std::any::Any)> {
+        self
+    }
+
+    fn descriptor(&self) -> &'static ::protobuf::reflect::MessageDescriptor {
+        Self::descriptor_static()
+    }
+
+    fn new() -> Router {
+        Router::new()
+    }
+
+    fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
+        static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
+        descriptor.get(|| {
+            let mut fields = ::std::vec::Vec::new();
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Router_Rule>>(
+                "rules",
+                |m: &Router| { &m.rules },
+                |m: &mut Router| { &mut m.rules },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeBool>(
+                "domain_resolve",
+                |m: &Router| { &m.domain_resolve },
+                |m: &mut Router| { &mut m.domain_resolve },
+            ));
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Router>(
+                "Router",
+                fields,
+                file_descriptor_proto()
+            )
+        })
+    }
+
+    fn default_instance() -> &'static Router {
+        static instance: ::protobuf::rt::LazyV2<Router> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Router::new)
+    }
+}
+
+impl ::protobuf::Clear for Router {
+    fn clear(&mut self) {
+        self.rules.clear();
+        self.domain_resolve = false;
+        self.unknown_fields.clear();
+    }
+}
+
+impl ::std::fmt::Debug for Router {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        ::protobuf::text_format::fmt(self, f)
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for Router {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(PartialEq,Clone,Default)]
+pub struct Router_Rule {
     // message fields
     pub target_tag: ::std::string::String,
-    pub domains: ::protobuf::RepeatedField<RoutingRule_Domain>,
+    pub domains: ::protobuf::RepeatedField<Router_Rule_Domain>,
     pub ip_cidrs: ::protobuf::RepeatedField<::std::string::String>,
-    pub mmdbs: ::protobuf::RepeatedField<RoutingRule_Mmdb>,
+    pub mmdbs: ::protobuf::RepeatedField<Router_Rule_Mmdb>,
     pub port_ranges: ::protobuf::RepeatedField<::std::string::String>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a RoutingRule {
-    fn default() -> &'a RoutingRule {
-        <RoutingRule as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a Router_Rule {
+    fn default() -> &'a Router_Rule {
+        <Router_Rule as ::protobuf::Message>::default_instance()
     }
 }
 
-impl RoutingRule {
-    pub fn new() -> RoutingRule {
+impl Router_Rule {
+    pub fn new() -> Router_Rule {
         ::std::default::Default::default()
     }
 
@@ -6771,10 +6929,10 @@ impl RoutingRule {
         ::std::mem::replace(&mut self.target_tag, ::std::string::String::new())
     }
 
-    // repeated .RoutingRule.Domain domains = 2;
+    // repeated .Router.Rule.Domain domains = 2;
 
 
-    pub fn get_domains(&self) -> &[RoutingRule_Domain] {
+    pub fn get_domains(&self) -> &[Router_Rule_Domain] {
         &self.domains
     }
     pub fn clear_domains(&mut self) {
@@ -6782,17 +6940,17 @@ impl RoutingRule {
     }
 
     // Param is passed by value, moved
-    pub fn set_domains(&mut self, v: ::protobuf::RepeatedField<RoutingRule_Domain>) {
+    pub fn set_domains(&mut self, v: ::protobuf::RepeatedField<Router_Rule_Domain>) {
         self.domains = v;
     }
 
     // Mutable pointer to the field.
-    pub fn mut_domains(&mut self) -> &mut ::protobuf::RepeatedField<RoutingRule_Domain> {
+    pub fn mut_domains(&mut self) -> &mut ::protobuf::RepeatedField<Router_Rule_Domain> {
         &mut self.domains
     }
 
     // Take field
-    pub fn take_domains(&mut self) -> ::protobuf::RepeatedField<RoutingRule_Domain> {
+    pub fn take_domains(&mut self) -> ::protobuf::RepeatedField<Router_Rule_Domain> {
         ::std::mem::replace(&mut self.domains, ::protobuf::RepeatedField::new())
     }
 
@@ -6821,10 +6979,10 @@ impl RoutingRule {
         ::std::mem::replace(&mut self.ip_cidrs, ::protobuf::RepeatedField::new())
     }
 
-    // repeated .RoutingRule.Mmdb mmdbs = 4;
+    // repeated .Router.Rule.Mmdb mmdbs = 4;
 
 
-    pub fn get_mmdbs(&self) -> &[RoutingRule_Mmdb] {
+    pub fn get_mmdbs(&self) -> &[Router_Rule_Mmdb] {
         &self.mmdbs
     }
     pub fn clear_mmdbs(&mut self) {
@@ -6832,17 +6990,17 @@ impl RoutingRule {
     }
 
     // Param is passed by value, moved
-    pub fn set_mmdbs(&mut self, v: ::protobuf::RepeatedField<RoutingRule_Mmdb>) {
+    pub fn set_mmdbs(&mut self, v: ::protobuf::RepeatedField<Router_Rule_Mmdb>) {
         self.mmdbs = v;
     }
 
     // Mutable pointer to the field.
-    pub fn mut_mmdbs(&mut self) -> &mut ::protobuf::RepeatedField<RoutingRule_Mmdb> {
+    pub fn mut_mmdbs(&mut self) -> &mut ::protobuf::RepeatedField<Router_Rule_Mmdb> {
         &mut self.mmdbs
     }
 
     // Take field
-    pub fn take_mmdbs(&mut self) -> ::protobuf::RepeatedField<RoutingRule_Mmdb> {
+    pub fn take_mmdbs(&mut self) -> ::protobuf::RepeatedField<Router_Rule_Mmdb> {
         ::std::mem::replace(&mut self.mmdbs, ::protobuf::RepeatedField::new())
     }
 
@@ -6872,7 +7030,7 @@ impl RoutingRule {
     }
 }
 
-impl ::protobuf::Message for RoutingRule {
+impl ::protobuf::Message for Router_Rule {
     fn is_initialized(&self) -> bool {
         for v in &self.domains {
             if !v.is_initialized() {
@@ -6990,8 +7148,8 @@ impl ::protobuf::Message for RoutingRule {
         Self::descriptor_static()
     }
 
-    fn new() -> RoutingRule {
-        RoutingRule::new()
+    fn new() -> Router_Rule {
+        Router_Rule::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -7000,44 +7158,44 @@ impl ::protobuf::Message for RoutingRule {
             let mut fields = ::std::vec::Vec::new();
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "target_tag",
-                |m: &RoutingRule| { &m.target_tag },
-                |m: &mut RoutingRule| { &mut m.target_tag },
+                |m: &Router_Rule| { &m.target_tag },
+                |m: &mut Router_Rule| { &mut m.target_tag },
             ));
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<RoutingRule_Domain>>(
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Router_Rule_Domain>>(
                 "domains",
-                |m: &RoutingRule| { &m.domains },
-                |m: &mut RoutingRule| { &mut m.domains },
+                |m: &Router_Rule| { &m.domains },
+                |m: &mut Router_Rule| { &mut m.domains },
             ));
             fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "ip_cidrs",
-                |m: &RoutingRule| { &m.ip_cidrs },
-                |m: &mut RoutingRule| { &mut m.ip_cidrs },
+                |m: &Router_Rule| { &m.ip_cidrs },
+                |m: &mut Router_Rule| { &mut m.ip_cidrs },
             ));
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<RoutingRule_Mmdb>>(
+            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Router_Rule_Mmdb>>(
                 "mmdbs",
-                |m: &RoutingRule| { &m.mmdbs },
-                |m: &mut RoutingRule| { &mut m.mmdbs },
+                |m: &Router_Rule| { &m.mmdbs },
+                |m: &mut Router_Rule| { &mut m.mmdbs },
             ));
             fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "port_ranges",
-                |m: &RoutingRule| { &m.port_ranges },
-                |m: &mut RoutingRule| { &mut m.port_ranges },
+                |m: &Router_Rule| { &m.port_ranges },
+                |m: &mut Router_Rule| { &mut m.port_ranges },
             ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<RoutingRule>(
-                "RoutingRule",
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Router_Rule>(
+                "Router.Rule",
                 fields,
                 file_descriptor_proto()
             )
         })
     }
 
-    fn default_instance() -> &'static RoutingRule {
-        static instance: ::protobuf::rt::LazyV2<RoutingRule> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(RoutingRule::new)
+    fn default_instance() -> &'static Router_Rule {
+        static instance: ::protobuf::rt::LazyV2<Router_Rule> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Router_Rule::new)
     }
 }
 
-impl ::protobuf::Clear for RoutingRule {
+impl ::protobuf::Clear for Router_Rule {
     fn clear(&mut self) {
         self.target_tag.clear();
         self.domains.clear();
@@ -7048,51 +7206,51 @@ impl ::protobuf::Clear for RoutingRule {
     }
 }
 
-impl ::std::fmt::Debug for RoutingRule {
+impl ::std::fmt::Debug for Router_Rule {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for RoutingRule {
+impl ::protobuf::reflect::ProtobufValue for Router_Rule {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct RoutingRule_Domain {
+pub struct Router_Rule_Domain {
     // message fields
-    pub field_type: RoutingRule_Domain_Type,
+    pub field_type: Router_Rule_Domain_Type,
     pub value: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a RoutingRule_Domain {
-    fn default() -> &'a RoutingRule_Domain {
-        <RoutingRule_Domain as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a Router_Rule_Domain {
+    fn default() -> &'a Router_Rule_Domain {
+        <Router_Rule_Domain as ::protobuf::Message>::default_instance()
     }
 }
 
-impl RoutingRule_Domain {
-    pub fn new() -> RoutingRule_Domain {
+impl Router_Rule_Domain {
+    pub fn new() -> Router_Rule_Domain {
         ::std::default::Default::default()
     }
 
-    // .RoutingRule.Domain.Type type = 1;
+    // .Router.Rule.Domain.Type type = 1;
 
 
-    pub fn get_field_type(&self) -> RoutingRule_Domain_Type {
+    pub fn get_field_type(&self) -> Router_Rule_Domain_Type {
         self.field_type
     }
     pub fn clear_field_type(&mut self) {
-        self.field_type = RoutingRule_Domain_Type::PLAIN;
+        self.field_type = Router_Rule_Domain_Type::PLAIN;
     }
 
     // Param is passed by value, moved
-    pub fn set_field_type(&mut self, v: RoutingRule_Domain_Type) {
+    pub fn set_field_type(&mut self, v: Router_Rule_Domain_Type) {
         self.field_type = v;
     }
 
@@ -7123,7 +7281,7 @@ impl RoutingRule_Domain {
     }
 }
 
-impl ::protobuf::Message for RoutingRule_Domain {
+impl ::protobuf::Message for Router_Rule_Domain {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -7150,7 +7308,7 @@ impl ::protobuf::Message for RoutingRule_Domain {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.field_type != RoutingRule_Domain_Type::PLAIN {
+        if self.field_type != Router_Rule_Domain_Type::PLAIN {
             my_size += ::protobuf::rt::enum_size(1, self.field_type);
         }
         if !self.value.is_empty() {
@@ -7162,7 +7320,7 @@ impl ::protobuf::Message for RoutingRule_Domain {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if self.field_type != RoutingRule_Domain_Type::PLAIN {
+        if self.field_type != Router_Rule_Domain_Type::PLAIN {
             os.write_enum(1, ::protobuf::ProtobufEnum::value(&self.field_type))?;
         }
         if !self.value.is_empty() {
@@ -7198,84 +7356,84 @@ impl ::protobuf::Message for RoutingRule_Domain {
         Self::descriptor_static()
     }
 
-    fn new() -> RoutingRule_Domain {
-        RoutingRule_Domain::new()
+    fn new() -> Router_Rule_Domain {
+        Router_Rule_Domain::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::MessageDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
             let mut fields = ::std::vec::Vec::new();
-            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<RoutingRule_Domain_Type>>(
+            fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeEnum<Router_Rule_Domain_Type>>(
                 "type",
-                |m: &RoutingRule_Domain| { &m.field_type },
-                |m: &mut RoutingRule_Domain| { &mut m.field_type },
+                |m: &Router_Rule_Domain| { &m.field_type },
+                |m: &mut Router_Rule_Domain| { &mut m.field_type },
             ));
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "value",
-                |m: &RoutingRule_Domain| { &m.value },
-                |m: &mut RoutingRule_Domain| { &mut m.value },
+                |m: &Router_Rule_Domain| { &m.value },
+                |m: &mut Router_Rule_Domain| { &mut m.value },
             ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<RoutingRule_Domain>(
-                "RoutingRule.Domain",
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Router_Rule_Domain>(
+                "Router.Rule.Domain",
                 fields,
                 file_descriptor_proto()
             )
         })
     }
 
-    fn default_instance() -> &'static RoutingRule_Domain {
-        static instance: ::protobuf::rt::LazyV2<RoutingRule_Domain> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(RoutingRule_Domain::new)
+    fn default_instance() -> &'static Router_Rule_Domain {
+        static instance: ::protobuf::rt::LazyV2<Router_Rule_Domain> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Router_Rule_Domain::new)
     }
 }
 
-impl ::protobuf::Clear for RoutingRule_Domain {
+impl ::protobuf::Clear for Router_Rule_Domain {
     fn clear(&mut self) {
-        self.field_type = RoutingRule_Domain_Type::PLAIN;
+        self.field_type = Router_Rule_Domain_Type::PLAIN;
         self.value.clear();
         self.unknown_fields.clear();
     }
 }
 
-impl ::std::fmt::Debug for RoutingRule_Domain {
+impl ::std::fmt::Debug for Router_Rule_Domain {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for RoutingRule_Domain {
+impl ::protobuf::reflect::ProtobufValue for Router_Rule_Domain {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
 }
 
 #[derive(Clone,PartialEq,Eq,Debug,Hash)]
-pub enum RoutingRule_Domain_Type {
+pub enum Router_Rule_Domain_Type {
     PLAIN = 0,
     DOMAIN = 1,
     FULL = 2,
 }
 
-impl ::protobuf::ProtobufEnum for RoutingRule_Domain_Type {
+impl ::protobuf::ProtobufEnum for Router_Rule_Domain_Type {
     fn value(&self) -> i32 {
         *self as i32
     }
 
-    fn from_i32(value: i32) -> ::std::option::Option<RoutingRule_Domain_Type> {
+    fn from_i32(value: i32) -> ::std::option::Option<Router_Rule_Domain_Type> {
         match value {
-            0 => ::std::option::Option::Some(RoutingRule_Domain_Type::PLAIN),
-            1 => ::std::option::Option::Some(RoutingRule_Domain_Type::DOMAIN),
-            2 => ::std::option::Option::Some(RoutingRule_Domain_Type::FULL),
+            0 => ::std::option::Option::Some(Router_Rule_Domain_Type::PLAIN),
+            1 => ::std::option::Option::Some(Router_Rule_Domain_Type::DOMAIN),
+            2 => ::std::option::Option::Some(Router_Rule_Domain_Type::FULL),
             _ => ::std::option::Option::None
         }
     }
 
     fn values() -> &'static [Self] {
-        static values: &'static [RoutingRule_Domain_Type] = &[
-            RoutingRule_Domain_Type::PLAIN,
-            RoutingRule_Domain_Type::DOMAIN,
-            RoutingRule_Domain_Type::FULL,
+        static values: &'static [Router_Rule_Domain_Type] = &[
+            Router_Rule_Domain_Type::PLAIN,
+            Router_Rule_Domain_Type::DOMAIN,
+            Router_Rule_Domain_Type::FULL,
         ];
         values
     }
@@ -7283,28 +7441,28 @@ impl ::protobuf::ProtobufEnum for RoutingRule_Domain_Type {
     fn enum_descriptor_static() -> &'static ::protobuf::reflect::EnumDescriptor {
         static descriptor: ::protobuf::rt::LazyV2<::protobuf::reflect::EnumDescriptor> = ::protobuf::rt::LazyV2::INIT;
         descriptor.get(|| {
-            ::protobuf::reflect::EnumDescriptor::new_pb_name::<RoutingRule_Domain_Type>("RoutingRule.Domain.Type", file_descriptor_proto())
+            ::protobuf::reflect::EnumDescriptor::new_pb_name::<Router_Rule_Domain_Type>("Router.Rule.Domain.Type", file_descriptor_proto())
         })
     }
 }
 
-impl ::std::marker::Copy for RoutingRule_Domain_Type {
+impl ::std::marker::Copy for Router_Rule_Domain_Type {
 }
 
-impl ::std::default::Default for RoutingRule_Domain_Type {
+impl ::std::default::Default for Router_Rule_Domain_Type {
     fn default() -> Self {
-        RoutingRule_Domain_Type::PLAIN
+        Router_Rule_Domain_Type::PLAIN
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for RoutingRule_Domain_Type {
+impl ::protobuf::reflect::ProtobufValue for Router_Rule_Domain_Type {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Enum(::protobuf::ProtobufEnum::descriptor(self))
     }
 }
 
 #[derive(PartialEq,Clone,Default)]
-pub struct RoutingRule_Mmdb {
+pub struct Router_Rule_Mmdb {
     // message fields
     pub file: ::std::string::String,
     pub country_code: ::std::string::String,
@@ -7313,14 +7471,14 @@ pub struct RoutingRule_Mmdb {
     pub cached_size: ::protobuf::CachedSize,
 }
 
-impl<'a> ::std::default::Default for &'a RoutingRule_Mmdb {
-    fn default() -> &'a RoutingRule_Mmdb {
-        <RoutingRule_Mmdb as ::protobuf::Message>::default_instance()
+impl<'a> ::std::default::Default for &'a Router_Rule_Mmdb {
+    fn default() -> &'a Router_Rule_Mmdb {
+        <Router_Rule_Mmdb as ::protobuf::Message>::default_instance()
     }
 }
 
-impl RoutingRule_Mmdb {
-    pub fn new() -> RoutingRule_Mmdb {
+impl Router_Rule_Mmdb {
+    pub fn new() -> Router_Rule_Mmdb {
         ::std::default::Default::default()
     }
 
@@ -7377,7 +7535,7 @@ impl RoutingRule_Mmdb {
     }
 }
 
-impl ::protobuf::Message for RoutingRule_Mmdb {
+impl ::protobuf::Message for Router_Rule_Mmdb {
     fn is_initialized(&self) -> bool {
         true
     }
@@ -7452,8 +7610,8 @@ impl ::protobuf::Message for RoutingRule_Mmdb {
         Self::descriptor_static()
     }
 
-    fn new() -> RoutingRule_Mmdb {
-        RoutingRule_Mmdb::new()
+    fn new() -> Router_Rule_Mmdb {
+        Router_Rule_Mmdb::new()
     }
 
     fn descriptor_static() -> &'static ::protobuf::reflect::MessageDescriptor {
@@ -7462,29 +7620,29 @@ impl ::protobuf::Message for RoutingRule_Mmdb {
             let mut fields = ::std::vec::Vec::new();
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "file",
-                |m: &RoutingRule_Mmdb| { &m.file },
-                |m: &mut RoutingRule_Mmdb| { &mut m.file },
+                |m: &Router_Rule_Mmdb| { &m.file },
+                |m: &mut Router_Rule_Mmdb| { &mut m.file },
             ));
             fields.push(::protobuf::reflect::accessor::make_simple_field_accessor::<_, ::protobuf::types::ProtobufTypeString>(
                 "country_code",
-                |m: &RoutingRule_Mmdb| { &m.country_code },
-                |m: &mut RoutingRule_Mmdb| { &mut m.country_code },
+                |m: &Router_Rule_Mmdb| { &m.country_code },
+                |m: &mut Router_Rule_Mmdb| { &mut m.country_code },
             ));
-            ::protobuf::reflect::MessageDescriptor::new_pb_name::<RoutingRule_Mmdb>(
-                "RoutingRule.Mmdb",
+            ::protobuf::reflect::MessageDescriptor::new_pb_name::<Router_Rule_Mmdb>(
+                "Router.Rule.Mmdb",
                 fields,
                 file_descriptor_proto()
             )
         })
     }
 
-    fn default_instance() -> &'static RoutingRule_Mmdb {
-        static instance: ::protobuf::rt::LazyV2<RoutingRule_Mmdb> = ::protobuf::rt::LazyV2::INIT;
-        instance.get(RoutingRule_Mmdb::new)
+    fn default_instance() -> &'static Router_Rule_Mmdb {
+        static instance: ::protobuf::rt::LazyV2<Router_Rule_Mmdb> = ::protobuf::rt::LazyV2::INIT;
+        instance.get(Router_Rule_Mmdb::new)
     }
 }
 
-impl ::protobuf::Clear for RoutingRule_Mmdb {
+impl ::protobuf::Clear for Router_Rule_Mmdb {
     fn clear(&mut self) {
         self.file.clear();
         self.country_code.clear();
@@ -7492,13 +7650,13 @@ impl ::protobuf::Clear for RoutingRule_Mmdb {
     }
 }
 
-impl ::std::fmt::Debug for RoutingRule_Mmdb {
+impl ::std::fmt::Debug for Router_Rule_Mmdb {
     fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         ::protobuf::text_format::fmt(self, f)
     }
 }
 
-impl ::protobuf::reflect::ProtobufValue for RoutingRule_Mmdb {
+impl ::protobuf::reflect::ProtobufValue for Router_Rule_Mmdb {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
     }
@@ -7510,8 +7668,9 @@ pub struct Config {
     pub log: ::protobuf::SingularPtrField<Log>,
     pub inbounds: ::protobuf::RepeatedField<Inbound>,
     pub outbounds: ::protobuf::RepeatedField<Outbound>,
-    pub routing_rules: ::protobuf::RepeatedField<RoutingRule>,
+    pub router: ::protobuf::SingularPtrField<Router>,
     pub dns: ::protobuf::SingularPtrField<Dns>,
+    pub api: ::protobuf::SingularPtrField<Api>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -7611,29 +7770,37 @@ impl Config {
         ::std::mem::replace(&mut self.outbounds, ::protobuf::RepeatedField::new())
     }
 
-    // repeated .RoutingRule routing_rules = 4;
+    // .Router router = 4;
 
 
-    pub fn get_routing_rules(&self) -> &[RoutingRule] {
-        &self.routing_rules
+    pub fn get_router(&self) -> &Router {
+        self.router.as_ref().unwrap_or_else(|| <Router as ::protobuf::Message>::default_instance())
     }
-    pub fn clear_routing_rules(&mut self) {
-        self.routing_rules.clear();
+    pub fn clear_router(&mut self) {
+        self.router.clear();
+    }
+
+    pub fn has_router(&self) -> bool {
+        self.router.is_some()
     }
 
     // Param is passed by value, moved
-    pub fn set_routing_rules(&mut self, v: ::protobuf::RepeatedField<RoutingRule>) {
-        self.routing_rules = v;
+    pub fn set_router(&mut self, v: Router) {
+        self.router = ::protobuf::SingularPtrField::some(v);
     }
 
     // Mutable pointer to the field.
-    pub fn mut_routing_rules(&mut self) -> &mut ::protobuf::RepeatedField<RoutingRule> {
-        &mut self.routing_rules
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_router(&mut self) -> &mut Router {
+        if self.router.is_none() {
+            self.router.set_default();
+        }
+        self.router.as_mut().unwrap()
     }
 
     // Take field
-    pub fn take_routing_rules(&mut self) -> ::protobuf::RepeatedField<RoutingRule> {
-        ::std::mem::replace(&mut self.routing_rules, ::protobuf::RepeatedField::new())
+    pub fn take_router(&mut self) -> Router {
+        self.router.take().unwrap_or_else(|| Router::new())
     }
 
     // .Dns dns = 5;
@@ -7668,6 +7835,39 @@ impl Config {
     pub fn take_dns(&mut self) -> Dns {
         self.dns.take().unwrap_or_else(|| Dns::new())
     }
+
+    // .Api api = 6;
+
+
+    pub fn get_api(&self) -> &Api {
+        self.api.as_ref().unwrap_or_else(|| <Api as ::protobuf::Message>::default_instance())
+    }
+    pub fn clear_api(&mut self) {
+        self.api.clear();
+    }
+
+    pub fn has_api(&self) -> bool {
+        self.api.is_some()
+    }
+
+    // Param is passed by value, moved
+    pub fn set_api(&mut self, v: Api) {
+        self.api = ::protobuf::SingularPtrField::some(v);
+    }
+
+    // Mutable pointer to the field.
+    // If field is not initialized, it is initialized with default value first.
+    pub fn mut_api(&mut self) -> &mut Api {
+        if self.api.is_none() {
+            self.api.set_default();
+        }
+        self.api.as_mut().unwrap()
+    }
+
+    // Take field
+    pub fn take_api(&mut self) -> Api {
+        self.api.take().unwrap_or_else(|| Api::new())
+    }
 }
 
 impl ::protobuf::Message for Config {
@@ -7687,12 +7887,17 @@ impl ::protobuf::Message for Config {
                 return false;
             }
         };
-        for v in &self.routing_rules {
+        for v in &self.router {
             if !v.is_initialized() {
                 return false;
             }
         };
         for v in &self.dns {
+            if !v.is_initialized() {
+                return false;
+            }
+        };
+        for v in &self.api {
             if !v.is_initialized() {
                 return false;
             }
@@ -7714,10 +7919,13 @@ impl ::protobuf::Message for Config {
                     ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.outbounds)?;
                 },
                 4 => {
-                    ::protobuf::rt::read_repeated_message_into(wire_type, is, &mut self.routing_rules)?;
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.router)?;
                 },
                 5 => {
                     ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.dns)?;
+                },
+                6 => {
+                    ::protobuf::rt::read_singular_message_into(wire_type, is, &mut self.api)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -7743,11 +7951,15 @@ impl ::protobuf::Message for Config {
             let len = value.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         };
-        for value in &self.routing_rules {
-            let len = value.compute_size();
+        if let Some(ref v) = self.router.as_ref() {
+            let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
-        };
+        }
         if let Some(ref v) = self.dns.as_ref() {
+            let len = v.compute_size();
+            my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
+        }
+        if let Some(ref v) = self.api.as_ref() {
             let len = v.compute_size();
             my_size += 1 + ::protobuf::rt::compute_raw_varint32_size(len) + len;
         }
@@ -7772,13 +7984,18 @@ impl ::protobuf::Message for Config {
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         };
-        for v in &self.routing_rules {
+        if let Some(ref v) = self.router.as_ref() {
             os.write_tag(4, ::protobuf::wire_format::WireTypeLengthDelimited)?;
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
-        };
+        }
         if let Some(ref v) = self.dns.as_ref() {
             os.write_tag(5, ::protobuf::wire_format::WireTypeLengthDelimited)?;
+            os.write_raw_varint32(v.get_cached_size())?;
+            v.write_to_with_cached_sizes(os)?;
+        }
+        if let Some(ref v) = self.api.as_ref() {
+            os.write_tag(6, ::protobuf::wire_format::WireTypeLengthDelimited)?;
             os.write_raw_varint32(v.get_cached_size())?;
             v.write_to_with_cached_sizes(os)?;
         }
@@ -7835,15 +8052,20 @@ impl ::protobuf::Message for Config {
                 |m: &Config| { &m.outbounds },
                 |m: &mut Config| { &mut m.outbounds },
             ));
-            fields.push(::protobuf::reflect::accessor::make_repeated_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<RoutingRule>>(
-                "routing_rules",
-                |m: &Config| { &m.routing_rules },
-                |m: &mut Config| { &mut m.routing_rules },
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Router>>(
+                "router",
+                |m: &Config| { &m.router },
+                |m: &mut Config| { &mut m.router },
             ));
             fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Dns>>(
                 "dns",
                 |m: &Config| { &m.dns },
                 |m: &mut Config| { &mut m.dns },
+            ));
+            fields.push(::protobuf::reflect::accessor::make_singular_ptr_field_accessor::<_, ::protobuf::types::ProtobufTypeMessage<Api>>(
+                "api",
+                |m: &Config| { &m.api },
+                |m: &mut Config| { &mut m.api },
             ));
             ::protobuf::reflect::MessageDescriptor::new_pb_name::<Config>(
                 "Config",
@@ -7864,8 +8086,9 @@ impl ::protobuf::Clear for Config {
         self.log.clear();
         self.inbounds.clear();
         self.outbounds.clear();
-        self.routing_rules.clear();
+        self.router.clear();
         self.dns.clear();
+        self.api.clear();
         self.unknown_fields.clear();
     }
 }
@@ -7883,100 +8106,102 @@ impl ::protobuf::reflect::ProtobufValue for Config {
 }
 
 static file_descriptor_proto_data: &'static [u8] = b"\
-    \n\x20src/config/internal/config.proto\"\xbd\x01\n\x03Dns\x12\x18\n\x07s\
-    ervers\x18\x01\x20\x03(\tR\x07servers\x12\x12\n\x04bind\x18\x02\x20\x01(\
-    \tR\x04bind\x12%\n\x05hosts\x18\x03\x20\x03(\x0b2\x0f.Dns.HostsEntryR\
-    \x05hosts\x1a\x1d\n\x03Ips\x12\x16\n\x06values\x18\x01\x20\x03(\tR\x06va\
-    lues\x1aB\n\nHostsEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\
-    \x1e\n\x05value\x18\x02\x20\x01(\x0b2\x08.Dns.IpsR\x05value:\x028\x01\"\
-    \xcc\x01\n\x03Log\x12\x20\n\x05level\x18\x01\x20\x01(\x0e2\n.Log.LevelR\
-    \x05level\x12#\n\x06output\x18\x02\x20\x01(\x0e2\x0b.Log.OutputR\x06outp\
-    ut\x12\x1f\n\x0boutput_file\x18\x03\x20\x01(\tR\noutputFile\"<\n\x05Leve\
-    l\x12\t\n\x05TRACE\x10\0\x12\t\n\x05DEBUG\x10\x01\x12\x08\n\x04INFO\x10\
-    \x02\x12\x08\n\x04WARN\x10\x03\x12\t\n\x05ERROR\x10\x04\"\x1f\n\x06Outpu\
-    t\x12\x0b\n\x07CONSOLE\x10\0\x12\x08\n\x04FILE\x10\x01\"\xec\x01\n\x12Tu\
-    nInboundSettings\x12\x0e\n\x02fd\x18\x01\x20\x01(\x05R\x02fd\x12\x12\n\
-    \x04name\x18\x02\x20\x01(\tR\x04name\x12\x18\n\x07address\x18\x03\x20\
-    \x01(\tR\x07address\x12\x18\n\x07gateway\x18\x04\x20\x01(\tR\x07gateway\
-    \x12\x18\n\x07netmask\x18\x05\x20\x01(\tR\x07netmask\x12\x10\n\x03mtu\
-    \x18\x06\x20\x01(\x05R\x03mtu\x12(\n\x10fake_dns_exclude\x18\x07\x20\x03\
-    (\tR\x0efakeDnsExclude\x12(\n\x10fake_dns_include\x18\x08\x20\x03(\tR\
-    \x0efakeDnsInclude\"P\n\x1aShadowsocksInboundSettings\x12\x16\n\x06metho\
-    d\x18\x01\x20\x01(\tR\x06method\x12\x1a\n\x08password\x18\x02\x20\x01(\t\
-    R\x08password\"3\n\x15TrojanInboundSettings\x12\x1a\n\x08password\x18\
-    \x03\x20\x01(\tR\x08password\".\n\x18WebSocketInboundSettings\x12\x12\n\
-    \x04path\x18\x01\x20\x01(\tR\x04path\"-\n\x13AMuxInboundSettings\x12\x16\
-    \n\x06actors\x18\x01\x20\x03(\tR\x06actors\"`\n\x13QuicInboundSettings\
-    \x12\x20\n\x0bcertificate\x18\x01\x20\x01(\tR\x0bcertificate\x12'\n\x0fc\
-    ertificate_key\x18\x02\x20\x01(\tR\x0ecertificateKey\".\n\x14ChainInboun\
-    dSettings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\"\x81\x01\n\
-    \x07Inbound\x12\x10\n\x03tag\x18\x01\x20\x01(\tR\x03tag\x12\x1a\n\x08pro\
-    tocol\x18\x02\x20\x01(\tR\x08protocol\x12\x18\n\x07address\x18\x03\x20\
-    \x01(\tR\x07address\x12\x12\n\x04port\x18\x04\x20\x01(\rR\x04port\x12\
-    \x1a\n\x08settings\x18\x05\x20\x01(\x0cR\x08settings\"H\n\x18RedirectOut\
-    boundSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\
-    \x12\n\x04port\x18\x02\x20\x01(\rR\x04port\"E\n\x15SocksOutboundSettings\
-    \x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\
-    \x18\x02\x20\x01(\rR\x04port\"\x7f\n\x1bShadowsocksOutboundSettings\x12\
-    \x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\x18\
-    \x02\x20\x01(\rR\x04port\x12\x16\n\x06method\x18\x03\x20\x01(\tR\x06meth\
-    od\x12\x1a\n\x08password\x18\x04\x20\x01(\tR\x08password\"b\n\x16TrojanO\
+    \n\x20src/config/internal/config.proto\"3\n\x03Api\x12\x18\n\x07address\
+    \x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\x18\x02\x20\x01(\rR\
+    \x04port\"\xbd\x01\n\x03Dns\x12\x18\n\x07servers\x18\x01\x20\x03(\tR\x07\
+    servers\x12\x12\n\x04bind\x18\x02\x20\x01(\tR\x04bind\x12%\n\x05hosts\
+    \x18\x03\x20\x03(\x0b2\x0f.Dns.HostsEntryR\x05hosts\x1a\x1d\n\x03Ips\x12\
+    \x16\n\x06values\x18\x01\x20\x03(\tR\x06values\x1aB\n\nHostsEntry\x12\
+    \x10\n\x03key\x18\x01\x20\x01(\tR\x03key\x12\x1e\n\x05value\x18\x02\x20\
+    \x01(\x0b2\x08.Dns.IpsR\x05value:\x028\x01\"\xcc\x01\n\x03Log\x12\x20\n\
+    \x05level\x18\x01\x20\x01(\x0e2\n.Log.LevelR\x05level\x12#\n\x06output\
+    \x18\x02\x20\x01(\x0e2\x0b.Log.OutputR\x06output\x12\x1f\n\x0boutput_fil\
+    e\x18\x03\x20\x01(\tR\noutputFile\"<\n\x05Level\x12\t\n\x05TRACE\x10\0\
+    \x12\t\n\x05DEBUG\x10\x01\x12\x08\n\x04INFO\x10\x02\x12\x08\n\x04WARN\
+    \x10\x03\x12\t\n\x05ERROR\x10\x04\"\x1f\n\x06Output\x12\x0b\n\x07CONSOLE\
+    \x10\0\x12\x08\n\x04FILE\x10\x01\"\x80\x02\n\x12TunInboundSettings\x12\
+    \x0e\n\x02fd\x18\x01\x20\x01(\x05R\x02fd\x12\x12\n\x04auto\x18\t\x20\x01\
+    (\x08R\x04auto\x12\x12\n\x04name\x18\x02\x20\x01(\tR\x04name\x12\x18\n\
+    \x07address\x18\x03\x20\x01(\tR\x07address\x12\x18\n\x07gateway\x18\x04\
+    \x20\x01(\tR\x07gateway\x12\x18\n\x07netmask\x18\x05\x20\x01(\tR\x07netm\
+    ask\x12\x10\n\x03mtu\x18\x06\x20\x01(\x05R\x03mtu\x12(\n\x10fake_dns_exc\
+    lude\x18\x07\x20\x03(\tR\x0efakeDnsExclude\x12(\n\x10fake_dns_include\
+    \x18\x08\x20\x03(\tR\x0efakeDnsInclude\"P\n\x1aShadowsocksInboundSetting\
+    s\x12\x16\n\x06method\x18\x01\x20\x01(\tR\x06method\x12\x1a\n\x08passwor\
+    d\x18\x02\x20\x01(\tR\x08password\"3\n\x15TrojanInboundSettings\x12\x1a\
+    \n\x08password\x18\x03\x20\x01(\tR\x08password\".\n\x18WebSocketInboundS\
+    ettings\x12\x12\n\x04path\x18\x01\x20\x01(\tR\x04path\"-\n\x13AMuxInboun\
+    dSettings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\"`\n\x13Quic\
+    InboundSettings\x12\x20\n\x0bcertificate\x18\x01\x20\x01(\tR\x0bcertific\
+    ate\x12'\n\x0fcertificate_key\x18\x02\x20\x01(\tR\x0ecertificateKey\".\n\
+    \x14ChainInboundSettings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06acto\
+    rs\"\x81\x01\n\x07Inbound\x12\x10\n\x03tag\x18\x01\x20\x01(\tR\x03tag\
+    \x12\x1a\n\x08protocol\x18\x02\x20\x01(\tR\x08protocol\x12\x18\n\x07addr\
+    ess\x18\x03\x20\x01(\tR\x07address\x12\x12\n\x04port\x18\x04\x20\x01(\rR\
+    \x04port\x12\x1a\n\x08settings\x18\x05\x20\x01(\x0cR\x08settings\"H\n\
+    \x18RedirectOutboundSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\
+    \x07address\x12\x12\n\x04port\x18\x02\x20\x01(\rR\x04port\"E\n\x15SocksO\
     utboundSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\
-    \x12\n\x04port\x18\x02\x20\x01(\rR\x04port\x12\x1a\n\x08password\x18\x03\
-    \x20\x01(\tR\x08password\"u\n\x15VMessOutboundSettings\x12\x18\n\x07addr\
-    ess\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\x18\x02\x20\x01(\rR\
-    \x04port\x12\x12\n\x04uuid\x18\x03\x20\x01(\tR\x04uuid\x12\x1a\n\x08secu\
-    rity\x18\x04\x20\x01(\tR\x08security\"Y\n\x15VLessOutboundSettings\x12\
-    \x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\x18\
-    \x02\x20\x01(\rR\x04port\x12\x12\n\x04uuid\x18\x03\x20\x01(\tR\x04uuid\"\
-    J\n\x13TlsOutboundSettings\x12\x1f\n\x0bserver_name\x18\x01\x20\x01(\tR\
-    \nserverName\x12\x12\n\x04alpn\x18\x02\x20\x03(\tR\x04alpn\"\xae\x01\n\
-    \x19WebSocketOutboundSettings\x12\x12\n\x04path\x18\x01\x20\x01(\tR\x04p\
-    ath\x12A\n\x07headers\x18\x02\x20\x03(\x0b2'.WebSocketOutboundSettings.H\
-    eadersEntryR\x07headers\x1a:\n\x0cHeadersEntry\x12\x10\n\x03key\x18\x01\
-    \x20\x01(\tR\x03key\x12\x14\n\x05value\x18\x02\x20\x01(\tR\x05value:\x02\
-    8\x01\"?\n\x15HTTP2OutboundSettings\x12\x12\n\x04path\x18\x01\x20\x01(\t\
-    R\x04path\x12\x12\n\x04host\x18\x02\x20\x01(\tR\x04host\"O\n\x16TryAllOu\
-    tboundSettings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\x12\x1d\
-    \n\ndelay_base\x18\x02\x20\x01(\rR\tdelayBase\"0\n\x16RandomOutboundSett\
-    ings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\"\x9f\x01\n\x14AM\
-    uxOutboundSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\
-    \x12\x12\n\x04port\x18\x02\x20\x01(\rR\x04port\x12\x16\n\x06actors\x18\
-    \x03\x20\x03(\tR\x06actors\x12\x1f\n\x0bmax_accepts\x18\x04\x20\x01(\rR\
-    \nmaxAccepts\x12\x20\n\x0bconcurrency\x18\x05\x20\x01(\rR\x0bconcurrency\
-    \"\x87\x01\n\x14QuicOutboundSettings\x12\x18\n\x07address\x18\x01\x20\
-    \x01(\tR\x07address\x12\x12\n\x04port\x18\x02\x20\x01(\rR\x04port\x12\
-    \x1f\n\x0bserver_name\x18\x03\x20\x01(\tR\nserverName\x12\x20\n\x0bcerti\
-    ficate\x18\x04\x20\x01(\tR\x0bcertificate\"/\n\x15ChainOutboundSettings\
-    \x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\"K\n\x15RetryOutbound\
-    Settings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\x12\x1a\n\x08\
-    attempts\x18\x02\x20\x01(\rR\x08attempts\"\xa6\x02\n\x18FailOverOutbound\
-    Settings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\x12!\n\x0cfai\
-    l_timeout\x18\x02\x20\x01(\rR\x0bfailTimeout\x12!\n\x0chealth_check\x18\
-    \x03\x20\x01(\x08R\x0bhealthCheck\x12%\n\x0echeck_interval\x18\x04\x20\
-    \x01(\rR\rcheckInterval\x12\x1a\n\x08failover\x18\x05\x20\x01(\x08R\x08f\
-    ailover\x12%\n\x0efallback_cache\x18\x06\x20\x01(\x08R\rfallbackCache\
-    \x12\x1d\n\ncache_size\x18\x07\x20\x01(\rR\tcacheSize\x12#\n\rcache_time\
-    out\x18\x08\x20\x01(\rR\x0ccacheTimeout\"D\n\x14StatOutboundSettings\x12\
-    \x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\x18\
-    \x02\x20\x01(\rR\x04port\"h\n\x08Outbound\x12\x10\n\x03tag\x18\x01\x20\
-    \x01(\tR\x03tag\x12\x1a\n\x08protocol\x18\x02\x20\x01(\tR\x08protocol\
-    \x12\x12\n\x04bind\x18\x03\x20\x01(\tR\x04bind\x12\x1a\n\x08settings\x18\
-    \x04\x20\x01(\x0cR\x08settings\"\xf6\x02\n\x0bRoutingRule\x12\x1d\n\ntar\
-    get_tag\x18\x01\x20\x01(\tR\ttargetTag\x12-\n\x07domains\x18\x02\x20\x03\
-    (\x0b2\x13.RoutingRule.DomainR\x07domains\x12\x19\n\x08ip_cidrs\x18\x03\
-    \x20\x03(\tR\x07ipCidrs\x12'\n\x05mmdbs\x18\x04\x20\x03(\x0b2\x11.Routin\
-    gRule.MmdbR\x05mmdbs\x12\x1f\n\x0bport_ranges\x18\x05\x20\x03(\tR\nportR\
-    anges\x1au\n\x06Domain\x12,\n\x04type\x18\x01\x20\x01(\x0e2\x18.RoutingR\
-    ule.Domain.TypeR\x04type\x12\x14\n\x05value\x18\x02\x20\x01(\tR\x05value\
-    \"'\n\x04Type\x12\t\n\x05PLAIN\x10\0\x12\n\n\x06DOMAIN\x10\x01\x12\x08\n\
-    \x04FULL\x10\x02\x1a=\n\x04Mmdb\x12\x12\n\x04file\x18\x01\x20\x01(\tR\
-    \x04file\x12!\n\x0ccountry_code\x18\x02\x20\x01(\tR\x0bcountryCode\"\xba\
-    \x01\n\x06Config\x12\x16\n\x03log\x18\x01\x20\x01(\x0b2\x04.LogR\x03log\
-    \x12$\n\x08inbounds\x18\x02\x20\x03(\x0b2\x08.InboundR\x08inbounds\x12'\
-    \n\toutbounds\x18\x03\x20\x03(\x0b2\t.OutboundR\toutbounds\x121\n\rrouti\
-    ng_rules\x18\x04\x20\x03(\x0b2\x0c.RoutingRuleR\x0croutingRules\x12\x16\
-    \n\x03dns\x18\x05\x20\x01(\x0b2\x04.DnsR\x03dnsb\x06proto3\
+    \x12\n\x04port\x18\x02\x20\x01(\rR\x04port\"\x7f\n\x1bShadowsocksOutboun\
+    dSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\
+    \x04port\x18\x02\x20\x01(\rR\x04port\x12\x16\n\x06method\x18\x03\x20\x01\
+    (\tR\x06method\x12\x1a\n\x08password\x18\x04\x20\x01(\tR\x08password\"b\
+    \n\x16TrojanOutboundSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\
+    \x07address\x12\x12\n\x04port\x18\x02\x20\x01(\rR\x04port\x12\x1a\n\x08p\
+    assword\x18\x03\x20\x01(\tR\x08password\"u\n\x15VMessOutboundSettings\
+    \x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\x04port\
+    \x18\x02\x20\x01(\rR\x04port\x12\x12\n\x04uuid\x18\x03\x20\x01(\tR\x04uu\
+    id\x12\x1a\n\x08security\x18\x04\x20\x01(\tR\x08security\"J\n\x13TlsOutb\
+    oundSettings\x12\x1f\n\x0bserver_name\x18\x01\x20\x01(\tR\nserverName\
+    \x12\x12\n\x04alpn\x18\x02\x20\x03(\tR\x04alpn\"\xae\x01\n\x19WebSocketO\
+    utboundSettings\x12\x12\n\x04path\x18\x01\x20\x01(\tR\x04path\x12A\n\x07\
+    headers\x18\x02\x20\x03(\x0b2'.WebSocketOutboundSettings.HeadersEntryR\
+    \x07headers\x1a:\n\x0cHeadersEntry\x12\x10\n\x03key\x18\x01\x20\x01(\tR\
+    \x03key\x12\x14\n\x05value\x18\x02\x20\x01(\tR\x05value:\x028\x01\"?\n\
+    \x15HTTP2OutboundSettings\x12\x12\n\x04path\x18\x01\x20\x01(\tR\x04path\
+    \x12\x12\n\x04host\x18\x02\x20\x01(\tR\x04host\"O\n\x16TryAllOutboundSet\
+    tings\x12\x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\x12\x1d\n\ndelay\
+    _base\x18\x02\x20\x01(\rR\tdelayBase\"0\n\x16RandomOutboundSettings\x12\
+    \x16\n\x06actors\x18\x01\x20\x03(\tR\x06actors\"\x9f\x01\n\x14AMuxOutbou\
+    ndSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07address\x12\x12\n\
+    \x04port\x18\x02\x20\x01(\rR\x04port\x12\x16\n\x06actors\x18\x03\x20\x03\
+    (\tR\x06actors\x12\x1f\n\x0bmax_accepts\x18\x04\x20\x01(\rR\nmaxAccepts\
+    \x12\x20\n\x0bconcurrency\x18\x05\x20\x01(\rR\x0bconcurrency\"\x87\x01\n\
+    \x14QuicOutboundSettings\x12\x18\n\x07address\x18\x01\x20\x01(\tR\x07add\
+    ress\x12\x12\n\x04port\x18\x02\x20\x01(\rR\x04port\x12\x1f\n\x0bserver_n\
+    ame\x18\x03\x20\x01(\tR\nserverName\x12\x20\n\x0bcertificate\x18\x04\x20\
+    \x01(\tR\x0bcertificate\"/\n\x15ChainOutboundSettings\x12\x16\n\x06actor\
+    s\x18\x01\x20\x03(\tR\x06actors\"K\n\x15RetryOutboundSettings\x12\x16\n\
+    \x06actors\x18\x01\x20\x03(\tR\x06actors\x12\x1a\n\x08attempts\x18\x02\
+    \x20\x01(\rR\x08attempts\"\xa6\x02\n\x18FailOverOutboundSettings\x12\x16\
+    \n\x06actors\x18\x01\x20\x03(\tR\x06actors\x12!\n\x0cfail_timeout\x18\
+    \x02\x20\x01(\rR\x0bfailTimeout\x12!\n\x0chealth_check\x18\x03\x20\x01(\
+    \x08R\x0bhealthCheck\x12%\n\x0echeck_interval\x18\x04\x20\x01(\rR\rcheck\
+    Interval\x12\x1a\n\x08failover\x18\x05\x20\x01(\x08R\x08failover\x12%\n\
+    \x0efallback_cache\x18\x06\x20\x01(\x08R\rfallbackCache\x12\x1d\n\ncache\
+    _size\x18\x07\x20\x01(\rR\tcacheSize\x12#\n\rcache_timeout\x18\x08\x20\
+    \x01(\rR\x0ccacheTimeout\"0\n\x16SelectOutboundSettings\x12\x16\n\x06act\
+    ors\x18\x01\x20\x03(\tR\x06actors\"h\n\x08Outbound\x12\x10\n\x03tag\x18\
+    \x01\x20\x01(\tR\x03tag\x12\x1a\n\x08protocol\x18\x02\x20\x01(\tR\x08pro\
+    tocol\x12\x12\n\x04bind\x18\x03\x20\x01(\tR\x04bind\x12\x1a\n\x08setting\
+    s\x18\x04\x20\x01(\x0cR\x08settings\"\xc5\x03\n\x06Router\x12\"\n\x05rul\
+    es\x18\x01\x20\x03(\x0b2\x0c.Router.RuleR\x05rules\x12%\n\x0edomain_reso\
+    lve\x18\x02\x20\x01(\x08R\rdomainResolve\x1a\xef\x02\n\x04Rule\x12\x1d\n\
+    \ntarget_tag\x18\x01\x20\x01(\tR\ttargetTag\x12-\n\x07domains\x18\x02\
+    \x20\x03(\x0b2\x13.Router.Rule.DomainR\x07domains\x12\x19\n\x08ip_cidrs\
+    \x18\x03\x20\x03(\tR\x07ipCidrs\x12'\n\x05mmdbs\x18\x04\x20\x03(\x0b2\
+    \x11.Router.Rule.MmdbR\x05mmdbs\x12\x1f\n\x0bport_ranges\x18\x05\x20\x03\
+    (\tR\nportRanges\x1au\n\x06Domain\x12,\n\x04type\x18\x01\x20\x01(\x0e2\
+    \x18.Router.Rule.Domain.TypeR\x04type\x12\x14\n\x05value\x18\x02\x20\x01\
+    (\tR\x05value\"'\n\x04Type\x12\t\n\x05PLAIN\x10\0\x12\n\n\x06DOMAIN\x10\
+    \x01\x12\x08\n\x04FULL\x10\x02\x1a=\n\x04Mmdb\x12\x12\n\x04file\x18\x01\
+    \x20\x01(\tR\x04file\x12!\n\x0ccountry_code\x18\x02\x20\x01(\tR\x0bcount\
+    ryCode\"\xc0\x01\n\x06Config\x12\x16\n\x03log\x18\x01\x20\x01(\x0b2\x04.\
+    LogR\x03log\x12$\n\x08inbounds\x18\x02\x20\x03(\x0b2\x08.InboundR\x08inb\
+    ounds\x12'\n\toutbounds\x18\x03\x20\x03(\x0b2\t.OutboundR\toutbounds\x12\
+    \x1f\n\x06router\x18\x04\x20\x01(\x0b2\x07.RouterR\x06router\x12\x16\n\
+    \x03dns\x18\x05\x20\x01(\x0b2\x04.DnsR\x03dns\x12\x16\n\x03api\x18\x06\
+    \x20\x01(\x0b2\x04.ApiR\x03apib\x06proto3\
 ";
 
 static file_descriptor_proto_lazy: ::protobuf::rt::LazyV2<::protobuf::descriptor::FileDescriptorProto> = ::protobuf::rt::LazyV2::INIT;
