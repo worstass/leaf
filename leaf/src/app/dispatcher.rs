@@ -67,8 +67,8 @@ impl Dispatcher {
         Dispatcher {
             outbound_manager,
             router,
-            endpoint_tcp_sem: Semaphore::new(option::ENDPOINT_TCP_CONCURRENCY),
-            direct_tcp_sem: Semaphore::new(option::DIRECT_TCP_CONCURRENCY),
+            endpoint_tcp_sem: Semaphore::new(*option::ENDPOINT_TCP_CONCURRENCY),
+            direct_tcp_sem: Semaphore::new(*option::DIRECT_TCP_CONCURRENCY),
             num_endpoint_tcp: AtomicUsize::new(0),
             num_direct_tcp: AtomicUsize::new(0),
         }
@@ -201,13 +201,10 @@ impl Dispatcher {
             Ok(rhs) => {
                 let elapsed = tokio::time::Instant::now().duration_since(handshake_start);
 
-                #[cfg(not(any(target_os = "ios", target_os = "android")))]
-                {
-                    log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
-                }
-                #[cfg(any(target_os = "ios", target_os = "android"))]
-                {
+                if *crate::option::LOG_NO_COLOR {
                     log_request(&sess, h.tag(), None, elapsed.as_millis());
+                } else {
+                    log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
                 }
 
                 let (lr, mut lw) = tokio::io::split(lhs);
@@ -522,13 +519,10 @@ impl Dispatcher {
             Ok(c) => {
                 let elapsed = tokio::time::Instant::now().duration_since(handshake_start);
 
-                #[cfg(not(any(target_os = "ios", target_os = "android")))]
-                {
-                    log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
-                }
-                #[cfg(any(target_os = "ios", target_os = "android"))]
-                {
+                if *crate::option::LOG_NO_COLOR {
                     log_request(&sess, h.tag(), None, elapsed.as_millis());
+                } else {
+                    log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
                 }
 
                 Ok(c)
