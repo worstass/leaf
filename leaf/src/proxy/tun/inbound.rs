@@ -17,7 +17,7 @@ use crate::{
 };
 
 use super::netstack::NetStack;
-use std::intrinsics::unaligned_volatile_load;
+// use std::intrinsics::unaligned_volatile_load;
 
 const MTU: usize = 1500;
 
