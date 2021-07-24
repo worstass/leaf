@@ -5,7 +5,7 @@ use anyhow::Result;
 
 use futures::stream::StreamExt;
 use log::*;
-use tokio::net::{TcpListener, TcpStream, UdpSocket};
+use tokio::net::{TcpStream, UdpSocket};
 use tokio::sync::mpsc::channel as tokio_channel;
 use tokio::sync::mpsc::{Receiver as TokioReceiver, Sender as TokioSender};
 
@@ -13,8 +13,8 @@ use crate::app::dispatcher::Dispatcher;
 use crate::app::nat_manager::{NatManager, UdpPacket};
 use crate::proxy::InboundHandler;
 use crate::proxy::{
-    InboundDatagram, InboundTransport, SimpleInboundDatagram, SimpleProxyStream,
-    SingleInboundTransport,
+    BaseInboundTransport, InboundDatagram, InboundTransport, SimpleInboundDatagram,
+    SimpleProxyStream, TcpInboundHandler, TcpListener, UdpInboundHandler,
 };
 use crate::session::{Network, Session, SocksAddr};
 use crate::Runner;
@@ -71,6 +71,19 @@ async fn handle_inbound_datagram(
                 break;
             }
             Ok((n, dgram_src, dst_addr)) => {
+                if n == 0 {
+                    // Means a proxy layer error, e.g. the ss handler failed to
+                    // decrypt a message.
+                    //
+                    // TODO use error matching for this purpose?
+                    //
+                    // The problem here is we don't want to exit the receive loop
+                    // because of a proxy protocol error if the underlying socket
+                    // is UDP-based. But we do wnat to exit the loop and the task
+                    // spawned above if the underlying socket is TCP-based. More
+                    // careful investigation needed.
+                    continue;
+                }
                 let dst_addr = if let Some(dst_addr) = dst_addr {
                     dst_addr
                 } else {
@@ -111,7 +124,7 @@ async fn handle_inbound_datagram(
 
 async fn handle_inbound_stream(
     stream: TcpStream,
-    handler: Arc<dyn InboundHandler>,
+    h: Arc<dyn InboundHandler>,
     dispatcher: Arc<Dispatcher>,
     nat_manager: Arc<NatManager>,
 ) {
@@ -125,38 +138,35 @@ async fn handle_inbound_stream(
         network: Network::Tcp,
         source,
         local_addr,
-        inbound_tag: handler.tag().clone(),
+        inbound_tag: h.tag().clone(),
         ..Default::default()
     };
 
-    match handler
-        .handle_tcp(sess, Box::new(SimpleProxyStream(stream)))
-        .await
-    {
+    match TcpInboundHandler::handle(h.as_ref(), sess, Box::new(SimpleProxyStream(stream))).await {
         Ok(res) => match res {
             InboundTransport::Stream(stream, mut sess) => {
                 dispatcher.dispatch_tcp(&mut sess, stream).await;
             }
             InboundTransport::Datagram(socket) => {
-                handle_inbound_datagram(handler.tag().clone(), socket, nat_manager).await;
+                handle_inbound_datagram(h.tag().clone(), socket, nat_manager).await;
             }
             InboundTransport::Incoming(mut incoming) => {
                 while let Some(transport) = incoming.next().await {
                     match transport {
-                        SingleInboundTransport::Stream(stream, mut sess) => {
+                        BaseInboundTransport::Stream(stream, mut sess) => {
                             let dispatcher2 = dispatcher.clone();
                             tokio::spawn(async move {
                                 dispatcher2.dispatch_tcp(&mut sess, stream).await;
                             });
                         }
-                        SingleInboundTransport::Datagram(socket) => {
+                        BaseInboundTransport::Datagram(socket) => {
                             let nat_manager2 = nat_manager.clone();
-                            let tag = handler.tag().clone();
+                            let tag = h.tag().clone();
                             tokio::spawn(async move {
                                 handle_inbound_datagram(tag, socket, nat_manager2).await;
                             });
                         }
-                        SingleInboundTransport::Empty => (),
+                        BaseInboundTransport::Empty => (),
                     }
                 }
             }
@@ -222,9 +232,11 @@ impl NetworkInboundListener {
                 info!("inbound listening udp {}", &listen_addr);
 
                 // FIXME spawn
-                match handler
-                    .handle_udp(Box::new(SimpleInboundDatagram(socket)))
-                    .await
+                match UdpInboundHandler::handle(
+                    handler.as_ref(),
+                    Box::new(SimpleInboundDatagram(socket)),
+                )
+                .await
                 {
                     Ok(res) => match res {
                         InboundTransport::Stream(stream, mut sess) => {
@@ -237,13 +249,13 @@ impl NetworkInboundListener {
                         InboundTransport::Incoming(mut incoming) => {
                             while let Some(transport) = incoming.next().await {
                                 match transport {
-                                    SingleInboundTransport::Stream(stream, mut sess) => {
+                                    BaseInboundTransport::Stream(stream, mut sess) => {
                                         let dispatcher2 = dispatcher.clone();
                                         tokio::spawn(async move {
                                             dispatcher2.dispatch_tcp(&mut sess, stream).await;
                                         });
                                     }
-                                    SingleInboundTransport::Datagram(socket) => {
+                                    BaseInboundTransport::Datagram(socket) => {
                                         let nat_manager2 = nat_manager.clone();
                                         let tag = handler.tag().clone();
                                         tokio::spawn(async move {
@@ -251,7 +263,7 @@ impl NetworkInboundListener {
                                                 .await;
                                         });
                                     }
-                                    SingleInboundTransport::Empty => (),
+                                    BaseInboundTransport::Empty => (),
                                 }
                             }
                         }

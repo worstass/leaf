@@ -4,24 +4,24 @@ use async_trait::async_trait;
 
 use crate::{
     proxy::{
-        OutboundConnect, OutboundDatagram, OutboundTransport, UdpOutboundHandler, UdpTransportType,
+        OutboundConnect, OutboundDatagram, OutboundTransport, UdpOutboundHandler, DatagramTransportType,
     },
     session::Session,
 };
 
-pub struct Handler {}
+pub struct Handler;
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    fn udp_connect_addr(&self) -> Option<OutboundConnect> {
+    fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
 
-    fn udp_transport_type(&self) -> UdpTransportType {
-        UdpTransportType::Packet
+    fn transport_type(&self) -> DatagramTransportType {
+        DatagramTransportType::Datagram
     }
 
-    async fn handle_udp<'a>(
+    async fn handle<'a>(
         &'a self,
         _sess: &'a Session,
         _transport: Option<OutboundTransport>,

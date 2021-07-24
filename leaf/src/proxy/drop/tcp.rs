@@ -7,15 +7,15 @@ use crate::{
     session::Session,
 };
 
-pub struct Handler {}
+pub struct Handler;
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
+    fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
 
-    async fn handle_tcp<'a>(
+    async fn handle<'a>(
         &'a self,
         _sess: &'a Session,
         _stream: Option<Box<dyn ProxyStream>>,

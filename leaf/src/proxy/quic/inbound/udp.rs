@@ -10,7 +10,10 @@ use futures::{
     Future,
 };
 
-use crate::proxy::{InboundDatagram, InboundTransport, SingleInboundTransport, UdpInboundHandler};
+use crate::{
+    proxy::{InboundDatagram, InboundTransport, BaseInboundTransport, UdpInboundHandler},
+    session::Session,
+};
 
 use super::QuicProxyStream;
 
@@ -33,7 +36,7 @@ impl Incoming {
 }
 
 impl Stream for Incoming {
-    type Item = SingleInboundTransport;
+    type Item = BaseInboundTransport;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         // FIXME don't iterate and poll all
@@ -77,9 +80,15 @@ impl Stream for Incoming {
         for (idx, new_conn) in self.new_conns.iter_mut().enumerate() {
             match Pin::new(&mut new_conn.bi_streams).poll_next(cx) {
                 Poll::Ready(Some(Ok((send, recv)))) => {
-                    stream.replace(SingleInboundTransport::Stream(
+                    let mut sess = Session {
+                        source: new_conn.connection.remote_address(),
+                        ..Default::default()
+                    };
+                    // TODO Check whether the index suitable for this purpose.
+                    sess.stream_id = Some(send.id().index());
+                    stream.replace(BaseInboundTransport::Stream(
                         Box::new(QuicProxyStream { recv, send }),
-                        Default::default(), // FIXME
+                        sess,
                     ));
                     break;
                 }
@@ -132,7 +141,7 @@ impl Handler {
 
 #[async_trait]
 impl UdpInboundHandler for Handler {
-    async fn handle_udp<'a>(
+    async fn handle<'a>(
         &'a self,
         socket: Box<dyn InboundDatagram>,
     ) -> io::Result<InboundTransport> {

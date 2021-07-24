@@ -5,9 +5,10 @@ use async_trait::async_trait;
 use log::*;
 
 use crate::{
+    app::SyncDnsClient,
     proxy::{
-        OutboundConnect, OutboundDatagram, OutboundHandler, OutboundTransport, UdpOutboundHandler,
-        UdpTransportType,
+        DatagramTransportType, OutboundConnect, OutboundDatagram, OutboundHandler,
+        OutboundTransport, UdpOutboundHandler,
     },
     session::Session,
 };
@@ -15,19 +16,20 @@ use crate::{
 pub struct Handler {
     pub actors: Vec<Arc<dyn OutboundHandler>>,
     pub attempts: usize,
+    pub dns_client: SyncDnsClient,
 }
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    fn udp_connect_addr(&self) -> Option<OutboundConnect> {
+    fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
 
-    fn udp_transport_type(&self) -> UdpTransportType {
-        UdpTransportType::Unknown
+    fn transport_type(&self) -> DatagramTransportType {
+        DatagramTransportType::Undefined
     }
 
-    async fn handle_udp<'a>(
+    async fn handle<'a>(
         &'a self,
         sess: &'a Session,
         _transport: Option<OutboundTransport>,
@@ -35,7 +37,9 @@ impl UdpOutboundHandler for Handler {
         for _ in 0..self.attempts {
             for a in self.actors.iter() {
                 debug!("retry handles tcp [{}] to [{}]", sess.destination, a.tag());
-                match a.handle_udp(sess, None).await {
+                let transport =
+                    crate::proxy::connect_udp_outbound(sess, self.dns_client.clone(), a).await?;
+                match UdpOutboundHandler::handle(a.as_ref(), sess, transport).await {
                     Ok(s) => return Ok(s),
                     Err(_) => continue,
                 }

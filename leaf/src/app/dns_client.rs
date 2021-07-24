@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::net::{IpAddr, SocketAddr};
 use std::str::FromStr;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, Result};
 use futures::future::select_ok;
@@ -20,13 +20,18 @@ use trust_dns_proto::{
 
 use crate::{option, proxy::UdpConnector};
 
+#[derive(Clone, Debug)]
+struct CacheEntry {
+    pub ips: Vec<IpAddr>,
+    // The deadline this entry should be considered expired.
+    pub deadline: Instant,
+}
+
 pub struct DnsClient {
-    bind_addr: SocketAddr,
     servers: Vec<SocketAddr>,
     hosts: HashMap<String, Vec<IpAddr>>,
-    // TODO apply ttl to cached entries
-    ipv4_cache: Arc<TokioMutex<LruCache<String, Vec<IpAddr>>>>,
-    ipv6_cache: Arc<TokioMutex<LruCache<String, Vec<IpAddr>>>>,
+    ipv4_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
+    ipv6_cache: Arc<TokioMutex<LruCache<String, CacheEntry>>>,
 }
 
 impl DnsClient {
@@ -65,18 +70,17 @@ impl DnsClient {
         } else {
             return Err(anyhow!("empty dns config"));
         };
-        let servers = Self::load_servers(&dns)?;
-        let hosts = Self::load_hosts(&dns);
-        let ipv4_cache = Arc::new(TokioMutex::new(LruCache::<String, Vec<IpAddr>>::new(
+        let servers = Self::load_servers(dns)?;
+        let hosts = Self::load_hosts(dns);
+        let ipv4_cache = Arc::new(TokioMutex::new(LruCache::<String, CacheEntry>::new(
             *option::DNS_CACHE_SIZE,
         )));
-        let ipv6_cache = Arc::new(TokioMutex::new(LruCache::<String, Vec<IpAddr>>::new(
+        let ipv6_cache = Arc::new(TokioMutex::new(LruCache::<String, CacheEntry>::new(
             *option::DNS_CACHE_SIZE,
         )));
 
         Ok(DnsClient {
             servers,
-            bind_addr: SocketAddr::new(dns.bind.parse::<IpAddr>()?, 0),
             hosts,
             ipv4_cache,
             ipv6_cache,
@@ -89,11 +93,10 @@ impl DnsClient {
         } else {
             return Err(anyhow!("empty dns config"));
         };
-        let servers = Self::load_servers(&dns)?;
-        let hosts = Self::load_hosts(&dns);
+        let servers = Self::load_servers(dns)?;
+        let hosts = Self::load_hosts(dns);
         self.servers = servers;
         self.hosts = hosts;
-        self.bind_addr = SocketAddr::new(dns.bind.parse::<IpAddr>()?, 0);
         Ok(())
     }
 
@@ -104,9 +107,9 @@ impl DnsClient {
         }
 
         // If the connected IP is not in the first place, we should optimize it.
-        let mut new_ips = if let Some(ips) = self.ipv4_cache.lock().await.get(&address) {
-            if !ips.starts_with(&[connected_ip]) && ips.contains(&connected_ip) {
-                ips.to_vec()
+        let mut new_entry = if let Some(entry) = self.ipv4_cache.lock().await.get(&address) {
+            if !entry.ips.starts_with(&[connected_ip]) && entry.ips.contains(&connected_ip) {
+                entry.clone()
             } else {
                 return;
             }
@@ -115,11 +118,11 @@ impl DnsClient {
         };
 
         // Move failed IPs to the end, the optimized vector starts with the connected IP.
-        if let Ok(idx) = new_ips.binary_search(&connected_ip) {
-            trace!("updates DNS cache item from\n{:#?}", &new_ips);
-            new_ips.rotate_left(idx);
-            trace!("to\n{:#?}", &new_ips);
-            self.ipv4_cache.lock().await.put(address, new_ips);
+        if let Ok(idx) = new_entry.ips.binary_search(&connected_ip) {
+            trace!("updates DNS cache item from\n{:#?}", &new_entry);
+            new_entry.ips.rotate_left(idx);
+            trace!("to\n{:#?}", &new_entry);
+            self.ipv4_cache.lock().await.put(address, new_entry);
             trace!("updated cache");
         }
     }
@@ -131,9 +134,9 @@ impl DnsClient {
         }
 
         // If the connected IP is not in the first place, we should optimize it.
-        let mut new_ips = if let Some(ips) = self.ipv6_cache.lock().await.get(&address) {
-            if !ips.starts_with(&[connected_ip]) && ips.contains(&connected_ip) {
-                ips.to_vec()
+        let mut new_entry = if let Some(entry) = self.ipv6_cache.lock().await.get(&address) {
+            if !entry.ips.starts_with(&[connected_ip]) && entry.ips.contains(&connected_ip) {
+                entry.clone()
             } else {
                 return;
             }
@@ -142,11 +145,11 @@ impl DnsClient {
         };
 
         // Move failed IPs to the end, the optimized vector starts with the connected IP.
-        if let Ok(idx) = new_ips.binary_search(&connected_ip) {
-            trace!("updates DNS cache item from\n{:#?}", &new_ips);
-            new_ips.rotate_left(idx);
-            trace!("to\n{:#?}", &new_ips);
-            self.ipv6_cache.lock().await.put(address, new_ips);
+        if let Ok(idx) = new_entry.ips.binary_search(&connected_ip) {
+            trace!("updates DNS cache item from\n{:#?}", &new_entry);
+            new_entry.ips.rotate_left(idx);
+            trace!("to\n{:#?}", &new_entry);
+            self.ipv6_cache.lock().await.put(address, new_entry);
             trace!("updated cache");
         }
     }
@@ -164,9 +167,8 @@ impl DnsClient {
         request: Vec<u8>,
         host: &str,
         server: &SocketAddr,
-        bind_addr: &SocketAddr,
-    ) -> Result<Vec<IpAddr>> {
-        let socket = self.create_udp_socket(bind_addr, server).await?;
+    ) -> Result<CacheEntry> {
+        let socket = self.new_udp_socket(server).await?;
         let mut last_err = None;
         for _i in 0..*option::MAX_DNS_RETRIES {
             debug!("looking up host {} on {}", host, server);
@@ -199,30 +201,41 @@ impl DnsClient {
                                     // this.
                                     break;
                                 }
-                                let mut addrs = Vec::new();
+                                let mut ips = Vec::new();
                                 for ans in resp.answers() {
                                     // TODO checks?
                                     match ans.rdata() {
-                                        RData::A(addr) => {
-                                            addrs.push(IpAddr::V4(addr.to_owned()));
+                                        RData::A(ip) => {
+                                            ips.push(IpAddr::V4(ip.to_owned()));
                                         }
-                                        RData::AAAA(addr) => {
-                                            addrs.push(IpAddr::V6(addr.to_owned()));
+                                        RData::AAAA(ip) => {
+                                            ips.push(IpAddr::V6(ip.to_owned()));
                                         }
                                         _ => (),
                                     }
                                 }
-                                if !addrs.is_empty() {
+                                if !ips.is_empty() {
                                     let elapsed = tokio::time::Instant::now().duration_since(start);
+                                    let ttl = resp.answers().iter().next().unwrap().ttl();
                                     debug!(
-                                        "return {} ips for {} from {} in {}ms",
-                                        addrs.len(),
+                                        "return {} ips (ttl {}) for {} from {} in {}ms",
+                                        ips.len(),
+                                        ttl,
                                         host,
                                         server,
                                         elapsed.as_millis(),
                                     );
-                                    trace!("ips for {}:\n{:#?}", host, &addrs);
-                                    return Ok(addrs);
+                                    let deadline = if let Some(d) =
+                                        Instant::now().checked_add(Duration::from_secs(ttl.into()))
+                                    {
+                                        d
+                                    } else {
+                                        last_err = Some(anyhow!("invalid ttl"));
+                                        break;
+                                    };
+                                    let entry = CacheEntry { ips, deadline };
+                                    trace!("ips for {}:\n{:#?}", host, &entry);
+                                    return Ok(entry);
                                 } else {
                                     // response with 0 records
                                     //
@@ -263,70 +276,98 @@ impl DnsClient {
         msg
     }
 
-    async fn cache_insert(&self, host: &str, ips: &Vec<IpAddr>) {
-        if ips.is_empty() {
+    async fn cache_insert(&self, host: &str, entry: CacheEntry) {
+        if entry.ips.is_empty() {
             return;
         }
-        match ips[0] {
-            IpAddr::V4(..) => self
-                .ipv4_cache
-                .lock()
-                .await
-                .put(host.to_owned(), ips.clone()),
-            IpAddr::V6(..) => self
-                .ipv6_cache
-                .lock()
-                .await
-                .put(host.to_owned(), ips.clone()),
+        match entry.ips[0] {
+            IpAddr::V4(..) => self.ipv4_cache.lock().await.put(host.to_owned(), entry),
+            IpAddr::V6(..) => self.ipv6_cache.lock().await.put(host.to_owned(), entry),
         };
     }
 
-    pub async fn lookup(&self, host: &String) -> Result<Vec<IpAddr>> {
-        self.lookup_with_bind(host, &self.bind_addr).await
-    }
-
-    pub async fn lookup_with_bind(
-        &self,
-        host: &String,
-        bind_addr: &SocketAddr,
-    ) -> Result<Vec<IpAddr>> {
-        if let Ok(ip) = host.parse::<IpAddr>() {
-            return Ok(vec![ip]);
-        }
-
+    async fn get_cached(&self, host: &String) -> Result<Vec<IpAddr>> {
         let mut cached_ips = Vec::new();
 
+        // TODO reduce boilerplates
         match (*crate::option::ENABLE_IPV6, *crate::option::PREFER_IPV6) {
             (true, true) => {
-                if let Some(ips) = self.ipv6_cache.lock().await.get(host) {
-                    let mut ips = ips.to_vec();
+                if let Some(entry) = self.ipv6_cache.lock().await.get(host) {
+                    if entry
+                        .deadline
+                        .checked_duration_since(Instant::now())
+                        .is_none()
+                    {
+                        return Err(anyhow!("entry expired"));
+                    }
+                    let mut ips = entry.ips.to_vec();
                     cached_ips.append(&mut ips);
                 }
-                if let Some(ips) = self.ipv4_cache.lock().await.get(host) {
-                    let mut ips = ips.to_vec();
+                if let Some(entry) = self.ipv4_cache.lock().await.get(host) {
+                    if entry
+                        .deadline
+                        .checked_duration_since(Instant::now())
+                        .is_none()
+                    {
+                        return Err(anyhow!("entry expired"));
+                    }
+                    let mut ips = entry.ips.to_vec();
                     cached_ips.append(&mut ips);
                 }
             }
             (true, false) => {
-                if let Some(ips) = self.ipv4_cache.lock().await.get(host) {
-                    let mut ips = ips.to_vec();
+                if let Some(entry) = self.ipv4_cache.lock().await.get(host) {
+                    if entry
+                        .deadline
+                        .checked_duration_since(Instant::now())
+                        .is_none()
+                    {
+                        return Err(anyhow!("entry expired"));
+                    }
+                    let mut ips = entry.ips.to_vec();
                     cached_ips.append(&mut ips);
                 }
-                if let Some(ips) = self.ipv6_cache.lock().await.get(host) {
-                    let mut ips = ips.to_vec();
+                if let Some(entry) = self.ipv6_cache.lock().await.get(host) {
+                    if entry
+                        .deadline
+                        .checked_duration_since(Instant::now())
+                        .is_none()
+                    {
+                        return Err(anyhow!("entry expired"));
+                    }
+                    let mut ips = entry.ips.to_vec();
                     cached_ips.append(&mut ips);
                 }
             }
             _ => {
-                if let Some(ips) = self.ipv4_cache.lock().await.get(host) {
-                    let mut ips = ips.to_vec();
+                if let Some(entry) = self.ipv4_cache.lock().await.get(host) {
+                    if entry
+                        .deadline
+                        .checked_duration_since(Instant::now())
+                        .is_none()
+                    {
+                        return Err(anyhow!("entry expired"));
+                    }
+                    let mut ips = entry.ips.to_vec();
                     cached_ips.append(&mut ips);
                 }
             }
         }
 
         if !cached_ips.is_empty() {
-            return Ok(cached_ips);
+            Ok(cached_ips)
+        } else {
+            Err(anyhow!("empty result"))
+        }
+    }
+
+    pub async fn lookup(&self, host: &String) -> Result<Vec<IpAddr>> {
+        if let Ok(ip) = host.parse::<IpAddr>() {
+            return Ok(vec![ip]);
+        }
+
+        if let Ok(ips) = self.get_cached(host).await {
+            return Ok(ips);
         }
 
         // Making cache lookup a priority rather than static hosts lookup
@@ -336,7 +377,17 @@ impl DnsClient {
             if let Some(ips) = self.hosts.get(host) {
                 if !ips.is_empty() {
                     if ips.len() > 1 {
-                        self.cache_insert(host, ips).await;
+                        let deadline = Instant::now()
+                            .checked_add(Duration::from_secs(6000))
+                            .unwrap();
+                        self.cache_insert(
+                            host,
+                            CacheEntry {
+                                ips: ips.clone(),
+                                deadline,
+                            },
+                        )
+                        .await;
                     }
                     return Ok(ips.to_vec());
                 }
@@ -352,6 +403,7 @@ impl DnsClient {
 
         let mut query_tasks = Vec::new();
 
+        // TODO reduce boilerplates
         match (*crate::option::ENABLE_IPV6, *crate::option::PREFER_IPV6) {
             (true, true) => {
                 let msg = Self::new_query(name.clone(), RecordType::AAAA);
@@ -361,7 +413,7 @@ impl DnsClient {
                 };
                 let mut tasks = Vec::new();
                 for server in &self.servers {
-                    let t = self.query_task(msg_buf.clone(), host, server, bind_addr);
+                    let t = self.query_task(msg_buf.clone(), host, server);
                     tasks.push(Box::pin(t));
                 }
                 let query_task = select_ok(tasks.into_iter());
@@ -374,7 +426,7 @@ impl DnsClient {
                 };
                 let mut tasks = Vec::new();
                 for server in &self.servers {
-                    let t = self.query_task(msg_buf.clone(), host, server, bind_addr);
+                    let t = self.query_task(msg_buf.clone(), host, server);
                     tasks.push(Box::pin(t));
                 }
                 let query_task = select_ok(tasks.into_iter());
@@ -388,7 +440,7 @@ impl DnsClient {
                 };
                 let mut tasks = Vec::new();
                 for server in &self.servers {
-                    let t = self.query_task(msg_buf.clone(), host, server, bind_addr);
+                    let t = self.query_task(msg_buf.clone(), host, server);
                     tasks.push(Box::pin(t));
                 }
                 let query_task = select_ok(tasks.into_iter());
@@ -401,7 +453,7 @@ impl DnsClient {
                 };
                 let mut tasks = Vec::new();
                 for server in &self.servers {
-                    let t = self.query_task(msg_buf.clone(), host, server, bind_addr);
+                    let t = self.query_task(msg_buf.clone(), host, server);
                     tasks.push(Box::pin(t));
                 }
                 let query_task = select_ok(tasks.into_iter());
@@ -415,7 +467,7 @@ impl DnsClient {
                 };
                 let mut tasks = Vec::new();
                 for server in &self.servers {
-                    let t = self.query_task(msg_buf.clone(), host, server, bind_addr);
+                    let t = self.query_task(msg_buf.clone(), host, server);
                     tasks.push(Box::pin(t));
                 }
                 let query_task = select_ok(tasks.into_iter());
@@ -429,8 +481,8 @@ impl DnsClient {
         for v in futures::future::join_all(query_tasks).await {
             match v {
                 Ok(mut v) => {
-                    self.cache_insert(host, &v.0).await;
-                    ips.append(&mut v.0);
+                    self.cache_insert(host, v.0.clone()).await;
+                    ips.append(&mut v.0.ips);
                 }
                 Err(e) => last_err = Some(anyhow!("all dns servers failed, last error: {}", e)),
             }

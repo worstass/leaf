@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::io;
-use std::net::{IpAddr, SocketAddr};
 use std::sync::mpsc::sync_channel;
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -78,6 +77,7 @@ pub struct RuntimeManager {
 }
 
 impl RuntimeManager {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         #[cfg(feature = "auto-reload")] rt_id: RuntimeId,
         config_path: Option<String>,
@@ -166,7 +166,7 @@ impl RuntimeManager {
             log::warn!("sending shutdown signal failed: {}", e);
             return false;
         }
-        return true;
+        true
     }
 
     pub fn blocking_shutdown(&self) -> bool {
@@ -385,7 +385,11 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         &mut config.router,
         dns_client.clone(),
     )));
-    let dispatcher = Arc::new(Dispatcher::new(outbound_manager.clone(), router.clone()));
+    let dispatcher = Arc::new(Dispatcher::new(
+        outbound_manager.clone(),
+        router.clone(),
+        dns_client.clone(),
+    ));
     let nat_manager = Arc::new(NatManager::new(dispatcher.clone()));
     let inbound_manager =
         InboundManager::new(&config.inbounds, dispatcher, nat_manager).map_err(Error::Config)?;
@@ -400,25 +404,6 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     } else {
         sys::NetInfo::default()
     };
-
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
-    if !(&*option::OUTBOUND_INTERFACE).is_empty() {
-        use proxy::OutboundBind;
-        use std::net::{Ipv4Addr, Ipv6Addr};
-        let mut outbound_binds = Vec::new();
-        for item in (&*option::OUTBOUND_INTERFACE).split(',').map(str::trim) {
-            if let Ok(ip) = item.parse::<Ipv4Addr>() {
-                outbound_binds.push(OutboundBind::Ipv4(ip));
-            } else if let Ok(ip) = item.parse::<Ipv6Addr>() {
-                outbound_binds.push(OutboundBind::Ipv6(ip));
-            } else {
-                outbound_binds.push(OutboundBind::Interface(item.to_owned()));
-            }
-        }
-        if !outbound_binds.is_empty() {
-            rt.block_on(proxy::set_outbound_binds(outbound_binds));
-        }
-    }
 
     #[cfg(all(
         feature = "inbound-tun",
@@ -459,6 +444,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     #[cfg(feature = "api")]
     {
+        use std::net::{IpAddr, SocketAddr};
         let listen_addr = if !(&*option::API_LISTEN).is_empty() {
             Some(
                 (&*option::API_LISTEN)

@@ -5,21 +5,23 @@ use log::*;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 
 use crate::{
+    app::SyncDnsClient,
     proxy::{OutboundConnect, OutboundHandler, ProxyStream, TcpOutboundHandler},
     session::Session,
 };
 
 pub struct Handler {
     pub actors: Vec<Arc<dyn OutboundHandler>>,
+    pub dns_client: SyncDnsClient,
 }
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
+    fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
 
-    async fn handle_tcp<'a>(
+    async fn handle<'a>(
         &'a self,
         sess: &'a Session,
         _stream: Option<Box<dyn ProxyStream>>,
@@ -31,6 +33,9 @@ impl TcpOutboundHandler for Handler {
             sess.destination,
             self.actors[i].tag()
         );
-        self.actors[i].handle_tcp(sess, None).await
+        let stream =
+            crate::proxy::connect_tcp_outbound(sess, self.dns_client.clone(), &self.actors[i])
+                .await?;
+        TcpOutboundHandler::handle(self.actors[i].as_ref(), sess, stream).await
     }
 }

@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use futures::future::select_ok;
 
 use crate::{
+    app::SyncDnsClient,
     proxy::{OutboundConnect, OutboundHandler, ProxyStream, TcpOutboundHandler},
     session::Session,
 };
@@ -11,15 +12,16 @@ use crate::{
 pub struct Handler {
     pub actors: Vec<Arc<dyn OutboundHandler>>,
     pub delay_base: u32,
+    pub dns_client: SyncDnsClient,
 }
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn tcp_connect_addr(&self) -> Option<OutboundConnect> {
+    fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
 
-    async fn handle_tcp<'a>(
+    async fn handle<'a>(
         &'a self,
         sess: &'a Session,
         _stream: Option<Box<dyn ProxyStream>>,
@@ -33,7 +35,9 @@ impl TcpOutboundHandler for Handler {
                     ))
                     .await;
                 }
-                a.handle_tcp(sess, None).await
+                let stream =
+                    crate::proxy::connect_tcp_outbound(sess, self.dns_client.clone(), a).await?;
+                TcpOutboundHandler::handle(a.as_ref(), sess, stream).await
             };
             tasks.push(Box::pin(t));
         }

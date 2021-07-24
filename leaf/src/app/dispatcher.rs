@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 use std::io::{self, ErrorKind};
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -8,13 +7,15 @@ use futures::future::{self, Either};
 use log::*;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::RwLock;
-use tokio::sync::Semaphore;
 use tokio::time::timeout;
 
 use crate::{
+    app::SyncDnsClient,
     common::sniff,
     option,
-    proxy::{OutboundDatagram, ProxyHandlerType, ProxyStream, SimpleProxyStream},
+    proxy::{
+        OutboundDatagram, ProxyStream, SimpleProxyStream, TcpOutboundHandler, UdpOutboundHandler,
+    },
     session::{Network, Session, SocksAddr},
 };
 
@@ -53,51 +54,20 @@ fn log_request(
 pub struct Dispatcher {
     outbound_manager: Arc<RwLock<OutboundManager>>,
     router: Arc<RwLock<Router>>,
-    endpoint_tcp_sem: Semaphore,
-    direct_tcp_sem: Semaphore,
-    num_endpoint_tcp: AtomicUsize,
-    num_direct_tcp: AtomicUsize,
+    dns_client: SyncDnsClient,
 }
 
 impl Dispatcher {
     pub fn new(
         outbound_manager: Arc<RwLock<OutboundManager>>,
         router: Arc<RwLock<Router>>,
+        dns_client: SyncDnsClient,
     ) -> Self {
         Dispatcher {
             outbound_manager,
             router,
-            endpoint_tcp_sem: Semaphore::new(*option::ENDPOINT_TCP_CONCURRENCY),
-            direct_tcp_sem: Semaphore::new(*option::DIRECT_TCP_CONCURRENCY),
-            num_endpoint_tcp: AtomicUsize::new(0),
-            num_direct_tcp: AtomicUsize::new(0),
+            dns_client,
         }
-    }
-
-    async fn dispatch_endpoint_tcp_start(&self) {
-        // FIXME panic
-        self.endpoint_tcp_sem.acquire().await.unwrap().forget();
-        let pn = self.num_endpoint_tcp.fetch_add(1, Ordering::SeqCst);
-        trace!("active proxied tcp connections +1: {}", pn + 1);
-    }
-
-    fn dispatch_endpoint_tcp_done(&self) {
-        self.endpoint_tcp_sem.add_permits(1);
-        let pn = self.num_endpoint_tcp.fetch_sub(1, Ordering::SeqCst);
-        trace!("active proxied tcp connections -1: {}", pn - 1)
-    }
-
-    async fn dispatch_direct_tcp_start(&self) {
-        // FIXME panic
-        self.direct_tcp_sem.acquire().await.unwrap().forget();
-        let pn = self.num_direct_tcp.fetch_add(1, Ordering::SeqCst);
-        trace!("active direct tcp connections +1: {}", pn + 1);
-    }
-
-    fn dispatch_direct_tcp_done(&self) {
-        self.direct_tcp_sem.add_permits(1);
-        let pn = self.num_direct_tcp.fetch_sub(1, Ordering::SeqCst);
-        trace!("active direct tcp connections -1: {}", pn - 1)
     }
 
     pub async fn dispatch_tcp<T>(&self, sess: &mut Session, lhs: T)
@@ -144,7 +114,7 @@ impl Dispatcher {
 
         let outbound = {
             let router = self.router.read().await;
-            let outbound = match router.pick_route(&sess).await {
+            let outbound = match router.pick_route(sess).await {
                 Ok(tag) => {
                     debug!(
                         "picked route [{}] for {} -> {}",
@@ -189,22 +159,29 @@ impl Dispatcher {
             return;
         };
 
-        match h.handler_type() {
-            ProxyHandlerType::Direct => self.dispatch_direct_tcp_start().await,
-            ProxyHandlerType::Endpoint | ProxyHandlerType::Ensemble => {
-                self.dispatch_endpoint_tcp_start().await
-            }
-        }
-
         let handshake_start = tokio::time::Instant::now();
-        match h.handle_tcp(sess, None).await {
+        let stream =
+            match crate::proxy::connect_tcp_outbound(sess, self.dns_client.clone(), &h).await {
+                Ok(s) => s,
+                Err(e) => {
+                    debug!(
+                        "dispatch tcp {} -> {} to [{}] failed: {}",
+                        &sess.source,
+                        &sess.destination,
+                        &h.tag(),
+                        e
+                    );
+                    return;
+                }
+            };
+        match TcpOutboundHandler::handle(h.as_ref(), sess, stream).await {
             Ok(rhs) => {
                 let elapsed = tokio::time::Instant::now().duration_since(handshake_start);
 
                 if *crate::option::LOG_NO_COLOR {
-                    log_request(&sess, h.tag(), None, elapsed.as_millis());
+                    log_request(sess, h.tag(), None, elapsed.as_millis());
                 } else {
-                    log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
+                    log_request(sess, h.tag(), Some(h.color()), elapsed.as_millis());
                 }
 
                 let (lr, mut lw) = tokio::io::split(lhs);
@@ -444,13 +421,6 @@ impl Dispatcher {
                         &h.tag()
                     );
                 }
-
-                match h.handler_type() {
-                    ProxyHandlerType::Direct => self.dispatch_direct_tcp_done(),
-                    ProxyHandlerType::Endpoint | ProxyHandlerType::Ensemble => {
-                        self.dispatch_endpoint_tcp_done()
-                    }
-                }
             }
             Err(e) => {
                 debug!(
@@ -470,13 +440,6 @@ impl Dispatcher {
                         &h.tag()
                     );
                 }
-
-                match h.handler_type() {
-                    ProxyHandlerType::Direct => self.dispatch_direct_tcp_done(),
-                    ProxyHandlerType::Endpoint | ProxyHandlerType::Ensemble => {
-                        self.dispatch_endpoint_tcp_done()
-                    }
-                }
             }
         }
     }
@@ -484,7 +447,7 @@ impl Dispatcher {
     pub async fn dispatch_udp(&self, sess: &Session) -> io::Result<Box<dyn OutboundDatagram>> {
         let outbound = {
             let router = self.router.read().await;
-            let outbound = match router.pick_route(&sess).await {
+            let outbound = match router.pick_route(sess).await {
                 Ok(tag) => {
                     debug!(
                         "picked route [{}] for {} -> {}",
@@ -515,14 +478,16 @@ impl Dispatcher {
         };
 
         let handshake_start = tokio::time::Instant::now();
-        match h.handle_udp(sess, None).await {
+        let transport =
+            crate::proxy::connect_udp_outbound(sess, self.dns_client.clone(), &h).await?;
+        match UdpOutboundHandler::handle(h.as_ref(), sess, transport).await {
             Ok(c) => {
                 let elapsed = tokio::time::Instant::now().duration_since(handshake_start);
 
                 if *crate::option::LOG_NO_COLOR {
-                    log_request(&sess, h.tag(), None, elapsed.as_millis());
+                    log_request(sess, h.tag(), None, elapsed.as_millis());
                 } else {
-                    log_request(&sess, h.tag(), Some(h.color()), elapsed.as_millis());
+                    log_request(sess, h.tag(), Some(h.color()), elapsed.as_millis());
                 }
 
                 Ok(c)
