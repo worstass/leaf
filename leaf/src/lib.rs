@@ -189,7 +189,7 @@ impl RuntimeManager {
             log::trace!("starting new watcher for config file: {}", config_path);
             let rt_id = self.rt_id;
             let mut watcher: RecommendedWatcher =
-                Watcher::new_immediate(move |res: NotifyResult<event::Event>| {
+                notify::recommended_watcher(move |res: NotifyResult<event::Event>| {
                     match res {
                         // FIXME Not sure what are the most appropriate events to
                         // filter on different platforms.
@@ -245,7 +245,10 @@ impl RuntimeManager {
                 })
                 .map_err(Error::Watcher)?;
             watcher
-                .watch(config_path, RecursiveMode::NonRecursive)
+                .watch(
+                    std::path::Path::new(&config_path),
+                    RecursiveMode::NonRecursive,
+                )
                 .map_err(Error::Watcher)?;
             log::info!("watching changes of file: {}", config_path);
             self.watcher.lock().unwrap().replace(watcher);
@@ -277,6 +280,10 @@ pub fn shutdown(key: RuntimeId) -> bool {
         }
     }
     false
+}
+
+pub fn is_running(key: RuntimeId) -> bool {
+    RUNTIME_MANAGER.lock().unwrap().contains_key(&key)
 }
 
 pub fn test_config(config_path: &str) -> Result<(), Error> {
@@ -320,6 +327,7 @@ pub enum RuntimeOption {
 #[derive(Debug)]
 pub enum Config {
     File(String),
+    Str(String),
     Internal(config::Config),
 }
 
@@ -330,9 +338,6 @@ pub struct StartOptions {
     // Enable auto reload, take effect only when "auto-reload" feature is enabled.
     #[cfg(feature = "auto-reload")]
     pub auto_reload: bool,
-    // The service path to protect outbound sockets on Android.
-    #[cfg(target_os = "android")]
-    pub socket_protect_path: Option<String>,
     // Tokio runtime options.
     pub runtime_opt: RuntimeOption,
 }
@@ -350,6 +355,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     let mut config = match opts.config {
         Config::File(p) => config::from_file(&p).map_err(Error::Config)?,
+        Config::Str(s) => config::from_string(&s).map_err(Error::Config)?,
         Config::Internal(c) => c,
     };
 
@@ -366,11 +372,6 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     let rt = new_runtime(&opts.runtime_opt)?;
     let _g = rt.enter();
-
-    #[cfg(target_os = "android")]
-    if let Some(p) = opts.socket_protect_path.as_ref() {
-        rt.block_on(proxy::set_socket_protect_path(p.to_owned()));
-    }
 
     let mut tasks: Vec<Runner> = Vec::new();
     let mut runners = Vec::new();
@@ -404,6 +405,22 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     } else {
         sys::NetInfo::default()
     };
+
+    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    {
+        if let sys::NetInfo {
+            default_interface: Some(iface),
+            ..
+        } = &net_info
+        {
+            let binds = if let Ok(v) = std::env::var("OUTBOUND_INTERFACE") {
+                format!("{},{}", v, iface)
+            } else {
+                iface.clone()
+            };
+            std::env::set_var("OUTBOUND_INTERFACE", binds);
+        }
+    }
 
     #[cfg(all(
         feature = "inbound-tun",
@@ -505,6 +522,8 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         .map_err(|_| Error::RuntimeManager)?
         .insert(rt_id, runtime_manager);
 
+    log::trace!("added runtime {}", &rt_id);
+
     rt.block_on(futures::future::select_all(tasks));
 
     #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
@@ -517,7 +536,48 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         .map_err(|_| Error::RuntimeManager)?
         .remove(&rt_id);
 
-    log::trace!("leaf shutdown");
+    log::trace!("removed runtime {}", &rt_id);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::thread;
+
+    #[test]
+    fn test_restart() {
+        let conf = r#"
+[General]
+loglevel = trace
+dns-server = 1.1.1.1
+socks-interface = 127.0.0.1
+socks-port = 1080
+# tun = auto
+
+[Proxy]
+Direct = direct
+"#;
+
+        for i in 1..10 {
+            thread::spawn(move || {
+                let opts = StartOptions {
+                    config: Config::Str(conf.to_string()),
+                    #[cfg(feature = "auto-reload")]
+                    auto_reload: false,
+                    runtime_opt: RuntimeOption::SingleThread,
+                };
+                start(0, opts);
+            });
+            thread::sleep(std::time::Duration::from_secs(5));
+            shutdown(0);
+            loop {
+                thread::sleep(std::time::Duration::from_secs(2));
+                if !is_running(0) {
+                    break;
+                }
+            }
+        }
+    }
 }

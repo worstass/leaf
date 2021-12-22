@@ -11,11 +11,7 @@ use tokio::sync::mpsc::{Receiver as TokioReceiver, Sender as TokioSender};
 
 use crate::app::dispatcher::Dispatcher;
 use crate::app::nat_manager::{NatManager, UdpPacket};
-use crate::proxy::InboundHandler;
-use crate::proxy::{
-    BaseInboundTransport, InboundDatagram, InboundTransport, SimpleInboundDatagram,
-    SimpleProxyStream, TcpInboundHandler, TcpListener, UdpInboundHandler,
-};
+use crate::proxy::*;
 use crate::session::{Network, Session, SocksAddr};
 use crate::Runner;
 
@@ -124,7 +120,7 @@ async fn handle_inbound_datagram(
 
 async fn handle_inbound_stream(
     stream: TcpStream,
-    h: Arc<dyn InboundHandler>,
+    h: AnyInboundHandler,
     dispatcher: Arc<Dispatcher>,
     nat_manager: Arc<NatManager>,
 ) {
@@ -142,7 +138,7 @@ async fn handle_inbound_stream(
         ..Default::default()
     };
 
-    match TcpInboundHandler::handle(h.as_ref(), sess, Box::new(SimpleProxyStream(stream))).await {
+    match TcpInboundHandler::handle(h.as_ref(), sess, Box::new(stream)).await {
         Ok(res) => match res {
             InboundTransport::Stream(stream, mut sess) => {
                 dispatcher.dispatch_tcp(&mut sess, stream).await;
@@ -181,7 +177,7 @@ async fn handle_inbound_stream(
 pub struct NetworkInboundListener {
     pub address: String,
     pub port: u16,
-    pub handler: Arc<dyn InboundHandler>,
+    pub handler: AnyInboundHandler,
     pub dispatcher: Arc<Dispatcher>,
     pub nat_manager: Arc<NatManager>,
 }

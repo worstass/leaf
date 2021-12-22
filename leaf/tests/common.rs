@@ -8,7 +8,7 @@ use tokio::net::{TcpListener, ToSocketAddrs, UdpSocket};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
 
-use leaf::proxy::{SimpleProxyStream, TcpOutboundHandler, UdpOutboundHandler};
+use leaf::proxy::*;
 
 pub async fn run_tcp_echo_server<A: ToSocketAddrs>(addr: A) {
     let listener = TcpListener::bind(addr).await.unwrap();
@@ -51,8 +51,7 @@ pub fn run_leaf_instances(
     let mut leaf_rt_ids = Vec::new();
     let mut rt_id = 0;
     for config in configs {
-        let mut config = leaf::config::json::from_string(config).unwrap();
-        let config = leaf::config::json::to_internal(&mut config).unwrap();
+        let config = leaf::config::json::from_string(&config).unwrap();
         let opts = leaf::StartOptions {
             config: leaf::Config::Internal(config),
             #[cfg(feature = "auto-reload")]
@@ -124,8 +123,7 @@ pub fn test_configs(configs: Vec<String>, socks_addr: &str, socks_port: u16) {
         let stream = tokio::net::TcpStream::connect(format!("{}:{}", socks_addr, socks_port))
             .await
             .unwrap();
-        let stream = Box::new(SimpleProxyStream(stream));
-        let mut s = TcpOutboundHandler::handle(handler.as_ref(), &sess, Some(stream))
+        let mut s = TcpOutboundHandler::handle(handler.as_ref(), &sess, Some(Box::new(stream)))
             .await
             .unwrap();
         s.write_all(b"abc").await.unwrap();

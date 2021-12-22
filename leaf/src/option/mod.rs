@@ -55,6 +55,10 @@ lazy_static! {
 }
 
 lazy_static! {
+    pub static ref USER_AGENT: String = {
+        get_env_var_or("USER_AGENT", "".to_string())
+    };
+
     pub static ref LOG_CONSOLE_OUT: bool = {
         get_env_var_or("LOG_CONSOLE_OUT", false)
     };
@@ -129,6 +133,19 @@ lazy_static! {
             }
         }
         outbound_binds
+    };
+
+    /// Sets the RPC service endpoint for protecting outbound sockets on Android to
+    /// avoid infinite loop. The `path` is treated as a Unix domain socket endpoint.
+    /// The RPC service simply listens for incoming connections, reads an int32 on
+    /// each connection, treats it as the file descriptor to protect, writes back 0
+    /// on success.
+    pub static ref SOCKET_PROTECT_PATH: String = {
+        get_env_var_or("SOCKET_PROTECT_PATH", "".to_string())
+    };
+
+    pub static ref SOCKET_PROTECT_SERVER: Option<SocketAddr> = {
+        get_env_var_or("SOCKET_PROTECT_SERVER", "".to_string()).parse().ok()
     };
 
     pub static ref GATEWAY_MODE: bool = {

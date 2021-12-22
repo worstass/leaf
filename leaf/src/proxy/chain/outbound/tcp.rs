@@ -1,18 +1,15 @@
 use std::convert::TryFrom;
-use std::{io, sync::Arc};
+use std::io;
 
 use async_trait::async_trait;
 
 use crate::{
-    proxy::{
-        stream::SimpleProxyStream, OutboundConnect, OutboundHandler, ProxyStream,
-        TcpOutboundHandler,
-    },
+    proxy::*,
     session::{Session, SocksAddr},
 };
 
 pub struct Handler {
-    pub actors: Vec<Arc<dyn OutboundHandler>>,
+    pub actors: Vec<AnyOutboundHandler>,
 }
 
 impl Handler {
@@ -37,6 +34,8 @@ impl Handler {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
+    type Stream = AnyStream;
+
     fn connect_addr(&self) -> Option<OutboundConnect> {
         for a in self.actors.iter() {
             if let Some(addr) = TcpOutboundHandler::connect_addr(a.as_ref()) {
@@ -49,8 +48,8 @@ impl TcpOutboundHandler for Handler {
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        mut stream: Option<Box<dyn ProxyStream>>,
-    ) -> io::Result<Box<dyn ProxyStream>> {
+        mut stream: Option<Self::Stream>,
+    ) -> io::Result<Self::Stream> {
         match self.connect_addr() {
             Some(OutboundConnect::NoConnect) => (),
             _ => {
@@ -65,7 +64,7 @@ impl TcpOutboundHandler for Handler {
             stream.replace(TcpOutboundHandler::handle(a.as_ref(), &new_sess, s).await?);
         }
         if let Some(stream) = stream {
-            Ok(Box::new(SimpleProxyStream(stream)))
+            Ok(Box::new(stream))
         } else {
             Err(io::Error::new(io::ErrorKind::Other, "invalid input"))
         }

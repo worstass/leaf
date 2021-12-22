@@ -69,12 +69,9 @@ GATEWAY_MODE=true leaf -c config.conf
 
 ## iOS & Android
 
-* [Leaf](https://apps.apple.com/us/app/leaf-lightweight-proxy/id1534109007): A simple iOS VPN app built with leaf
+<a href="https://play.google.com/store/apps/details?id=com.leaf.example.aleaf"><img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" height="70"></a>
 
-There are example projects demonstrating how you could easily build VPN apps for iOS and Android with leaf:
- 
-* iOS: https://github.com/eycorsican/ileaf
-* Android: https://github.com/eycorsican/aleaf
+<a href="https://apps.apple.com/us/app/leaf-lightweight-proxy/id1534109007"><img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" height="70"></a>
 
 ## Build
 
@@ -91,7 +88,7 @@ cargo build -p leaf-bin
 
 Run:
 ```sh
-./target/debug/leaf -h
+./target/debug/leaf --help
 ```
 
 ## License

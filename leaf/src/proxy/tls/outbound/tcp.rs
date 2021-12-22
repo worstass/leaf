@@ -1,5 +1,8 @@
+use std::fs::File;
 use std::io;
+use std::io::BufReader;
 
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use futures::TryFutureExt;
 use log::*;
@@ -18,10 +21,7 @@ use {
     tokio_openssl::SslStream,
 };
 
-use crate::{
-    proxy::{OutboundConnect, ProxyStream, SimpleProxyStream, TcpOutboundHandler},
-    session::Session,
-};
+use crate::{proxy::*, session::Session};
 
 pub struct Handler {
     server_name: String,
@@ -32,21 +32,32 @@ pub struct Handler {
 }
 
 impl Handler {
-    pub fn new(server_name: String, alpns: Vec<String>) -> Self {
+    pub fn new(
+        server_name: String,
+        alpns: Vec<String>,
+        certificate: Option<String>,
+    ) -> Result<Self> {
         #[cfg(feature = "rustls-tls")]
         {
             let mut config = ClientConfig::new();
             config
                 .root_store
                 .add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
+            if let Some(cert) = certificate {
+                let mut pem = BufReader::new(File::open(cert)?);
+                config
+                    .root_store
+                    .add_pem_file(&mut pem)
+                    .map_err(|_| anyhow!("add pem file failed"))?;
+            }
 
             for alpn in alpns {
                 config.alpn_protocols.push(alpn.as_bytes().to_vec());
             }
-            Handler {
+            Ok(Handler {
                 server_name,
                 tls_config: Arc::new(config),
-            }
+            })
         }
         #[cfg(feature = "openssl-tls")]
         {
@@ -65,10 +76,10 @@ impl Handler {
                 builder.set_alpn_protos(&wire).expect("set alpn failed");
             }
             let ssl_connector = builder.build();
-            Handler {
+            Ok(Handler {
                 server_name,
                 ssl_connector,
-            }
+            })
         }
     }
 }
@@ -82,6 +93,8 @@ where
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
+    type Stream = AnyStream;
+
     fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
@@ -89,8 +102,8 @@ impl TcpOutboundHandler for Handler {
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        stream: Option<Box<dyn ProxyStream>>,
-    ) -> io::Result<Box<dyn ProxyStream>> {
+        stream: Option<Self::Stream>,
+    ) -> io::Result<Self::Stream> {
         // TODO optimize, dont need copy
         let name = if !&self.server_name.is_empty() {
             self.server_name.clone()
@@ -105,7 +118,7 @@ impl TcpOutboundHandler for Handler {
                 let dnsname = DNSNameRef::try_from_ascii_str(&name).map_err(tls_err)?;
                 let tls_stream = config.connect(dnsname, stream).map_err(tls_err).await?;
                 // FIXME check negotiated alpn
-                Ok(Box::new(SimpleProxyStream(tls_stream)))
+                Ok(Box::new(tls_stream))
             }
             #[cfg(feature = "openssl-tls")]
             {
@@ -119,7 +132,7 @@ impl TcpOutboundHandler for Handler {
                         tls_err(e)
                     })
                     .await?;
-                Ok(Box::new(SimpleProxyStream(stream)))
+                Ok(Box::new(stream))
             }
         } else {
             Err(io::Error::new(io::ErrorKind::Other, "invalid tls input"))

@@ -45,6 +45,7 @@ all-endpoints = [
     "inbound-amux",
     # "inbound-quic",
     "inbound-ws",
+    "inbound-tls",
     "inbound-trojan",
     # "inbound-http",
     "inbound-shadowsocks",
@@ -110,6 +111,7 @@ inbound-tun = ["tun"]
 inbound-ws = ["tungstenite", "tokio-tungstenite", "url", "http"]
 inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
+inbound-tls = []
 inbound-chain = []
 
 api = ["warp"]
@@ -208,7 +210,7 @@ rustls = { version = "0.19", optional = true }
 warp = { version = "0.3", default-features = false, optional = true }
 
 # Auto reload
-notify = { version = "5.0.0-pre.6", optional = true }
+notify = { version = "5.0.0-pre.11", optional = true }
 
 # TUN
 [target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]

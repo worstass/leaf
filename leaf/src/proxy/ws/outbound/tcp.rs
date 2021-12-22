@@ -7,10 +7,7 @@ use tokio_tungstenite::client_async_with_config;
 use tungstenite::protocol::WebSocketConfig;
 use url::Url;
 
-use crate::{
-    proxy::{OutboundConnect, ProxyStream, SimpleProxyStream, TcpOutboundHandler},
-    session::Session,
-};
+use crate::{proxy::*, session::Session};
 
 use super::stream;
 
@@ -28,7 +25,10 @@ impl<'a> tungstenite::client::IntoClientRequest for Request<'a> {
     fn into_client_request(
         self,
     ) -> tungstenite::error::Result<tungstenite::handshake::client::Request> {
-        let mut builder = http::Request::builder().method("GET").uri(self.uri);
+        let mut builder = http::Request::builder()
+            .method("GET")
+            .uri(self.uri)
+            .header("User-Agent", &*crate::option::USER_AGENT);
         for (k, v) in self.headers.iter() {
             if k != "Host" {
                 builder = builder.header(k, v);
@@ -40,6 +40,8 @@ impl<'a> tungstenite::client::IntoClientRequest for Request<'a> {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
+    type Stream = AnyStream;
+
     fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
@@ -47,8 +49,8 @@ impl TcpOutboundHandler for Handler {
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        stream: Option<Box<dyn ProxyStream>>,
-    ) -> io::Result<Box<dyn ProxyStream>> {
+        stream: Option<Self::Stream>,
+    ) -> io::Result<Self::Stream> {
         if let Some(stream) = stream {
             let host = if let Some(host) = self.headers.get("Host") {
                 host.to_owned()
@@ -76,7 +78,7 @@ impl TcpOutboundHandler for Handler {
                 })
                 .await?;
             let ws_stream = stream::WebSocketToStream::new(socket);
-            Ok(Box::new(SimpleProxyStream(ws_stream)))
+            Ok(Box::new(ws_stream))
         } else {
             Err(io::Error::new(io::ErrorKind::Other, "invalid input"))
         }

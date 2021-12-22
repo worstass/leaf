@@ -8,7 +8,7 @@ use crate::app::dispatcher::Dispatcher;
 use crate::app::nat_manager::NatManager;
 use crate::config;
 use crate::proxy;
-use crate::proxy::InboundHandler;
+use crate::proxy::AnyInboundHandler;
 use crate::Runner;
 
 #[cfg(feature = "inbound-amux")]
@@ -21,6 +21,8 @@ use crate::proxy::quic;
 use crate::proxy::shadowsocks;
 #[cfg(feature = "inbound-socks")]
 use crate::proxy::socks;
+#[cfg(feature = "inbound-tls")]
+use crate::proxy::tls;
 #[cfg(feature = "inbound-trojan")]
 use crate::proxy::trojan;
 #[cfg(feature = "inbound-ws")]
@@ -63,7 +65,7 @@ impl InboundManager {
         dispatcher: Arc<Dispatcher>,
         nat_manager: Arc<NatManager>,
     ) -> Result<Self> {
-        let mut handlers: HashMap<String, Arc<dyn InboundHandler>> = HashMap::new();
+        let mut handlers: HashMap<String, AnyInboundHandler> = HashMap::new();
 
         for inbound in inbounds.iter() {
             let tag = String::from(&inbound.tag);
@@ -135,6 +137,18 @@ impl InboundManager {
                     ));
                     let handler =
                         Arc::new(proxy::inbound::Handler::new(tag.clone(), None, Some(udp)));
+                    handlers.insert(tag.clone(), handler);
+                }
+                #[cfg(feature = "inbound-tls")]
+                "tls" => {
+                    let settings =
+                        config::TlsInboundSettings::parse_from_bytes(&inbound.settings).unwrap();
+                    let tcp = Arc::new(tls::inbound::TcpHandler::new(
+                        settings.certificate.clone(),
+                        settings.certificate_key.clone(),
+                    )?);
+                    let handler =
+                        Arc::new(proxy::inbound::Handler::new(tag.clone(), Some(tcp), None));
                     handlers.insert(tag.clone(), handler);
                 }
                 _ => (),

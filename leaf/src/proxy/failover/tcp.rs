@@ -6,18 +6,19 @@ use futures::future::{abortable, AbortHandle};
 use futures::FutureExt;
 use log::*;
 use lru_time_cache::LruCache;
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex as TokioMutex;
 use tokio::time::timeout;
 
 use crate::{
     app::SyncDnsClient,
-    proxy::{OutboundConnect, OutboundHandler, ProxyStream, TcpOutboundHandler},
+    proxy::*,
     session::{Session, SocksAddr},
 };
 
 pub struct Handler {
-    pub actors: Vec<Arc<dyn OutboundHandler>>,
+    pub actors: Vec<AnyOutboundHandler>,
     pub fail_timeout: u32,
     pub schedule: Arc<TokioMutex<Vec<usize>>>,
     pub health_check_task: TokioMutex<Option<BoxFuture<'static, ()>>>,
@@ -28,10 +29,57 @@ pub struct Handler {
 #[derive(Debug, Eq, Ord, PartialEq, PartialOrd)]
 struct Measure(usize, u128); // (index, duration in millis)
 
+async fn health_check_task(
+    i: usize,
+    h: AnyOutboundHandler,
+    dns_client: SyncDnsClient,
+    mut delay: Option<time::Duration>,
+) -> Measure {
+    if let Some(d) = delay.take() {
+        tokio::time::sleep(d).await;
+    }
+    debug!("health checking tcp for [{}] index [{}]", h.tag(), i);
+    let measure = async move {
+        let sess = Session {
+            destination: SocksAddr::Domain("www.google.com".to_string(), 80),
+            ..Default::default()
+        };
+        let start = tokio::time::Instant::now();
+        let stream = match crate::proxy::connect_tcp_outbound(&sess, dns_client, &h).await {
+            Ok(s) => s,
+            Err(_) => return Measure(i, u128::MAX),
+        };
+        match TcpOutboundHandler::handle(h.as_ref(), &sess, stream).await {
+            Ok(mut stream) => {
+                if stream.write_all(b"HEAD / HTTP/1.1\r\n\r\n").await.is_err() {
+                    return Measure(i, u128::MAX - 2); // handshake is ok
+                }
+                let mut buf = vec![0u8; 1];
+                match stream.read_exact(&mut buf).await {
+                    // handshake, write and read are ok
+                    Ok(_) => {
+                        let elapsed = tokio::time::Instant::now().duration_since(start);
+                        Measure(i, elapsed.as_millis())
+                    }
+                    // handshake and write are ok
+                    Err(_) => Measure(i, u128::MAX - 3),
+                }
+            }
+            // handshake not ok
+            Err(_) => Measure(i, u128::MAX),
+        }
+    };
+    match timeout(time::Duration::from_secs(5), measure).await {
+        Ok(m) => m,
+        // timeout, better than handshake error
+        Err(_) => Measure(i, u128::MAX - 1),
+    }
+}
+
 impl Handler {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        actors: Vec<Arc<dyn OutboundHandler>>,
+        actors: Vec<AnyOutboundHandler>,
         fail_timeout: u32, // in secs
         health_check: bool,
         check_interval: u32, // in secs
@@ -54,53 +102,24 @@ impl Handler {
         let task = if health_check {
             let fut = async move {
                 loop {
-                    let mut measures: Vec<Measure> = Vec::new();
+                    let mut checks = Vec::new();
+                    let dns_client3 = dns_client2.clone();
+                    let mut rng = StdRng::from_entropy();
                     for (i, a) in (&actors2).iter().enumerate() {
-                        debug!("health checking tcp for [{}] index [{}]", a.tag(), i);
-                        let dns_client3 = dns_client2.clone();
-                        let single_measure = async move {
-                            let sess = Session {
-                                destination: SocksAddr::Domain("www.google.com".to_string(), 80),
-                                ..Default::default()
-                            };
-                            let start = tokio::time::Instant::now();
-                            let stream =
-                                match crate::proxy::connect_tcp_outbound(&sess, dns_client3, &a)
-                                    .await
-                                {
-                                    Ok(s) => s,
-                                    Err(_) => return Measure(i, u128::MAX),
-                                };
-                            match TcpOutboundHandler::handle(a.as_ref(), &sess, stream).await {
-                                Ok(mut stream) => {
-                                    if stream.write_all(b"HEAD / HTTP/1.1\r\n\r\n").await.is_err() {
-                                        return Measure(i, u128::MAX - 2); // handshake is ok
-                                    }
-                                    let mut buf = vec![0u8; 1];
-                                    match stream.read_exact(&mut buf).await {
-                                        // handshake, write and read are ok
-                                        Ok(_) => {
-                                            let elapsed =
-                                                tokio::time::Instant::now().duration_since(start);
-                                            Measure(i, elapsed.as_millis())
-                                        }
-                                        // handshake and write are ok
-                                        Err(_) => Measure(i, u128::MAX - 3),
-                                    }
-                                }
-                                // handshake not ok
-                                Err(_) => Measure(i, u128::MAX),
-                            }
+                        let dns_client4 = dns_client3.clone();
+                        let delay: Option<time::Duration> = if actors2.len() >= 4 {
+                            Some(time::Duration::from_millis(rng.gen_range(0..=1000) as u64))
+                        } else {
+                            None
                         };
-                        match timeout(time::Duration::from_secs(10), single_measure).await {
-                            Ok(m) => {
-                                measures.push(m);
-                            }
-                            Err(_) => {
-                                measures.push(Measure(i, u128::MAX - 1)); // timeout, better than handshake error
-                            }
-                        }
+                        checks.push(Box::pin(health_check_task(
+                            i,
+                            a.clone(),
+                            dns_client4,
+                            delay,
+                        )));
                     }
+                    let mut measures = futures::future::join_all(checks).await;
 
                     measures.sort_by(|a, b| a.1.cmp(&b.1));
                     trace!("sorted tcp health check results:\n{:#?}", measures);
@@ -175,6 +194,8 @@ impl Handler {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
+    type Stream = AnyStream;
+
     fn connect_addr(&self) -> Option<OutboundConnect> {
         None
     }
@@ -182,8 +203,8 @@ impl TcpOutboundHandler for Handler {
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        _stream: Option<Box<dyn ProxyStream>>,
-    ) -> io::Result<Box<dyn ProxyStream>> {
+        _stream: Option<Self::Stream>,
+    ) -> io::Result<Self::Stream> {
         if let Some(task) = self.health_check_task.lock().await.take() {
             tokio::spawn(task);
         }
