@@ -79,12 +79,14 @@ pub mod tryall;
         target_os = "android",
         target_os = "macos",
         target_os = "linux",
-        target_os = "windows"
+        target_os = "windows" // MARKER BEGIN - END
     )
 ))]
 pub mod tun;
 #[cfg(any(feature = "inbound-ws", feature = "outbound-ws"))]
 pub mod ws;
+#[cfg(any(feature = "inbound-packet"))]
+pub mod packet;
 
 pub use datagram::{
     SimpleInboundDatagram, SimpleInboundDatagramRecvHalf, SimpleInboundDatagramSendHalf,

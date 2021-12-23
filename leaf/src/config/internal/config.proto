@@ -76,6 +76,12 @@ message ChainInboundSettings {
 	repeated string actors = 1;
 }
 
+// MARKER BEGIN
+message PacketInboundSettings {
+	uint32 port = 1;
+}
+// MARKER END
+
 message Inbound {
 	string tag = 1;
 	string protocol = 2; // TODO use enum

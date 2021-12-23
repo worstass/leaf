@@ -51,6 +51,8 @@ all-endpoints = [
     "inbound-shadowsocks",
     "inbound-socks",
     "inbound-tun",
+    "inbound-packet",
+
     # outbounds
     "outbound-direct",
     "outbound-drop",
@@ -113,6 +115,7 @@ inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
 inbound-tls = []
 inbound-chain = []
+inbound-packet = []
 
 api = ["warp"]
 auto-reload = ["notify"]
