@@ -17,6 +17,3 @@ panic = "abort"
 opt-level = 0
 debug = true
 split-debuginfo = "unpacked"
-
-#[patch.crates-io]
-#mio = { git = "https://github.com/YtFlow/mio-noafd" }
