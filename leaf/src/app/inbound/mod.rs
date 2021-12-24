@@ -11,4 +11,7 @@ mod network_listener;
 ))]
 mod tun_listener;
 
+#[cfg(feature = "inbound-packet")]
+mod packet_listener;
+
 pub mod manager;
