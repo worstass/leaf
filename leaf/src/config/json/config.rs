@@ -81,6 +81,13 @@ pub struct TunInboundSettings {
     pub fake_dns_include: Option<Vec<String>>,
 }
 
+// MARKER BEGIN
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PacketInboundSettings {
+    pub port: Option<u16>,
+}
+// MARKER END
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Inbound {
     pub protocol: String,
