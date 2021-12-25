@@ -1,2 +1,2 @@
-#[cfg(feature = "inbound-packet")]
 pub mod inbound;
+pub mod netstack;

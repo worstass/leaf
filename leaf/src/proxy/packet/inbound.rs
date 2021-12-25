@@ -14,7 +14,7 @@ use crate::{
     app::dispatcher::Dispatcher,
     app::fake_dns::{FakeDns, FakeDnsMode},
     app::nat_manager::NatManager,
-    config::{Inbound},
+    config::{Inbound, PacketInboundSettings},
     option, Runner,
     proxy::tun::netstack::NetStack,
 };
@@ -27,12 +27,13 @@ pub fn new(
     dispatcher: Arc<Dispatcher>,
     nat_manager: Arc<NatManager>,
 ) -> Result<Runner> {
+    let settings = PacketInboundSettings::parse_from_bytes(&inbound.settings)?;
+
     Ok(Box::pin(async move {
         // let sock = UdpSocket::bind("0.0.0.0:8081").await?;
-       let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Include)));
-
-        let remote_port = 8081;
-        let local_port = 8082;
+        let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Include)));
+        let remote_port = settings.port;
+        let local_port = settings.port;
         let remote_addr: SocketAddr = format!("127.0.0.1:{}", remote_port).parse().unwrap();
         let sock = Arc::new(tokio::net::UdpSocket::bind(&remote_addr).await.unwrap());
         let local_addr: SocketAddr = format!("127.0.0.1:{}", local_port).parse().unwrap();
@@ -73,11 +74,11 @@ pub fn new(
                     Ok(0) => {
                         debug!("read stack eof");
                         return;
-                    },
+                    }
                     Err(err) => {
                         warn!("read stack failed {:?}", err);
                         return;
-                    },
+                    }
                     Ok(n) => match stack_writer.write(&buf[..n]).await {
                         Ok(_) => (),
                         Err(e) => {

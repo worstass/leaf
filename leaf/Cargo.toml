@@ -221,7 +221,7 @@ tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", 
 
 # MARKER BEGIN
 # Packet
-smoltcp = { version = "0.8.0", default-features = false, features = ["log"] }
+smoltcp = "0.8.0"
 # MARKER END
 
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
