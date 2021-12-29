@@ -108,6 +108,8 @@ pub struct ProxyGroup {
     pub fallback_cache: Option<bool>,
     pub cache_size: Option<i32>,
     pub cache_timeout: Option<i32>,
+    pub last_resort: Option<String>,
+    pub health_check_timeout: Option<i32>,
 
     // tryall
     pub delay_base: Option<i32>,
@@ -129,6 +131,8 @@ impl Default for ProxyGroup {
             fallback_cache: Some(false),
             cache_size: Some(256),
             cache_timeout: Some(60),
+            last_resort: None,
+            health_check_timeout: Some(5),
             delay_base: Some(0),
             attempts: Some(2),
         }
@@ -524,6 +528,22 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
                         };
                         group.cache_timeout = i;
                     }
+                    "last-resort" => {
+                        let i = if let Ok(i) = v.parse::<String>() {
+                            Some(i)
+                        } else {
+                            None
+                        };
+                        group.last_resort = i;
+                    }
+                    "health-check-timeout" => {
+                        let i = if let Ok(i) = v.parse::<i32>() {
+                            Some(i)
+                        } else {
+                            None
+                        };
+                        group.health_check_timeout = i;
+                    }
                     "delay-base" => {
                         let i = if let Ok(i) = v.parse::<i32>() {
                             Some(i)
@@ -871,6 +891,16 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                     if let Some(ext_sni) = &ext_proxy.sni {
                         quic_settings.server_name = ext_sni.clone();
                     }
+                    if let Some(ext_tls_cert) = &ext_proxy.tls_cert {
+                        let cert = Path::new(ext_tls_cert);
+                        if cert.is_absolute() {
+                            quic_settings.certificate = cert.to_string_lossy().to_string();
+                        } else {
+                            let asset_loc = Path::new(&*crate::option::ASSET_LOCATION);
+                            let path = asset_loc.join(cert).to_string_lossy().to_string();
+                            quic_settings.certificate = path;
+                        }
+                    }
                     let quic_settings = quic_settings.write_to_bytes().unwrap();
                     quic_outbound.settings = quic_settings;
                     quic_outbound.protocol = "quic".to_string();
@@ -1029,6 +1059,16 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                         settings.cache_timeout = ext_cache_timeout as u32;
                     } else {
                         settings.cache_timeout = 60; // in minutes
+                    }
+                    if let Some(ext_last_resort) = &ext_proxy_group.last_resort {
+                        settings.last_resort = ext_last_resort.clone();
+                    } else {
+                        settings.last_resort = "".to_string();
+                    }
+                    if let Some(ext_health_check_timeout) = ext_proxy_group.health_check_timeout {
+                        settings.health_check_timeout = ext_health_check_timeout as u32;
+                    } else {
+                        settings.health_check_timeout = 4;
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;

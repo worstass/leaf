@@ -1069,7 +1069,7 @@ impl ::protobuf::reflect::ProtobufValue for ShadowsocksInboundSettings {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct TrojanInboundSettings {
     // message fields
-    pub password: ::std::string::String,
+    pub passwords: ::protobuf::RepeatedField<::std::string::String>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1086,11 +1086,11 @@ impl TrojanInboundSettings {
         ::std::default::Default::default()
     }
 
-    // string password = 3;
+    // repeated string passwords = 1;
 
 
-    pub fn get_password(&self) -> &str {
-        &self.password
+    pub fn get_passwords(&self) -> &[::std::string::String] {
+        &self.passwords
     }
 }
 
@@ -1103,8 +1103,8 @@ impl ::protobuf::Message for TrojanInboundSettings {
         while !is.eof()? {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
-                3 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.password)?;
+                1 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.passwords)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1118,18 +1118,18 @@ impl ::protobuf::Message for TrojanInboundSettings {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if !self.password.is_empty() {
-            my_size += ::protobuf::rt::string_size(3, &self.password);
-        }
+        for value in &self.passwords {
+            my_size += ::protobuf::rt::string_size(1, &value);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if !self.password.is_empty() {
-            os.write_string(3, &self.password)?;
-        }
+        for v in &self.passwords {
+            os.write_string(1, &v)?;
+        };
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -1172,7 +1172,7 @@ impl ::protobuf::Message for TrojanInboundSettings {
 
 impl ::protobuf::Clear for TrojanInboundSettings {
     fn clear(&mut self) {
-        self.password.clear();
+        self.passwords.clear();
         self.unknown_fields.clear();
     }
 }
@@ -4028,6 +4028,8 @@ pub struct FailOverOutboundSettings {
     pub fallback_cache: bool,
     pub cache_size: u32,
     pub cache_timeout: u32,
+    pub last_resort: ::std::string::String,
+    pub health_check_timeout: u32,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -4099,6 +4101,20 @@ impl FailOverOutboundSettings {
     pub fn get_cache_timeout(&self) -> u32 {
         self.cache_timeout
     }
+
+    // string last_resort = 9;
+
+
+    pub fn get_last_resort(&self) -> &str {
+        &self.last_resort
+    }
+
+    // uint32 health_check_timeout = 10;
+
+
+    pub fn get_health_check_timeout(&self) -> u32 {
+        self.health_check_timeout
+    }
 }
 
 impl ::protobuf::Message for FailOverOutboundSettings {
@@ -4162,6 +4178,16 @@ impl ::protobuf::Message for FailOverOutboundSettings {
                     let tmp = is.read_uint32()?;
                     self.cache_timeout = tmp;
                 },
+                9 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.last_resort)?;
+                },
+                10 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.health_check_timeout = tmp;
+                },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
                 },
@@ -4198,6 +4224,12 @@ impl ::protobuf::Message for FailOverOutboundSettings {
         if self.cache_timeout != 0 {
             my_size += ::protobuf::rt::value_size(8, self.cache_timeout, ::protobuf::wire_format::WireTypeVarint);
         }
+        if !self.last_resort.is_empty() {
+            my_size += ::protobuf::rt::string_size(9, &self.last_resort);
+        }
+        if self.health_check_timeout != 0 {
+            my_size += ::protobuf::rt::value_size(10, self.health_check_timeout, ::protobuf::wire_format::WireTypeVarint);
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -4227,6 +4259,12 @@ impl ::protobuf::Message for FailOverOutboundSettings {
         }
         if self.cache_timeout != 0 {
             os.write_uint32(8, self.cache_timeout)?;
+        }
+        if !self.last_resort.is_empty() {
+            os.write_string(9, &self.last_resort)?;
+        }
+        if self.health_check_timeout != 0 {
+            os.write_uint32(10, self.health_check_timeout)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -4278,6 +4316,8 @@ impl ::protobuf::Clear for FailOverOutboundSettings {
         self.fallback_cache = false;
         self.cache_size = 0;
         self.cache_timeout = 0;
+        self.last_resort.clear();
+        self.health_check_timeout = 0;
         self.unknown_fields.clear();
     }
 }

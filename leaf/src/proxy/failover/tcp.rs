@@ -23,6 +23,7 @@ pub struct Handler {
     pub schedule: Arc<TokioMutex<Vec<usize>>>,
     pub health_check_task: TokioMutex<Option<BoxFuture<'static, ()>>>,
     pub cache: Option<Arc<TokioMutex<LruCache<String, usize>>>>,
+    pub last_resort: Option<AnyOutboundHandler>,
     pub dns_client: SyncDnsClient,
 }
 
@@ -34,6 +35,7 @@ async fn health_check_task(
     h: AnyOutboundHandler,
     dns_client: SyncDnsClient,
     mut delay: Option<time::Duration>,
+    health_check_timeout: u32,
 ) -> Measure {
     if let Some(d) = delay.take() {
         tokio::time::sleep(d).await;
@@ -69,7 +71,12 @@ async fn health_check_task(
             Err(_) => Measure(i, u128::MAX),
         }
     };
-    match timeout(time::Duration::from_secs(5), measure).await {
+    match timeout(
+        time::Duration::from_secs(health_check_timeout.into()),
+        measure,
+    )
+    .await
+    {
         Ok(m) => m,
         // timeout, better than handshake error
         Err(_) => Measure(i, u128::MAX - 1),
@@ -87,6 +94,8 @@ impl Handler {
         fallback_cache: bool,
         cache_size: usize,
         cache_timeout: u64, // in minutes
+        last_resort: Option<AnyOutboundHandler>,
+        health_check_timeout: u32,
         dns_client: SyncDnsClient,
     ) -> (Self, Vec<AbortHandle>) {
         let mut abort_handles = Vec::new();
@@ -99,6 +108,7 @@ impl Handler {
         let schedule2 = schedule.clone();
         let actors2 = actors.clone();
         let dns_client2 = dns_client.clone();
+        let last_resort2 = last_resort.clone();
         let task = if health_check {
             let fut = async move {
                 loop {
@@ -117,6 +127,7 @@ impl Handler {
                             a.clone(),
                             dns_client4,
                             delay,
+                            health_check_timeout,
                         )));
                     }
                     let mut measures = futures::future::join_all(checks).await;
@@ -143,14 +154,28 @@ impl Handler {
 
                     let mut schedule = schedule2.lock().await;
                     schedule.clear();
-                    if !failover {
-                        // if failover is disabled, put only 1 actor in schedule
-                        schedule.push(measures[0].0);
-                        trace!("put {} in schedule", measures[0].0);
-                    } else {
-                        for m in measures {
-                            schedule.push(m.0);
-                            trace!("put {} in schedule", m.0);
+
+                    let all_failed = |measures: &Vec<Measure>| -> bool {
+                        let threshold =
+                            time::Duration::from_secs(health_check_timeout.into()).as_millis();
+                        for m in measures.iter() {
+                            if m.1 < threshold {
+                                return false;
+                            }
+                        }
+                        true
+                    };
+
+                    if !(last_resort2.is_some() && all_failed(&measures)) {
+                        if !failover {
+                            // if failover is disabled, put only 1 actor in schedule
+                            schedule.push(measures[0].0);
+                            trace!("put {} in schedule", measures[0].0);
+                        } else {
+                            for m in measures {
+                                schedule.push(m.0);
+                                trace!("put {} in schedule", m.0);
+                            }
                         }
                     }
 
@@ -185,6 +210,7 @@ impl Handler {
                 schedule,
                 health_check_task: TokioMutex::new(task),
                 cache,
+                last_resort,
                 dns_client,
             },
             abort_handles,
@@ -236,6 +262,24 @@ impl TcpOutboundHandler for Handler {
         }
 
         let schedule = self.schedule.lock().await.clone();
+
+        if schedule.is_empty() && self.last_resort.is_some() {
+            let handle = async {
+                let stream = crate::proxy::connect_tcp_outbound(
+                    sess,
+                    self.dns_client.clone(),
+                    &self.last_resort.as_ref().unwrap(),
+                )
+                .await?;
+                TcpOutboundHandler::handle(
+                    self.last_resort.as_ref().unwrap().as_ref(),
+                    sess,
+                    stream,
+                )
+                .await
+            };
+            return handle.await;
+        }
 
         for (sche_idx, actor_idx) in schedule.into_iter().enumerate() {
             if actor_idx >= self.actors.len() {
