@@ -28,21 +28,17 @@ pub fn new(
     nat_manager: Arc<NatManager>,
 ) -> Result<Runner> {
     let settings = PacketInboundSettings::parse_from_bytes(&inbound.settings)?;
-
     Ok(Box::pin(async move {
-        // let sock = UdpSocket::bind("0.0.0.0:8081").await?;
         let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Include)));
         let remote_port = settings.port;
-        let local_port = settings.port;
+        let local_port = settings.port + 1;
         let remote_addr: SocketAddr = format!("127.0.0.1:{}", remote_port).parse().unwrap();
         let sock = Arc::new(tokio::net::UdpSocket::bind(&remote_addr).await.unwrap());
-        let local_addr: SocketAddr = format!("127.0.0.1:{}", local_port).parse().unwrap();
-        sock.connect(local_addr).await.unwrap();
+        // let local_addr: SocketAddr = format!("127.0.0.1:{}", local_port).parse().unwrap();
+        // sock.connect(local_addr).await.unwrap();
         let stack = NetStack::new(inbound.tag.clone(), dispatcher, nat_manager, fakedns);
         let (mut stack_reader, mut stack_writer) = io::split(stack);
-
         let packet_sink = sock.clone();
-
         let mtu = 1500;
         let s2t = Box::pin(async move {
             let mut buf = vec![0; mtu as usize];
@@ -89,7 +85,6 @@ pub fn new(
                 }
             }
         });
-
         info!("packet inbound started");
         futures::future::select(t2s, s2t).await;
         info!("packet inbound exited");
