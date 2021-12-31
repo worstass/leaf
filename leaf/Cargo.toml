@@ -217,13 +217,17 @@ warp = { version = "0.3", default-features = false, optional = true }
 notify = { version = "5.0.0-pre.13", optional = true }
 
 # TUN
-[target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]
-tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
-
-# MARKER BEGIN
-# Packet
-smoltcp = "0.8.0"
-# MARKER END
+#[target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]
+#tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
+[target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
+tun = { path = "../rust-tun", features = ["async"], optional = true }
+## MARKER BEGIN
+## TUN for Windows
+#[target.'cfg(any(target_os = "windows"))'.dependencies]
+#wtun = { path = "../wtun" }
+## Packet
+#smoltcp = "0.8.0"
+## MARKER END
 
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
 pnet_datalink = { version = "0.28", package = "pnet_datalink" }

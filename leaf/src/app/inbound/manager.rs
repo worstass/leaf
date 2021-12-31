@@ -44,10 +44,10 @@ use super::network_listener::NetworkInboundListener;
 ))]
 use super::tun_listener::TunInboundListener;
 
-// MARKER BEGIN
-#[cfg(feature = "inbound-packet")]
-use super::packet_listener::PacketInboundListener;
-// MARKER END
+// // MARKER BEGIN
+// #[cfg(feature = "inbound-packet")]
+// use super::packet_listener::PacketInboundListener;
+// // MARKER END
 
 pub struct InboundManager {
     network_listeners: HashMap<String, NetworkInboundListener>,
@@ -61,10 +61,10 @@ pub struct InboundManager {
         )
     ))]
     tun_listener: Option<TunInboundListener>,
-    // MARKER BEGIN
-    #[cfg(feature = "inbound-packet")]
-    packet_listener: Option<PacketInboundListener>,
-    // MARKER END
+    // // MARKER BEGIN
+    // #[cfg(feature = "inbound-packet")]
+    // packet_listener: Option<PacketInboundListener>,
+    // // MARKER END
     tun_auto: bool,
 }
 
@@ -236,10 +236,10 @@ impl InboundManager {
         ))]
         let mut tun_listener: Option<TunInboundListener> = None;
 
-        // MARKER BEGIN
-        #[cfg(feature = "inbound-packet")]
-        let mut packet_listener: Option<PacketInboundListener> = None;
-        // MARKER END
+        // // MARKER BEGIN
+        // #[cfg(feature = "inbound-packet")]
+        // let mut packet_listener: Option<PacketInboundListener> = None;
+        // // MARKER END
 
         let mut tun_auto = false;
 
@@ -266,20 +266,20 @@ impl InboundManager {
                         crate::config::TunInboundSettings::parse_from_bytes(&inbound.settings)?;
                     tun_auto = settings.auto;
                 }
-                // MARKER BEGIN
-                #[cfg(feature = "inbound-packet")]
-                "packet" => {
-                    let listener = PacketInboundListener {
-                        inbound: inbound.clone(),
-                        dispatcher: dispatcher.clone(),
-                        nat_manager: nat_manager.clone(),
-                    };
-                    packet_listener.replace(listener);
-                    // let settings =
-                    //     crate::config::TunInboundSettings::parse_from_bytes(&inbound.settings)?;
-                    // tun_auto = settings.auto;
-                }
-                // MARKER END
+                // // MARKER BEGIN
+                // #[cfg(feature = "inbound-packet")]
+                // "packet" => {
+                //     let listener = PacketInboundListener {
+                //         inbound: inbound.clone(),
+                //         dispatcher: dispatcher.clone(),
+                //         nat_manager: nat_manager.clone(),
+                //     };
+                //     packet_listener.replace(listener);
+                //     // let settings =
+                //     //     crate::config::TunInboundSettings::parse_from_bytes(&inbound.settings)?;
+                //     // tun_auto = settings.auto;
+                // }
+                // // MARKER END
                 _ => {
                     if inbound.port != 0 {
                         if let Some(h) = handlers.get(&tag) {
@@ -309,10 +309,10 @@ impl InboundManager {
                 )
             ))]
             tun_listener,
-            // MARKER BEGIN
-            #[cfg(feature = "inbound-packet")]
-            packet_listener,
-            // MARKER END
+            // // MARKER BEGIN
+            // #[cfg(feature = "inbound-packet")]
+            // packet_listener,
+            // // MARKER END
             tun_auto,
         })
     }
@@ -354,20 +354,20 @@ impl InboundManager {
         self.tun_listener.is_some()
     }
 
-    // MARKER BEGIN
-    #[cfg(feature = "inbound-packet")]
-    pub fn get_packet_runner(&self) -> Result<Runner> {
-        if let Some(listener) = &self.packet_listener {
-            return listener.listen();
-        }
-        Err(anyhow!("no tun inbound"))
-    }
-
-    #[cfg(feature = "inbound-packet")]
-    pub fn has_packet_listener(&self) -> bool {
-        self.packet_listener.is_some()
-    }
-    // MARKER END
+    // // MARKER BEGIN
+    // #[cfg(feature = "inbound-packet")]
+    // pub fn get_packet_runner(&self) -> Result<Runner> {
+    //     if let Some(listener) = &self.packet_listener {
+    //         return listener.listen();
+    //     }
+    //     Err(anyhow!("no tun inbound"))
+    // }
+    //
+    // #[cfg(feature = "inbound-packet")]
+    // pub fn has_packet_listener(&self) -> bool {
+    //     self.packet_listener.is_some()
+    // }
+    // // MARKER END
 
     pub fn tun_auto(&self) -> bool {
         self.tun_auto
