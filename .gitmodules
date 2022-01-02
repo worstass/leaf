@@ -3,4 +3,4 @@
 	url = https://github.com/eycorsican/lwip-leaf.git
 [submodule "rust-tun"]
 	path = rust-tun
-	url = git@github.com:worstass/rust-tun.git
+	url = https://github.com/worstass/rust-tun.git
