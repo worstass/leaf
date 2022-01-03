@@ -1,0 +1,54 @@
+[package]
+name = "leaf-android"
+version = "0.1.0"
+authors = ["nobody <noreply>"]
+edition = "2018"
+
+[lib]
+name = "leaf"
+path = "src/lib.rs"
+crate-type = ["dylib"]
+
+[features]
+default = [
+    "leaf/all-configs",
+    "leaf/all-configs",
+
+    "leaf/inbound-socks",
+    "leaf/inbound-packet",
+    "leaf/inbound-tun",
+
+    "leaf/outbound-direct",
+    "leaf/outbound-drop",
+    "leaf/outbound-redirect",
+    "leaf/outbound-shadowsocks",
+    "leaf/outbound-socks",
+    "leaf/outbound-trojan",
+    "leaf/outbound-tls",
+    "leaf/outbound-ws",
+    "leaf/outbound-amux",
+    "leaf/outbound-quic",
+    "leaf/outbound-failover",
+    "leaf/outbound-random",
+    "leaf/outbound-rr",
+    "leaf/outbound-tryall",
+    "leaf/outbound-chain",
+    "leaf/outbound-retry",
+    # "leaf/outbound-select",
+
+    "leaf/ring-aead",
+    "leaf/rustls-tls",
+    # quinn supports only rustls as tls backend for now
+#    "leaf/inbound-quic",
+#    "leaf/outbound-quic",
+    "auto-reload",
+]
+
+auto-reload = ["leaf/auto-reload"]
+
+[dependencies]
+leaf = { path = "../leaf", default-features = false, optional = true }
+jni = { version = "0.19", default-features = false }
+jnix = "0.4.0"
+tokio = { version = "1", features = ["macros", "rt"] }
+futures = "0.3"

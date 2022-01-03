@@ -40,17 +40,17 @@ fn load_keys(path: &Path) -> io::Result<Vec<PrivateKey>> {
 impl Handler {
     pub fn new(certificate: String, certificate_key: String) -> Result<Self> {
         #[cfg(feature = "rustls-tls")]
-        {
-            let certs = load_certs(Path::new(&certificate))?;
-            let mut keys = load_keys(Path::new(&certificate_key))?;
-            let config = rustls::ServerConfig::builder()
-                .with_safe_defaults()
-                .with_no_client_auth()
-                .with_single_cert(certs, keys.remove(0))
-                .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
-            let acceptor = TlsAcceptor::from(Arc::new(config));
-            Ok(Self { acceptor })
-        }
+            {
+                let certs = load_certs(Path::new(&certificate))?;
+                let mut keys = load_keys(Path::new(&certificate_key))?;
+                let config = rustls::ServerConfig::builder()
+                    .with_safe_defaults()
+                    .with_no_client_auth()
+                    .with_single_cert(certs, keys.remove(0))
+                    .map_err(|err| io::Error::new(io::ErrorKind::InvalidInput, err))?;
+                let acceptor = TlsAcceptor::from(Arc::new(config));
+                Ok(Self { acceptor })
+            }
         #[cfg(feature = "openssl-tls")]
         unimplemented!();
     }
@@ -67,12 +67,12 @@ impl TcpInboundHandler for Handler {
         stream: Self::TStream,
     ) -> std::io::Result<InboundTransport<Self::TStream, Self::TDatagram>> {
         #[cfg(feature = "rustls-tls")]
-        {
-            Ok(InboundTransport::Stream(
-                Box::new(self.acceptor.accept(stream).await?),
-                sess,
-            ))
-        }
+            {
+                Ok(InboundTransport::Stream(
+                    Box::new(self.acceptor.accept(stream).await?),
+                    sess,
+                ))
+            }
 
         #[cfg(feature = "openssl-tls")]
         unimplemented!();

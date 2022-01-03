@@ -1,9 +1,0 @@
-[package]
-name = "netstack"
-version = "0.0.1"
-edition = "2018"
-authors = ["nobody <nobody@nowhere.com>"]
-
-[dependencies]
-tokio = "1.15"
-smoltcp = "0.8.0"
