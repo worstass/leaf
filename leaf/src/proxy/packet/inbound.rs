@@ -18,7 +18,7 @@ use crate::{
     option, Runner,
 };
 
-use super::stack::NetStack;
+use crate::proxy::tun::netstack::NetStack;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use std::net::SocketAddr;
