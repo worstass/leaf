@@ -16,8 +16,9 @@ use crate::{
     app::nat_manager::NatManager,
     config::{Inbound, PacketInboundSettings},
     option, Runner,
-    proxy::tun::netstack::NetStack,
 };
+
+use super::stack::NetStack;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use std::net::SocketAddr;

@@ -10,16 +10,16 @@ use crate::app::nat_manager::NatManager;
 
 use super::stack_impl::NetStackImpl;
 
-pub struct NetStack(Box<NetStackImpl>);
+pub struct Stack(Box<NetStackImpl>);
 
-impl NetStack {
+impl Stack {
     pub fn new(
         inbound_tag: String,
         dispatcher: Arc<Dispatcher>,
         nat_manager: Arc<NatManager>,
         fakedns: Arc<TokioMutex<FakeDns>>,
     ) -> Self {
-        NetStack(NetStackImpl::new(
+        Stack(NetStackImpl::new(
             inbound_tag,
             dispatcher,
             nat_manager,
@@ -28,7 +28,7 @@ impl NetStack {
     }
 }
 
-impl AsyncRead for NetStack {
+impl AsyncRead for Stack {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context,
@@ -38,7 +38,7 @@ impl AsyncRead for NetStack {
     }
 }
 
-impl AsyncWrite for NetStack {
+impl AsyncWrite for Stack {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut Context,

@@ -85,8 +85,8 @@ pub mod tryall;
 pub mod tun;
 #[cfg(any(feature = "inbound-ws", feature = "outbound-ws"))]
 pub mod ws;
-// #[cfg(any(feature = "inbound-packet"))]
-// pub mod packet;
+#[cfg(any(feature = "inbound-packet"))]
+pub mod packet;
 
 pub use datagram::{
     SimpleInboundDatagram, SimpleInboundDatagramRecvHalf, SimpleInboundDatagramSendHalf,

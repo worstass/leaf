@@ -438,12 +438,12 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
     sys::post_tun_creation_setup(&net_info);
 
-    // // MARKER BEGIN
-    // #[cfg(feature = "inbound-packet")]
-    // if let Ok(r) = inbound_manager.get_packet_runner() {
-    //     runners.push(r);
-    // }
-    // // MARKER END
+    // MARKER BEGIN
+    #[cfg(feature = "inbound-packet")]
+    if let Ok(r) = inbound_manager.get_packet_runner() {
+        runners.push(r);
+    }
+    // MARKER END
 
     let runtime_manager = RuntimeManager::new(
         #[cfg(feature = "auto-reload")]

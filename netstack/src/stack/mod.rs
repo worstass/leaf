@@ -4,4 +4,4 @@ mod endpoint;
 mod tcp_stream;
 mod tcp_stream_impl;
 
-pub use stack::NetStack;
+pub use stack::Stack;

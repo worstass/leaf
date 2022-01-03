@@ -1,2 +1,4 @@
 pub mod inbound;
-pub mod netstack;
+mod endpoint;
+mod stack;
+
