@@ -16,6 +16,8 @@ public class Leaf {
 
     public static native boolean shutdown(int rtId);
 
+    public static native boolean testConfigdown(final String configPath);
+
     static {
         System.loadLibrary("leaf");
     }

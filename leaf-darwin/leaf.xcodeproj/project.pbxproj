@@ -6,19 +6,157 @@
 	objectVersion = 55;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		FADB380C27847818005A3852 /* leaf.h in Headers */ = {isa = PBXBuildFile; fileRef = FADB37D827847618005A3852 /* leaf.h */; };
+		FADB380D27847818005A3852 /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8177942783142700DFB7AE /* leaf.swift */; };
+		FADB380E27847819005A3852 /* leaf.h in Headers */ = {isa = PBXBuildFile; fileRef = FADB37D827847618005A3852 /* leaf.h */; };
+		FADB380F27847819005A3852 /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA8177942783142700DFB7AE /* leaf.swift */; };
+		FADB3811278479DF005A3852 /* leaf-bridge.h in Headers */ = {isa = PBXBuildFile; fileRef = FADB3810278479DF005A3852 /* leaf-bridge.h */; };
+		FADB3812278479DF005A3852 /* leaf-bridge.h in Headers */ = {isa = PBXBuildFile; fileRef = FADB3810278479DF005A3852 /* leaf-bridge.h */; };
+		FADB382327848ACF005A3852 /* debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382227848ACF005A3852 /* debug.xcconfig */; };
+		FADB382427848ACF005A3852 /* debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382227848ACF005A3852 /* debug.xcconfig */; };
+		FADB382627848BEE005A3852 /* release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382527848BEE005A3852 /* release.xcconfig */; };
+		FADB382727848BEE005A3852 /* release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382527848BEE005A3852 /* release.xcconfig */; };
+		FADB382C2784A376005A3852 /* libleaf.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FADB382A2784A2DD005A3852 /* libleaf.a */; };
+		FADB382D2784A53D005A3852 /* libleaf.a in Frameworks */ = {isa = PBXBuildFile; fileRef = FADB382A2784A2DD005A3852 /* libleaf.a */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		FA8177942783142700DFB7AE /* leaf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = leaf.swift; sourceTree = "<group>"; };
+		FADB37D827847618005A3852 /* leaf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = leaf.h; sourceTree = "<group>"; };
+		FADB37F9278477F3005A3852 /* leaf_macos.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = leaf_macos.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		FADB380527847805005A3852 /* leaf_ios.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = leaf_ios.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		FADB3810278479DF005A3852 /* leaf-bridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "leaf-bridge.h"; sourceTree = "<group>"; };
+		FADB381527848318005A3852 /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
+		FADB381D2784873A005A3852 /* leaf.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = leaf.h; sourceTree = "<group>"; };
+		FADB382227848ACF005A3852 /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = debug.xcconfig; sourceTree = "<group>"; };
+		FADB382527848BEE005A3852 /* release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = release.xcconfig; sourceTree = "<group>"; };
+		FADB382A2784A2DD005A3852 /* libleaf.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libleaf.a; path = ../build/apple/debug/macosx/libleaf.a; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		FADB37F6278477F3005A3852 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB382C2784A376005A3852 /* libleaf.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FADB380227847805005A3852 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB382D2784A53D005A3852 /* libleaf.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		FA59C32E2782EFBF0077B2EE = {
 			isa = PBXGroup;
 			children = (
+				FADB382827848BF8005A3852 /* configs */,
+				FADB381527848318005A3852 /* build.sh */,
+				FADB3810278479DF005A3852 /* leaf-bridge.h */,
+				FADB37D827847618005A3852 /* leaf.h */,
 				FA8177942783142700DFB7AE /* leaf.swift */,
+				FADB37F9278477F3005A3852 /* leaf_macos.framework */,
+				FADB380527847805005A3852 /* leaf_ios.framework */,
+				FADB381C2784873A005A3852 /* leaf */,
+				FADB38292784A2DD005A3852 /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
+		FADB381C2784873A005A3852 /* leaf */ = {
+			isa = PBXGroup;
+			children = (
+				FADB381D2784873A005A3852 /* leaf.h */,
+			);
+			path = leaf;
+			sourceTree = "<group>";
+		};
+		FADB382827848BF8005A3852 /* configs */ = {
+			isa = PBXGroup;
+			children = (
+				FADB382527848BEE005A3852 /* release.xcconfig */,
+				FADB382227848ACF005A3852 /* debug.xcconfig */,
+			);
+			path = configs;
+			sourceTree = "<group>";
+		};
+		FADB38292784A2DD005A3852 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				FADB382A2784A2DD005A3852 /* libleaf.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		FADB37F4278477F3005A3852 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB380C27847818005A3852 /* leaf.h in Headers */,
+				FADB3811278479DF005A3852 /* leaf-bridge.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FADB380027847805005A3852 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB380E27847819005A3852 /* leaf.h in Headers */,
+				FADB3812278479DF005A3852 /* leaf-bridge.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		FADB37F8278477F3005A3852 /* leaf-macos */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FADB37FD278477F3005A3852 /* Build configuration list for PBXNativeTarget "leaf-macos" */;
+			buildPhases = (
+				FADB37F4278477F3005A3852 /* Headers */,
+				FADB381327847F1E005A3852 /* Compile Rust Code */,
+				FADB37F5278477F3005A3852 /* Sources */,
+				FADB37F6278477F3005A3852 /* Frameworks */,
+				FADB37F7278477F3005A3852 /* Resources */,
+				FADB38142784811D005A3852 /* ShellScript */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "leaf-macos";
+			productName = "leaf-macos";
+			productReference = FADB37F9278477F3005A3852 /* leaf_macos.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		FADB380427847805005A3852 /* leaf-ios */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FADB380927847805005A3852 /* Build configuration list for PBXNativeTarget "leaf-ios" */;
+			buildPhases = (
+				FADB380027847805005A3852 /* Headers */,
+				FADB380127847805005A3852 /* Sources */,
+				FADB380227847805005A3852 /* Frameworks */,
+				FADB380327847805005A3852 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "leaf-ios";
+			productName = "leaf-ios";
+			productReference = FADB380527847805005A3852 /* leaf_ios.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
 		FA59C32F2782EFBF0077B2EE /* Project object */ = {
@@ -27,6 +165,14 @@
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1320;
 				LastUpgradeCheck = 1320;
+				TargetAttributes = {
+					FADB37F8278477F3005A3852 = {
+						CreatedOnToolsVersion = 13.2.1;
+					};
+					FADB380427847805005A3852 = {
+						CreatedOnToolsVersion = 13.2.1;
+					};
+				};
 			};
 			buildConfigurationList = FA59C3322782EFBF0077B2EE /* Build configuration list for PBXProject "leaf" */;
 			compatibilityVersion = "Xcode 13.0";
@@ -41,15 +187,97 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
+				FADB37F8278477F3005A3852 /* leaf-macos */,
+				FADB380427847805005A3852 /* leaf-ios */,
 			);
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		FADB37F7278477F3005A3852 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB382627848BEE005A3852 /* release.xcconfig in Resources */,
+				FADB382327848ACF005A3852 /* debug.xcconfig in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FADB380327847805005A3852 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB382727848BEE005A3852 /* release.xcconfig in Resources */,
+				FADB382427848ACF005A3852 /* debug.xcconfig in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		FADB381327847F1E005A3852 /* Compile Rust Code */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Compile Rust Code";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "PATH=${PATH}:$HOME/.cargo/bin\n$PROJECT_DIR/build.sh\n";
+		};
+		FADB38142784811D005A3852 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		FADB37F5278477F3005A3852 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB380D27847818005A3852 /* leaf.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FADB380127847805005A3852 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FADB380F27847819005A3852 /* leaf.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
 /* Begin XCBuildConfiguration section */
 		FA59C34A2782EFBF0077B2EE /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FADB382227848ACF005A3852 /* debug.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64BIT)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
@@ -98,12 +326,15 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.1;
+				LIBRARY_SEARCH_PATHS = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
+				OTHER_LIBTOOLFLAGS = "";
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OBJC_BRIDGING_HEADER = "leaf-bridge.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
@@ -112,8 +343,10 @@
 		};
 		FA59C34B2782EFBF0077B2EE /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FADB382527848BEE005A3852 /* release.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64BIT)";
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
@@ -156,14 +389,140 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 12.1;
+				LIBRARY_SEARCH_PATHS = "";
+				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
+				OTHER_LIBTOOLFLAGS = "";
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = "leaf-bridge.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VERSIONING_SYSTEM = "apple-generic";
 				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		FADB37FE278477F3005A3852 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 7R6X3T4SL4;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../build/apple/$(BUILD_TYPE)/$(PLATFORM_NAME)";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.github.leaf.leaf-macos";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		FADB37FF278477F3005A3852 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD)";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 7R6X3T4SL4;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../build/apple/$(BUILD_TYPE)/$(PLATFORM_NAME)";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.github.leaf.leaf-macos";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		FADB380A27847805005A3852 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 7R6X3T4SL4;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../build/apple/$(BUILD_TYPE)/$(PLATFORM_NAME)";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.github.leaf.leaf-ios";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		FADB380B27847805005A3852 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DEVELOPMENT_TEAM = 7R6X3T4SL4;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				IPHONEOS_DEPLOYMENT_TARGET = 15.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "$(PROJECT_DIR)/../build/apple/$(BUILD_TYPE)/$(PLATFORM_NAME)";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.github.leaf.leaf-ios";
+				PRODUCT_NAME = "$(TARGET_NAME:c99extidentifier)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -175,6 +534,24 @@
 			buildConfigurations = (
 				FA59C34A2782EFBF0077B2EE /* Debug */,
 				FA59C34B2782EFBF0077B2EE /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FADB37FD278477F3005A3852 /* Build configuration list for PBXNativeTarget "leaf-macos" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FADB37FE278477F3005A3852 /* Debug */,
+				FADB37FF278477F3005A3852 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FADB380927847805005A3852 /* Build configuration list for PBXNativeTarget "leaf-ios" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FADB380A27847805005A3852 /* Debug */,
+				FADB380B27847805005A3852 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

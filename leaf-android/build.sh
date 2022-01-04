@@ -1,5 +1,11 @@
 #!/bin/bash
 
+set -e
+
+realpath() {
+    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+}
+
 mode=debug
 
 if [ "$1" == "release" ]; then
@@ -33,16 +39,16 @@ for target in x86_64-linux-android aarch64-linux-android; do
             export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$android_tools/${target}${api}-clang"
             export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
             mkdir -p "$BUILD_DIR/jni/x86_64/"
-			case $mode in
-				'release')
-					cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-					cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/x86_64/"
-					;;
-				*)
-					cargo build --target $target --manifest-path "$BASE/Cargo.toml"
-					cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/x86_64/"
-					;;
-			esac
+            case $mode in
+              'release')
+                cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
+                cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/x86_64/"
+                ;;
+              *)
+                cargo build --target $target --manifest-path "$BASE/Cargo.toml"
+                cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/x86_64/"
+                ;;
+            esac
             ;;
         'aarch64-linux-android')
             export CC_aarch64_linux_android="$android_tools/${target}${api}-clang"
@@ -51,17 +57,17 @@ for target in x86_64-linux-android aarch64-linux-android; do
             export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$android_tools/${target}${api}-clang"
             export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
             mkdir -p "$BUILD_DIR/jni/arm64-v8a/"
-			case $mode in
-				'release')
-					cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-					cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
-					;;
-				*)
-					cargo build --target $target --manifest-path "$BASE/Cargo.toml"
-					cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
-					;;
-			esac
-			;;
+            case $mode in
+              'release')
+                cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
+                cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
+                ;;
+              *)
+                cargo build --target $target --manifest-path "$BASE/Cargo.toml"
+                cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
+                ;;
+            esac
+			      ;;
         *)
             echo "Unknown target $target"
             ;;

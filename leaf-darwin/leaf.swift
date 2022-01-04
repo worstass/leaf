@@ -1,18 +1,29 @@
 import Foundation
 
-public func runWithOptions(rtId: Int, configPath: String) -> Int32 {
-    
+public func runWithOptions(
+    rtId: UInt16,
+    configPath: String,
+    autoReload: Bool,
+    multiThread: Bool,
+    autoTheads: Bool,
+    threads: Int32,
+    stackSize: Int32
+) -> Int32 {
+    let p = UnsafeMutablePointer<CChar>(mutating: configPath.cString(using: .utf8))
+    return leaf_run_with_options(rtId, p, autoReload, multiThread, autoTheads, threads, stackSize);
 }
 
-public func run(rtId: Int, configPath: String)  -> Int32 {
-    
+public func run(rtId: UInt16, configPath: String)  -> Int32 {
+    let a = configPath.cString(using: .utf8)
+    let p = UnsafeMutablePointer<CChar>(mutating: a)
+    return leaf_run(rtId, p)
 }
 
-public func reload(rtId: Int)  -> Bool {
-    
+public func reload(rtId: UInt16)  -> Int32 {
+    return leaf_reload(rtId)
 }
 
-public func shutdown(rtId: Int)  -> Int32 {
-    
+public func shutdown(rtId: UInt16)  -> Bool {
+    return leaf_shutdown(rtId)
 }
 
