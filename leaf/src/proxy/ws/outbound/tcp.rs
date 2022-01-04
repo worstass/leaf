@@ -11,6 +11,8 @@ use crate::{proxy::*, session::Session};
 
 use super::stream;
 
+use ::http; // MARKER BEGIN - END
+
 pub struct Handler {
     pub path: String,
     pub headers: HashMap<String, String>,

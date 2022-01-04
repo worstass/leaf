@@ -13,6 +13,8 @@ use crate::{
     session::{Session, SocksAddr},
 };
 
+use crate::proxy::stream::BufHeadProxyStream;
+
 struct ProxyService {
     uri: String,
 }
@@ -55,11 +57,14 @@ pub struct Handler;
 
 #[async_trait]
 impl TcpInboundHandler for Handler {
+    type TStream = AnyStream;
+    type TDatagram = AnyInboundDatagram;
+
     async fn handle<'a>(
         &'a self,
         mut sess: Session,
         stream: Box<dyn ProxyStream>,
-    ) -> std::io::Result<InboundTransport> {
+    ) -> std::io::Result<InboundTransport<Self::TStream, Self::TDatagram>> {
         let http = Http::new();
         let proxy_service = ProxyService::new();
         let conn = http
@@ -100,7 +105,8 @@ impl TcpInboundHandler for Handler {
         sess.destination = destination;
 
         Ok(InboundTransport::Stream(
-            Box::new(SimpleProxyStream(parts.io)),
+            // Box::new(SimpleProxyStream(parts.io)),
+            Box::new(BufHeadProxyStream::new(parts.io, bytes::Bytes::new())), // MARKER BEGIN - END
             sess,
         ))
     }

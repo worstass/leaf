@@ -9,6 +9,8 @@ use crate::{proxy::*, session::Session};
 
 use super::stream;
 
+use ::http; // MARKER BEGIN - END
+
 struct SimpleCallback {
     path: String,
 }
