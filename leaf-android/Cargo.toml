@@ -12,7 +12,6 @@ crate-type = ["dylib"]
 [features]
 default = [
     "leaf/all-configs",
-    "leaf/all-configs",
 
     "leaf/inbound-socks",
     "leaf/inbound-packet",

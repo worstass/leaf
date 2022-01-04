@@ -7,7 +7,8 @@ if [ "$1" == "release" ]; then
 fi
 
 BASE=`dirname "$0"`
-BUILD_DIR="$BASE/build"
+PROJECT_BASE=`realpath $BASE/../`
+BUILD_DIR="$PROJECT_BASE/build/android/$mode"
 HOST_OS=`uname -s | tr "[:upper:]" "[:lower:]"`
 HOST_ARCH=`uname -m | tr "[:upper:]" "[:lower:]"`
 if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
@@ -16,45 +17,48 @@ if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
     HOST_ARCH=x86_64
 fi
 
-android_tools="$NDK_HOME/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
-api=31
+api=30
+ndk_version=22.1.7171670
+android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
+
+CC_preifx=${target}${api}
+AR_preifx=${target}${api}
 
 for target in x86_64-linux-android aarch64-linux-android; do
     case $target in
         'x86_64-linux-android')
             export CC_x86_64_linux_android="$android_tools/${target}${api}-clang"
-            export AR_x86_64_linux_android="$android_tools/llvm-ar"
-            export CARGO_TARGET_X86_64_LINUX_ANDROID_AR="$android_tools/llvm-ar"
+            export AR_x86_64_linux_android="$android_tools/${target}-ar"
+            export CARGO_TARGET_X86_64_LINUX_ANDROID_AR="$android_tools/$target-ar"
             export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$android_tools/${target}${api}-clang"
-            export PATH="$NDK_HOME/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
-            mkdir -p "$BUILD_DIR/jniLibs/x86_64/"
+            export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
+            mkdir -p "$BUILD_DIR/jni/x86_64/"
 			case $mode in
 				'release')
-#				  cargo build --target $target --manifest-path "$BASE/Cargo.toml" --no-default-features --features "leaf/default-openssl" --release
 					cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-					cp "$BASE/../target/$target/release/libleaf.so" "$BUILD_DIR/jniLibs/x86_64/"
+					cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/x86_64/"
 					;;
 				*)
 					cargo build --target $target --manifest-path "$BASE/Cargo.toml"
-					cp "$BASE/../target/$target/debug/libleaf.so" "$BUILD_DIR/jniLibs/x86_64/"
+					cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/x86_64/"
 					;;
 			esac
             ;;
         'aarch64-linux-android')
             export CC_aarch64_linux_android="$android_tools/${target}${api}-clang"
-            export AR_aarch64_linux_android="$android_tools/llvm-ar"
-            export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR="$android_tools/llvm-ar"
+            export AR_aarch64_linux_android="$android_tools/${target}-ar"
+            export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR="$android_tools/$target-ar"
             export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$android_tools/${target}${api}-clang"
-            export PATH="$NDK_HOME/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
-            mkdir -p "$BUILD_DIR/jniLibs/arm64-v8a/"
+            export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
+            mkdir -p "$BUILD_DIR/jni/arm64-v8a/"
 			case $mode in
 				'release')
 					cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-					cp "$BASE/../target/$target/release/libleaf.so" "$BUILD_DIR/jniLibs/arm64-v8a/"
+					cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
 					;;
 				*)
 					cargo build --target $target --manifest-path "$BASE/Cargo.toml"
-					cp "$BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jniLibs/arm64-v8a/"
+					cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
 					;;
 			esac
 			;;
@@ -63,3 +67,16 @@ for target in x86_64-linux-android aarch64-linux-android; do
             ;;
     esac
 done
+
+javac $BASE/Leaf.java -d $BUILD_DIR
+pushd $BUILD_DIR > /dev/null
+jar cvf classes.jar leaf/Leaf.class
+popd > /dev/null
+
+pushd $BUILD_DIR > /dev/null
+cat > AndroidManifest.xml <<EOF
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="rust.boundary.rustjni">
+<uses-sdk android:minSdkVersion="15"/></manifest>
+EOF
+zip -r leaf.aar classes.jar AndroidManifest.xml jni
+popd > /dev/null
