@@ -8,7 +8,6 @@ build = "build.rs"
 [lib]
 name = "leaf"
 path = "src/lib.rs"
-#crate-type = ["staticlib"]
 
 [features]
 default = [
@@ -115,7 +114,7 @@ inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
 inbound-tls = []
 inbound-chain = []
-inbound-packet = []
+inbound-packet = ["inbound-tun"]
 
 api = ["warp"]
 auto-reload = ["notify"]
@@ -232,7 +231,6 @@ memchr = { version = "2" }
 
 # MARKER BEGIN
 # Packet
-#netstack = {path = "../netstack"}
 smoltcp = "0.8.0"
 # MARKER END
 

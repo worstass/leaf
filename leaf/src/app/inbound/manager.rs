@@ -39,7 +39,8 @@ use super::network_listener::NetworkInboundListener;
         target_os = "ios",
         target_os = "android",
         target_os = "macos",
-        target_os = "linux"
+        target_os = "linux",
+        target_os = "windows", // MARKER BEGIN - END
     )
 ))]
 use super::tun_listener::TunInboundListener;
@@ -57,7 +58,8 @@ pub struct InboundManager {
             target_os = "ios",
             target_os = "android",
             target_os = "macos",
-            target_os = "linux"
+            target_os = "linux",
+            target_os = "windows", // MARKER BEGIN - END
         )
     ))]
     tun_listener: Option<TunInboundListener>,
@@ -231,7 +233,8 @@ impl InboundManager {
                 target_os = "ios",
                 target_os = "android",
                 target_os = "macos",
-                target_os = "linux"
+                target_os = "linux",
+                target_os = "windows", // MARKER BEGIN - END
             )
         ))]
         let mut tun_listener: Option<TunInboundListener> = None;
@@ -252,7 +255,8 @@ impl InboundManager {
                         target_os = "ios",
                         target_os = "android",
                         target_os = "macos",
-                        target_os = "linux"
+                        target_os = "linux",
+                        target_os = "windows", // MARKER BEGIN - END
                     )
                 ))]
                 "tun" => {
@@ -275,9 +279,6 @@ impl InboundManager {
                         nat_manager: nat_manager.clone(),
                     };
                     packet_listener.replace(listener);
-                    // let settings =
-                    //     crate::config::TunInboundSettings::parse_from_bytes(&inbound.settings)?;
-                    // tun_auto = settings.auto;
                 }
                 // MARKER END
                 _ => {
@@ -305,7 +306,8 @@ impl InboundManager {
                     target_os = "ios",
                     target_os = "android",
                     target_os = "macos",
-                    target_os = "linux"
+                    target_os = "linux",
+                    target_os = "windows", // MARKER BEGIN - END
                 )
             ))]
             tun_listener,
@@ -331,7 +333,8 @@ impl InboundManager {
             target_os = "ios",
             target_os = "android",
             target_os = "macos",
-            target_os = "linux"
+            target_os = "linux",
+            target_os = "windows", // MARKER BEGIN - END
         )
     ))]
     pub fn get_tun_runner(&self) -> Result<Runner> {
@@ -347,11 +350,16 @@ impl InboundManager {
             target_os = "ios",
             target_os = "android",
             target_os = "macos",
-            target_os = "linux"
+            target_os = "linux",
+            target_os = "windows", // MARKER BEGIN - END
         )
     ))]
     pub fn has_tun_listener(&self) -> bool {
         self.tun_listener.is_some()
+    }
+
+    pub fn tun_auto(&self) -> bool {
+        self.tun_auto
     }
 
     // MARKER BEGIN
@@ -368,8 +376,4 @@ impl InboundManager {
         self.packet_listener.is_some()
     }
     // MARKER END
-
-    pub fn tun_auto(&self) -> bool {
-        self.tun_auto
-    }
 }

@@ -13,14 +13,13 @@ pub mod router;
 #[cfg(feature = "api")]
 pub mod api;
 
-// MARKER BEGIN
-// #[cfg(any(
-//     target_os = "ios",
-//     target_os = "android",
-//     target_os = "macos",
-//     target_os = "linux"
-// ))]
-// MARKER END
+#[cfg(any(
+    target_os = "ios",
+    target_os = "android",
+    target_os = "macos",
+    target_os = "linux",
+    target_os = "windows", // MARKER BEGIN - END
+))]
 pub mod fake_dns;
 
 pub type SyncDnsClient = Arc<RwLock<dns_client::DnsClient>>;

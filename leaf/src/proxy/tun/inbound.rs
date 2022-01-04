@@ -37,14 +37,14 @@ pub fn new(
             .mtu(1500);
 
         #[cfg(not(any(
-        target_arch = "mips",
-        target_arch = "mips64",
-        target_arch = "mipsel",
-        target_arch = "mipsel64",
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_arch = "mipsel",
+            target_arch = "mipsel64",
         )))]
-            {
-                cfg.netmask(&*option::DEFAULT_TUN_IPV4_MASK);
-            }
+        {
+            cfg.netmask(&*option::DEFAULT_TUN_IPV4_MASK);
+        }
 
         cfg.up();
     } else {
@@ -54,14 +54,14 @@ pub fn new(
             .mtu(settings.mtu);
 
         #[cfg(not(any(
-        target_arch = "mips",
-        target_arch = "mips64",
-        target_arch = "mipsel",
-        target_arch = "mipsel64",
+            target_arch = "mips",
+            target_arch = "mips64",
+            target_arch = "mipsel",
+            target_arch = "mipsel64",
         )))]
-            {
-                cfg.netmask(settings.netmask);
-            }
+        {
+            cfg.netmask(settings.netmask);
+        }
 
         cfg.up();
     }
