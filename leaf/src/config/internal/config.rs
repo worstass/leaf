@@ -1807,7 +1807,11 @@ impl ::protobuf::reflect::ProtobufValue for ChainInboundSettings {
 #[derive(PartialEq,Clone,Default,Debug)]
 pub struct PacketInboundSettings {
     // message fields
-    pub port: u32,
+    pub sink: PacketInboundSettings_Sink,
+    pub fd: i32,
+    pub local_port: u32,
+    pub remote_port: u32,
+    pub pipe: ::std::string::String,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1824,11 +1828,39 @@ impl PacketInboundSettings {
         ::std::default::Default::default()
     }
 
-    // uint32 port = 1;
+    // .PacketInboundSettings.Sink sink = 1;
 
 
-    pub fn get_port(&self) -> u32 {
-        self.port
+    pub fn get_sink(&self) -> PacketInboundSettings_Sink {
+        self.sink
+    }
+
+    // int32 fd = 2;
+
+
+    pub fn get_fd(&self) -> i32 {
+        self.fd
+    }
+
+    // uint32 local_port = 3;
+
+
+    pub fn get_local_port(&self) -> u32 {
+        self.local_port
+    }
+
+    // uint32 remote_port = 4;
+
+
+    pub fn get_remote_port(&self) -> u32 {
+        self.remote_port
+    }
+
+    // string pipe = 5;
+
+
+    pub fn get_pipe(&self) -> &str {
+        &self.pipe
     }
 }
 
@@ -1842,11 +1874,31 @@ impl ::protobuf::Message for PacketInboundSettings {
             let (field_number, wire_type) = is.read_tag_unpack()?;
             match field_number {
                 1 => {
+                    ::protobuf::rt::read_proto3_enum_with_unknown_fields_into(wire_type, is, &mut self.sink, 1, &mut self.unknown_fields)?
+                },
+                2 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int32()?;
+                    self.fd = tmp;
+                },
+                3 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
                     let tmp = is.read_uint32()?;
-                    self.port = tmp;
+                    self.local_port = tmp;
+                },
+                4 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_uint32()?;
+                    self.remote_port = tmp;
+                },
+                5 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.pipe)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1860,8 +1912,20 @@ impl ::protobuf::Message for PacketInboundSettings {
     #[allow(unused_variables)]
     fn compute_size(&self) -> u32 {
         let mut my_size = 0;
-        if self.port != 0 {
-            my_size += ::protobuf::rt::value_size(1, self.port, ::protobuf::wire_format::WireTypeVarint);
+        if self.sink != PacketInboundSettings_Sink::FD {
+            my_size += ::protobuf::rt::enum_size(1, self.sink);
+        }
+        if self.fd != 0 {
+            my_size += ::protobuf::rt::value_size(2, self.fd, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.local_port != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.local_port, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if self.remote_port != 0 {
+            my_size += ::protobuf::rt::value_size(4, self.remote_port, ::protobuf::wire_format::WireTypeVarint);
+        }
+        if !self.pipe.is_empty() {
+            my_size += ::protobuf::rt::string_size(5, &self.pipe);
         }
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
@@ -1869,8 +1933,20 @@ impl ::protobuf::Message for PacketInboundSettings {
     }
 
     fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::ProtobufResult<()> {
-        if self.port != 0 {
-            os.write_uint32(1, self.port)?;
+        if self.sink != PacketInboundSettings_Sink::FD {
+            os.write_enum(1, ::protobuf::ProtobufEnum::value(&self.sink))?;
+        }
+        if self.fd != 0 {
+            os.write_int32(2, self.fd)?;
+        }
+        if self.local_port != 0 {
+            os.write_uint32(3, self.local_port)?;
+        }
+        if self.remote_port != 0 {
+            os.write_uint32(4, self.remote_port)?;
+        }
+        if !self.pipe.is_empty() {
+            os.write_string(5, &self.pipe)?;
         }
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -1914,7 +1990,11 @@ impl ::protobuf::Message for PacketInboundSettings {
 
 impl ::protobuf::Clear for PacketInboundSettings {
     fn clear(&mut self) {
-        self.port = 0;
+        self.sink = PacketInboundSettings_Sink::FD;
+        self.fd = 0;
+        self.local_port = 0;
+        self.remote_port = 0;
+        self.pipe.clear();
         self.unknown_fields.clear();
     }
 }
@@ -1922,6 +2002,52 @@ impl ::protobuf::Clear for PacketInboundSettings {
 impl ::protobuf::reflect::ProtobufValue for PacketInboundSettings {
     fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
         ::protobuf::reflect::ReflectValueRef::Message(self)
+    }
+}
+
+#[derive(Clone,PartialEq,Eq,Debug,Hash)]
+pub enum PacketInboundSettings_Sink {
+    FD = 0,
+    UDP = 1,
+    PIPE = 2,
+}
+
+impl ::protobuf::ProtobufEnum for PacketInboundSettings_Sink {
+    fn value(&self) -> i32 {
+        *self as i32
+    }
+
+    fn from_i32(value: i32) -> ::std::option::Option<PacketInboundSettings_Sink> {
+        match value {
+            0 => ::std::option::Option::Some(PacketInboundSettings_Sink::FD),
+            1 => ::std::option::Option::Some(PacketInboundSettings_Sink::UDP),
+            2 => ::std::option::Option::Some(PacketInboundSettings_Sink::PIPE),
+            _ => ::std::option::Option::None
+        }
+    }
+
+    fn values() -> &'static [Self] {
+        static values: &'static [PacketInboundSettings_Sink] = &[
+            PacketInboundSettings_Sink::FD,
+            PacketInboundSettings_Sink::UDP,
+            PacketInboundSettings_Sink::PIPE,
+        ];
+        values
+    }
+}
+
+impl ::std::marker::Copy for PacketInboundSettings_Sink {
+}
+
+impl ::std::default::Default for PacketInboundSettings_Sink {
+    fn default() -> Self {
+        PacketInboundSettings_Sink::FD
+    }
+}
+
+impl ::protobuf::reflect::ProtobufValue for PacketInboundSettings_Sink {
+    fn as_ref(&self) -> ::protobuf::reflect::ReflectValueRef {
+        ::protobuf::reflect::ReflectValueRef::Enum(::protobuf::ProtobufEnum::descriptor(self))
     }
 }
 

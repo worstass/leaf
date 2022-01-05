@@ -78,7 +78,16 @@ message ChainInboundSettings {
 
 // MARKER BEGIN
 message PacketInboundSettings {
-	uint32 port = 1;
+	enum Sink {
+		FD = 0;
+		UDP = 1;
+		PIPE = 2;
+	}
+	Sink sink = 1;
+	int32 fd = 2;
+	uint32 local_port = 3;
+	uint32 remote_port = 4;
+	string pipe = 5;
 }
 // MARKER END
 

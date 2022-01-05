@@ -42,12 +42,12 @@ fn compile_lwip() {
         // .file("src/proxy/tun/netstack/lwip/core/ipv6/mld6.c")
         .file("src/proxy/tun/netstack/lwip/core/ipv6/nd6.c")
         .file("src/proxy/tun/netstack/lwip/custom/sys_arch.c")
-        .file("src/lwiperr.c") // MARKER BEGIN - END
+        .file("src/lwiperr.c") // MARKER BEGIN - END Fixing the Windows builds
         .include("src/proxy/tun/netstack/lwip/custom")
         .include("src/proxy/tun/netstack/lwip/include")
         .warnings(false)
         .flag_if_supported("-Wno-everything")
-        .compile("liblwip"); // MARKER BEGIN - END
+        .compile("liblwip"); // MARKER BEGIN - END Remove lib suffix
 }
 
 fn generate_lwip_bindings() {

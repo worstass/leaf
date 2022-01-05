@@ -114,7 +114,7 @@ inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
 inbound-tls = []
 inbound-chain = []
-inbound-packet = ["inbound-tun"]
+inbound-packet = ["inbound-tun", "tokio/fs"]
 
 api = ["warp"]
 auto-reload = ["notify"]
