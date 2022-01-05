@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FADB37F8278477F3005A3852"
+               BlueprintIdentifier = "FADB380427847805005A3852"
                BuildableName = "leaf.framework"
-               BlueprintName = "leaf_macos"
+               BlueprintName = "leaf_ios"
                ReferencedContainer = "container:leaf.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -47,6 +47,15 @@
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "NO"
       debugDocumentVersioning = "YES">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "FADB380427847805005A3852"
+            BuildableName = "leaf.framework"
+            BlueprintName = "leaf_ios"
+            ReferencedContainer = "container:leaf.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
    </ProfileAction>
    <AnalyzeAction
       buildConfiguration = "Debug">

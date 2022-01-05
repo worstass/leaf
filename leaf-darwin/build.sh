@@ -6,48 +6,66 @@ realpath() {
     [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
-BUILD_TYPE="${BUILD_TYPE:=debug}"
+scheme=$1 # macos or ios
+if [ -n "$CONFIGURATION" ]; then CONFIG=$CONFIGURATION; else CONFIG="Debug"; fi
 BASE=`dirname "$0"`
 PROJECT_BASE=`realpath $BASE/..`
-BUILD_DIR="$PROJECT_BASE/build/apple/$BUILD_TYPE/$PLATFORM_NAME"
-mkdir -p $BUILD_DIR
 
-if [ "$BUILD_TYPE" == "release" ]; then
-  build_type="--release"
+macosx_platform_targets="aarch64-apple-darwin x86_64-apple-darwin"
+iphoneos_platform_targets="aarch64-apple-ios"
+iphonesimulator_platform_targets="x86_64-apple-ios aarch64-apple-ios-sim"
+maccatalyst_platform_targets="x86_64-apple-ios-macabi aarch64-apple-ios-macabi"
+
+if [ "$scheme" == "macos" ]; then
+  targets="$macosx_platform_targets"
+elif [ "$scheme" == "ios" ]; then
+  targets="$iphoneos_platform_targets $iphonesimulator_platform_targets $maccatalyst_platform_targets"
 else
-  build_type=""
+  echo "Unknown scheme type: $scheme"
+  exit
 fi
 
-#echo $BUILD_TYPE
-#echo $PLATFORM_NAME
-#echo $ARCHS
-
-if [ "$PLATFORM_NAME" == "macosx" ]; then
-  host_os="darwin"
-elif [ "$PLATFORM_NAME" == "ios" ]; then
-  host_os="ios"
+if [ "$CONFIG" == "Release" ]; then
+  cargo_build_flags="--release"
+  build_type="release"
+elif [ "$CONFIG" == "Debug" ]; then
+  cargo_build_flags=""
+  build_type="debug"
 else
-  echo "Unknown host_os"
+  echo "Unknown configuration type"
 fi
 
-echo $host_os
-
-libs=""
-for arch in $ARCHS; do
-   case $arch in
-     'x86_64')
-         cargo build --target x86_64-apple-$host_os $build_type
-         libs="$libs $PROJECT_BASE/target/x86_64-apple-$host_os/$BUILD_TYPE/libleaf.a"
-         ;;
-     'arm64')
-         cargo build --target aarch64-apple-$host_os $build_type
-         libs="$libs $PROJECT_BASE/target/aarch64-apple-$host_os/$BUILD_TYPE/libleaf.a"
-         ;;
-     *)
-         echo "Unknown target $arch"
-         ;;
-   esac
+for target in $targets; do
+  if [[ $target == *macabi ]]; then flags="-Z build-std"; else flags=""; fi
+  cd $PROJECT_BASE/leaf-ffi && cargo build $flags --target $target $cargo_build_flags
 done
 
-lipo -create $libs -output $BUILD_DIR/libleaf.a
-lipo -info $BUILD_DIR/libleaf.a
+if [ "$scheme" == "macos" ]; then
+  targets="$macosx_platform_targets"
+  for platform in macosx; do
+    libs=""
+    for target in $targets; do
+      libs="$libs $PROJECT_BASE/target/$target/$build_type/libleaf.a"
+    done
+    lib_output="$PROJECT_BASE/build/apple/$CONFIG-$platform"
+    mkdir -p $lib_output
+    lipo -create $libs -output $lib_output/libleaf.a
+    lipo -info $lib_output/libleaf.a
+  done
+elif [ "$scheme" == "ios" ]; then
+    for platform in iphoneos iphonesimulator maccatalyst; do
+      tgs=${platform}_platform_targets
+      targets=${!tgs}
+      libs=""
+      for target in $targets; do
+        libs="$libs $PROJECT_BASE/target/$target/$build_type/libleaf.a"
+      done
+      lib_output="$PROJECT_BASE/build/apple/$CONFIG-$platform"
+      mkdir -p $lib_output
+      lipo -create $libs -output $lib_output/libleaf.a
+      lipo -info $lib_output/libleaf.a
+    done
+else
+  echo "Unknown scheme type: $scheme"
+  exit
+fi

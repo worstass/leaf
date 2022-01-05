@@ -218,7 +218,7 @@ notify = { version = "5.0.0-pre.13", optional = true }
 # TUN
 #[target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux"))'.dependencies]
 #tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
-[target.'cfg(any(target_os = "macos", target_os = "android", target_os = "linux", target_os = "windows"))'.dependencies]
+[target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
 tun = { path = "../rust-tun", features = ["async"], optional = true }
 
 [target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]
@@ -231,7 +231,7 @@ memchr = { version = "2" }
 
 # MARKER BEGIN
 # Packet
-smoltcp = "0.8.0"
+#smoltcp = "0.8.0"
 # MARKER END
 
 [dev-dependencies]
