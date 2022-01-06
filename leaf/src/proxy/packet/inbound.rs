@@ -8,7 +8,6 @@ use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
 use tokio::sync::Mutex as TokioMutex;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio_util::codec::Framed;
-// use tokio::net::UdpSocket;
 
 use crate::{
     app::dispatcher::Dispatcher,
@@ -26,10 +25,12 @@ use std::net::SocketAddr;
 use std::os::unix::io::FromRawFd;
 use std::pin::Pin;
 use tokio::fs::File;
-use tun::platform::posix::Fd;
+
 use crate::config::PacketInboundSettings_Sink;
 use crate::proxy::packet::UdpSink;
 use crate::proxy::packet::Sink;
+
+#[cfg(unix)]
 use crate::proxy::packet::FdSink;
 
 #[cfg(unix)]
@@ -48,6 +49,7 @@ fn sink_from_udp(local_port: u32, remote_port: u32) -> Result<Pin<Box<dyn Sink>>
 
 impl Sink for File {}
 
+#[cfg(unix)]
 fn sink_from_pipe(pipe: &str) -> Result<Pin<Box<dyn Sink>>> {
     Ok(Box::pin(unsafe { File::from_raw_fd(21) }))
 }
@@ -61,12 +63,15 @@ pub fn new(
     Ok(Box::pin(async move {
         let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Include)));
         let mut stack = NetStack::new(inbound.tag.clone(), dispatcher, nat_manager, fakedns);
-        let mut sink = match settings.sink {
+        let sink = match settings.sink {
             #[cfg(unix)]
-            PacketInboundSettings_Sink::FD => sink_from_fd(settings.fd).unwrap(),
-            PacketInboundSettings_Sink::UDP => sink_from_udp(settings.local_port, settings.remote_port).unwrap(),
-            PacketInboundSettings_Sink::PIPE => sink_from_pipe(settings.pipe.as_str()).unwrap()
+            PacketInboundSettings_Sink::FD =>  Some( sink_from_fd(settings.fd).unwrap()),
+            #[cfg(unix)]
+            PacketInboundSettings_Sink::PIPE =>  Some(sink_from_pipe(settings.pipe.as_str()).unwrap()),
+            PacketInboundSettings_Sink::UDP => Some(sink_from_udp(settings.local_port, settings.remote_port).unwrap()),
+            #[cfg(not(unix))] _ => None,
         };
+        let mut sink = sink.expect("");
         info!("packet inbound started");
         tokio::io::copy_bidirectional(&mut sink, &mut stack);
         info!("packet inbound exited");

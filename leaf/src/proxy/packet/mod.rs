@@ -1,10 +1,12 @@
+use tokio::io::{AsyncRead, AsyncWrite};
+
 pub mod inbound;
 
 pub trait Sink: AsyncRead + AsyncWrite  {}
 
+#[cfg(unix)]
 mod fd_sink;
-
-use tokio::io::{AsyncRead, AsyncWrite};
+#[cfg(unix)]
 pub use fd_sink::*;
 
 mod udp_sink;

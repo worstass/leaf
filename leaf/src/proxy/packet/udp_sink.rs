@@ -3,7 +3,6 @@ use std::io::Error;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures::ready;
-use libc::SYS_epoll_wait;
 use tokio::io::{AsyncRead, AsyncWrite, Interest, ReadBuf};
 use std::net::UdpSocket;
 use futures_util::future::ok;
