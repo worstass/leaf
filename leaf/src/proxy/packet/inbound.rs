@@ -49,7 +49,7 @@ fn sink_from_pipe(pipe: &str) -> Result<impl AsyncRead + AsyncWrite + Unpin>
 
     // todo!()
 
-    Ok( unsafe { File::from_raw_fd(21) })
+    Ok(unsafe { File::from_raw_fd(21) })
 }
 
 pub fn new(
