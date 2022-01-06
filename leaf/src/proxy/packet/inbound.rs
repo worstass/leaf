@@ -41,7 +41,7 @@ fn sink_from_fd(fd: i32) -> Result<Pin<Box<dyn Sink>>> {
 fn sink_from_udp(local_port: u32, remote_port: u32) -> Result<Pin<Box<dyn Sink>>>
 {
     let local_addr: SocketAddr = format!("127.0.0.1:{}", local_port).parse()?;
-    let remote_addr: SocketAddr = format!("127.0.0.1:{}", local_addr).parse()?;
+    let remote_addr: SocketAddr = format!("127.0.0.1:{}", remote_port).parse()?;
     let sock = std::net::UdpSocket::bind(&local_addr)?;
     sock.connect(remote_addr)?;
     Ok(Box::pin(UdpSink::new(sock)))
