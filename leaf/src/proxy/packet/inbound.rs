@@ -71,7 +71,7 @@ pub fn new(
             PacketInboundSettings_Sink::UDP => Some(sink_from_udp(settings.local_port, settings.remote_port).unwrap()),
             #[cfg(not(unix))] _ => None,
         }.expect("Packet sink creation failed");
-        info!("packet inbound started");
+        info!("packet inbound started, using sink {:?}", settings.sink);
         match tokio::io::copy_bidirectional(&mut sink, &mut stack).await {
             Ok((u, d)) => info!("packet inbound done - up: {}, down: {}", u, d),
             Err(e) => debug!("packet inbound error: {:?}", e)
