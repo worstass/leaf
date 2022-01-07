@@ -63,17 +63,18 @@ pub fn new(
     Ok(Box::pin(async move {
         let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Include)));
         let mut stack = NetStack::new(inbound.tag.clone(), dispatcher, nat_manager, fakedns);
-        let sink = match settings.sink {
+        let mut sink = match settings.sink {
             #[cfg(unix)]
-            PacketInboundSettings_Sink::FD =>  Some( sink_from_fd(settings.fd).unwrap()),
+            PacketInboundSettings_Sink::FD => Some(sink_from_fd(settings.fd).unwrap()),
             #[cfg(unix)]
-            PacketInboundSettings_Sink::PIPE =>  Some(sink_from_pipe(settings.pipe.as_str()).unwrap()),
+            PacketInboundSettings_Sink::PIPE => Some(sink_from_pipe(settings.pipe.as_str()).unwrap()),
             PacketInboundSettings_Sink::UDP => Some(sink_from_udp(settings.local_port, settings.remote_port).unwrap()),
             #[cfg(not(unix))] _ => None,
-        };
-        let mut sink = sink.expect("");
+        }.expect("Packet sink creation failed");
         info!("packet inbound started");
-        tokio::io::copy_bidirectional(&mut sink, &mut stack);
-        info!("packet inbound exited");
+        match tokio::io::copy_bidirectional(&mut sink, &mut stack).await {
+            Ok((u, d)) => info!("packet inbound done - up: {}, down: {}", u, d),
+            Err(e) => debug!("packet inbound error: {:?}", e)
+        }
     }))
 }

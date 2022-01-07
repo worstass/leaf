@@ -19,11 +19,22 @@ pub struct Tun {
     pub mtu: Option<i32>,
 }
 
+// MARKER BEGIN
+#[derive(Debug, Default)]
+pub struct Packet {
+    pub r#type: Option<String>,
+    pub fd: Option<i32>,
+    pub local: Option<u32>,
+    pub remote: Option<u32>,
+}
+// MARKER END
+
 #[derive(Debug, Default)]
 pub struct General {
     pub tun: Option<Tun>,
     pub tun_fd: Option<i32>,
     pub tun_auto: Option<bool>,
+    pub packet: Option<Packet>, // MARKER BEGIN - END
     pub loglevel: Option<String>,
     pub logoutput: Option<String>,
     pub dns_server: Option<Vec<String>>,
@@ -304,6 +315,19 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
             "api-port" => {
                 general.api_port = get_value::<u16>(parts[1]);
             }
+            // MARKER BEGIN
+            "packet" => {
+                if let Some(items) = get_char_sep_slice(parts[1], ',') {
+                    let packet = Packet {
+                        r#type: Some(items[0].clone()),
+                        fd:  get_value::<i32>(&items[1]),
+                        local:  get_value::<u32>(&items[2]),
+                        remote: get_value::<u32>(&items[3]),
+                    };
+                    general.packet = Some(packet);
+                }
+            }
+            // MARKER END
             _ => {}
         }
     }
@@ -690,6 +714,55 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
             inbound.port = ext_general.socks_port.unwrap() as u32;
             inbounds.push(inbound);
         }
+
+        // MARKER BEGIN
+        if ext_general.packet.is_some() {
+            let mut inbound = internal::Inbound::new();
+            inbound.protocol = "packet".to_string();
+            inbound.tag = "packet".to_string();
+            let mut settings = internal::PacketInboundSettings::new();
+            // let mut fake_dns_exclude = protobuf::RepeatedField::new();
+            // if let Some(ext_always_real_ip) = &ext_general.always_real_ip {
+            //     for item in ext_always_real_ip {
+            //         fake_dns_exclude.push(item.clone())
+            //     }
+            //     if fake_dns_exclude.len() > 0 {
+            //         settings.fake_dns_exclude = fake_dns_exclude;
+            //     }
+            // }
+            //
+            // let mut fake_dns_include = protobuf::RepeatedField::new();
+            // if let Some(ext_always_fake_ip) = &ext_general.always_fake_ip {
+            //     for item in ext_always_fake_ip {
+            //         fake_dns_include.push(item.clone())
+            //     }
+            //     if fake_dns_include.len() > 0 {
+            //         settings.fake_dns_include = fake_dns_include;
+            //     }
+            // }
+            let ext_packet = ext_general.packet.as_ref().unwrap();
+            if let Some(ext_type) = &ext_packet.r#type {
+                settings.sink = match ext_type.as_str() {
+                    "udp" => internal::PacketInboundSettings_Sink::UDP,
+                    "fd"  => internal::PacketInboundSettings_Sink::FD,
+                    "pipe"  => internal::PacketInboundSettings_Sink::PIPE,
+                    _ =>  internal::PacketInboundSettings_Sink::PIPE,
+                }
+            }
+            if let Some(ext_fd) = &ext_packet.fd {
+                settings.fd = *ext_fd;
+            }
+            if let Some(ext_local) = &ext_packet.local {
+                settings.local_port = *ext_local;
+            }
+            if let Some(ext_remote) = &ext_packet.remote {
+                settings.remote_port = *ext_remote;
+            }
+            let settings = settings.write_to_bytes().unwrap();
+            inbound.settings = settings;
+            inbounds.push(inbound);
+        }
+        // MARKER END
 
         if ext_general.tun_fd.is_some()
             || ext_general.tun_auto.is_some()

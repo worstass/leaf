@@ -21,34 +21,26 @@ impl UdpSink {
     }
 }
 
-impl Sink for UdpSink {
-}
+impl Sink for UdpSink {}
 
 impl AsyncRead for UdpSink {
-    fn poll_read(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
-        match self.inner.poll_recv_ready(cx) {
-            Poll::Pending => return Poll::Pending,
-            Poll::Ready(_) => {
-                match self.inner.poll_recv(cx, buf) {
-                    Poll::Pending => Poll::Pending,
-                    Poll::Ready(res) => Poll::Ready(res)
-                }
-            }
+    fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
+        let inner =  Pin::new(&mut self.inner);
+        match inner.poll_recv_ready(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Ready(Ok(())) => inner.poll_recv(cx, buf),
         }
     }
 }
 
 impl AsyncWrite for UdpSink {
-    fn poll_write(self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize, Error>> {
-        // todo!()
-        match self.inner.poll_send_ready(cx) {
+    fn poll_write(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &[u8]) -> Poll<Result<usize, Error>> {
+        let inner =  Pin::new(&mut self.inner);
+        match inner.poll_send_ready(cx) {
             Poll::Pending => return Poll::Pending,
-            Poll::Ready(_) => {
-                match self.inner.poll_send(cx, buf) {
-                    Poll::Pending => Poll::Pending,
-                    Poll::Ready(res) => Poll::Ready(res)
-                }
-            }
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
+            Poll::Ready(Ok(())) => inner.poll_send(cx, buf),
         }
     }
 

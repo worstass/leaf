@@ -84,7 +84,10 @@ pub struct TunInboundSettings {
 // MARKER BEGIN
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PacketInboundSettings {
-    pub port: Option<u16>,
+    pub r#type: Option<String>,
+    pub fd: Option<i32>,
+    pub local_port: Option<u32>,
+    pub remote_port: Option<u32>,
 }
 // MARKER END
 

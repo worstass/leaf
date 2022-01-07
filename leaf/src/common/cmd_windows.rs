@@ -4,7 +4,8 @@ use std::process::Command;
 use anyhow::Result;
 
 pub fn get_default_ipv4_gateway() -> Result<String> {
-    todo!()
+
+    Ok("".to_string())
 }
 
 pub fn get_default_ipv6_gateway() -> Result<String> {

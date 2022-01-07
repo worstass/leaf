@@ -2,7 +2,7 @@ use tokio::io::{AsyncRead, AsyncWrite};
 
 pub mod inbound;
 
-pub trait Sink: AsyncRead + AsyncWrite  {}
+pub trait Sink: AsyncRead + AsyncWrite + Send {}
 
 #[cfg(unix)]
 mod fd_sink;

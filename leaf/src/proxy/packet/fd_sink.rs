@@ -22,8 +22,7 @@ impl FdSink {
     }
 }
 
-impl Sink for FdSink {
-}
+impl Sink for FdSink {}
 
 impl AsyncRead for FdSink {
     fn poll_read(mut self: Pin<&mut Self>, cx: &mut Context<'_>, buf: &mut ReadBuf<'_>) -> Poll<std::io::Result<()>> {
