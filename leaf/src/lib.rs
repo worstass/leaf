@@ -35,7 +35,9 @@ pub mod util;
 #[cfg(any(target_os = "ios", target_os = "macos", target_os = "android"))]
 pub mod mobile;
 
-#[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+// MARKER BEGIN
+// #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+#[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 mod sys;
 
 #[derive(Error, Debug)]
@@ -399,14 +401,18 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         .map_err(Error::Config)?;
     runners.append(&mut inbound_net_runners);
 
-    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    // MARKER BEGIN
+    // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     let net_info = if inbound_manager.has_tun_listener() && inbound_manager.tun_auto() {
         sys::get_net_info()
     } else {
         sys::NetInfo::default()
     };
 
-    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    // MARKER BEGIN
+    // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         if let sys::NetInfo {
             default_interface: Some(iface),
@@ -428,14 +434,17 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
             target_os = "ios",
             target_os = "android",
             target_os = "macos",
-            target_os = "linux"
+            target_os = "linux",
+            target_os = "windows", // MARKER BEGIN - END
         )
     ))]
     if let Ok(r) = inbound_manager.get_tun_runner() {
         runners.push(r);
     }
 
-    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    // MARKER BEGIN
+    // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     sys::post_tun_creation_setup(&net_info);
 
     // MARKER BEGIN
@@ -533,7 +542,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     rt.block_on(futures::future::select_all(tasks));
 
-    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    // MARKER BEGIN
+    // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     sys::post_tun_completion_setup(&net_info);
 
     rt.shutdown_background();

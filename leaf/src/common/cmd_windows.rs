@@ -21,8 +21,25 @@ pub fn get_default_ipv6_address() -> Result<String> {
 }
 
 pub fn get_default_interface() -> Result<String> {
-    todo!()
-}
+    let out = Command::new("ip")
+        .arg("route")
+        .arg("get")
+        .arg("1")
+        .output()
+        .expect("failed to execute command");
+    assert!(out.status.success());
+    let out = String::from_utf8_lossy(&out.stdout).to_string();
+    let cols: Vec<&str> = out
+        .lines()
+        .filter(|l| l.contains("via"))
+        .next()
+        .unwrap()
+        .split_whitespace()
+        .map(str::trim)
+        .collect();
+    assert!(cols.len() >= 5);
+    let res = cols[4].to_string();
+    Ok(res)}
 
 pub fn add_interface_ipv4_address(
     name: &str,
