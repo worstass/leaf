@@ -25,6 +25,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::FromRawFd;
 use std::pin::Pin;
 use tokio::fs::File;
+use tun::AsyncDevice;
 
 use crate::config::PacketInboundSettings_Sink;
 use crate::proxy::packet::{TcpSink, UdpSink};
@@ -54,6 +55,24 @@ fn sink_from_tcp(port: u32) -> Result<Pin<Box<dyn Sink>>>
     let (stream, _) = listener.accept()?;
     debug!("tcp sink listen on {}", port);
     Ok(Box::pin(TcpSink::new(stream)))
+}
+
+impl Sink for AsyncDevice {}
+
+fn sink_from_tun() -> Result<Pin<Box<dyn Sink>>>
+{
+    let mut config = tun::Configuration::default();
+    config
+        .address((10, 0, 0, 2))
+        .netmask((255, 255, 255, 0))
+        .destination((10, 0, 0, 1))
+        .up();
+    #[cfg(target_os = "linux")]
+        config.platform(|config| {
+        config.packet_information(true);
+    });
+    let dev = tun::create_as_async(&config).unwrap();
+    Ok(Box::pin(dev))
 }
 
 impl Sink for File {}
@@ -87,7 +106,8 @@ pub fn new(
             PacketInboundSettings_Sink::UDP => {
                 debug!("using packet udp sink with ports: local={}, remote={}", settings.local_port, settings.remote_port);
                 // Some(sink_from_udp(settings.local_port, settings.remote_port).unwrap())
-                Some(sink_from_tcp(settings.local_port).unwrap())
+                // Some(sink_from_tcp(settings.local_port).unwrap())
+                Some(sink_from_tun().unwrap())
             },
             #[cfg(not(unix))] _ => None,
         }.expect("Packet sink creation failed");
