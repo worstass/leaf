@@ -4,9 +4,11 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures::ready;
 use tokio::io::{AsyncRead, AsyncWrite, Interest, ReadBuf};
-use std::net::UdpSocket;
+use std::net::{UdpSocket, SocketAddr};
 use futures_util::future::ok;
 use crate::proxy::packet::Sink;
+use tokio_util::codec::Framed;
+use tun::TunPacketCodec;
 
 pub struct UdpSink {
     inner: Box<tokio::net::UdpSocket>,

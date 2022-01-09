@@ -25,7 +25,7 @@ use std::net::{SocketAddr, TcpStream};
 use std::os::unix::io::FromRawFd;
 use std::pin::Pin;
 use tokio::fs::File;
-use tun::AsyncDevice;
+use tun::{AsyncDevice, TunPacket, TunPacketCodec};
 
 use crate::config::PacketInboundSettings_Sink;
 use crate::proxy::packet::{TcpSink, UdpSink};
@@ -88,32 +88,85 @@ pub fn new(
     nat_manager: Arc<NatManager>,
 ) -> Result<Runner> {
     let settings = PacketInboundSettings::parse_from_bytes(&inbound.settings)?;
+
     Ok(Box::pin(async move {
+        let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Exclude)));
+        // for filter in fake_dns_filters.into_iter() {
+        //     fakedns.lock().await.add_filter(filter);
+        // }
+        let stack = NetStack::new(inbound.tag.clone(), dispatcher, nat_manager, fakedns);
         info!("packet inbound started");
-        let fakedns = Arc::new(TokioMutex::new(FakeDns::new(FakeDnsMode::Include)));
-        let mut stack = NetStack::new(inbound.tag.clone(), dispatcher, nat_manager, fakedns);
-        let mut sink = match settings.sink {
-            #[cfg(unix)]
-            PacketInboundSettings_Sink::FD =>{
-                debug!("using packet fd sink with fd={}", settings.fd);
-                Some(sink_from_fd(settings.fd).unwrap())
-            } ,
-            #[cfg(unix)]
-            PacketInboundSettings_Sink::PIPE =>{
-                debug!("using packet pipe sink with pipe={}", settings.pipe);
-                Some(sink_from_pipe(settings.pipe.as_str()).unwrap())
-            },
-            PacketInboundSettings_Sink::UDP => {
-                debug!("using packet udp sink with ports: local={}, remote={}", settings.local_port, settings.remote_port);
-                // Some(sink_from_udp(settings.local_port, settings.remote_port).unwrap())
-                // Some(sink_from_tcp(settings.local_port).unwrap())
-                Some(sink_from_tun().unwrap())
-            },
-            #[cfg(not(unix))] _ => None,
-        }.expect("Packet sink creation failed");
-        match tokio::io::copy_bidirectional(&mut sink, &mut stack).await {
-            Ok((u, d)) => info!("packet inbound done - up: {}, down: {}", u, d),
-            Err(e) => debug!("packet inbound exited with error: {:?}", e)
+        loop {
+            let mut tun = match settings.sink {
+                #[cfg(unix)]
+                PacketInboundSettings_Sink::FD =>{
+                    debug!("using packet fd sink with fd={}", settings.fd);
+                    Some(sink_from_fd(settings.fd).unwrap())
+                } ,
+                #[cfg(unix)]
+                PacketInboundSettings_Sink::PIPE =>{
+                    debug!("using packet pipe sink with pipe={}", settings.pipe);
+                    Some(sink_from_pipe(settings.pipe.as_str()).unwrap())
+                },
+                PacketInboundSettings_Sink::UDP => {
+                    debug!("using packet udp sink with ports: local={}, remote={}", settings.local_port, settings.remote_port);
+                    // Some(sink_from_udp(settings.local_port, settings.remote_port).unwrap())
+                    // Some(sink_from_tcp(settings.local_port).unwrap())
+                    Some(sink_from_tun().unwrap())
+                },
+                #[cfg(not(unix))] _ => None,
+            }.expect("Packet sink creation failed");
+            let pi = false;
+            let mtu = 1504;
+            let codec = TunPacketCodec::new(pi, mtu);
+            let framed = Framed::new(tun, codec);
+            let (mut tun_sink, mut tun_stream) = framed.split();
+            let (mut stack_reader, mut stack_writer) = io::split(stack);
+
+            let s2t = Box::pin(async move {
+                let mut buf = vec![0; mtu as usize];
+                loop {
+                    match stack_reader.read(&mut buf).await {
+                        Ok(0) => {
+                            debug!("read stack eof");
+                            return;
+                        }
+                        Ok(n) => match tun_sink.send(TunPacket::new((&buf[..n]).to_vec())).await {
+                            Ok(_) => (),
+                            Err(e) => {
+                                warn!("send pkt to tun failed: {}", e);
+                                return;
+                            }
+                        },
+                        Err(err) => {
+                            warn!("read stack failed {:?}", err);
+                            return;
+                        }
+                    }
+                }
+            });
+
+            let t2s = Box::pin(async move {
+                while let Some(packet) = tun_stream.next().await {
+                    match packet {
+                        Ok(packet) => match stack_writer.write(packet.get_bytes()).await {
+                            Ok(_) => (),
+                            Err(e) => {
+                                warn!("write pkt to stack failed: {}", e);
+                                return;
+                            }
+                        },
+                        Err(err) => {
+                            warn!("read tun failed {:?}", err);
+                            return;
+                        }
+                    }
+                }
+            });
+
+            futures::future::select(t2s, s2t).await;
+            break;
         }
+        info!("packet inbound exited");
     }))
 }

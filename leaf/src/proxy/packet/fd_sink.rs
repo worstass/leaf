@@ -9,6 +9,8 @@ use tokio::fs::File;
 #[cfg(unix)]
 use std::os::unix::io::{FromRawFd, RawFd};
 use crate::proxy::packet::Sink;
+use tokio_util::codec::Framed;
+use tun::TunPacketCodec;
 
 pub struct FdSink {
     inner: File,

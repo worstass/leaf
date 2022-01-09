@@ -6,6 +6,8 @@ use futures::ready;
 use tokio::io::{AsyncRead, AsyncWrite, Interest, ReadBuf};
 use futures_util::future::ok;
 use crate::proxy::packet::Sink;
+use tokio_util::codec::Framed;
+use tun::TunPacketCodec;
 
 pub struct TcpSink {
     inner: Box<tokio::net::TcpStream>,
