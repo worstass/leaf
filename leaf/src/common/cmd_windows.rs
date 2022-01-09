@@ -47,54 +47,60 @@ pub fn add_interface_ipv4_address(
     gw: Ipv4Addr,
     mask: Ipv4Addr,
 ) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn add_interface_ipv6_address(name: &str, addr: Ipv6Addr, prefixlen: i32) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn add_default_ipv4_route(gateway: Ipv4Addr, interface: String, primary: bool) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn add_default_ipv6_route(gateway: Ipv6Addr, interface: String, primary: bool) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn add_default_ipv4_rule(addr: Ipv4Addr) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn add_default_ipv6_rule(addr: Ipv6Addr) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn delete_default_ipv4_rule(addr: Ipv4Addr) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn delete_default_ipv6_rule(addr: Ipv6Addr) -> Result<()> {
-    todo!()
+    Ok(())
 }
 
 pub fn get_ipv4_forwarding() -> Result<bool> {
-    todo!()
+
+    // "netsh interface ipv4 show interface "
+    Ok(false)
 }
 
 pub fn get_ipv6_forwarding() -> Result<bool> {
-    todo!()
+    // "netsh interface ipv6 show interface "
+
+    Ok(false)
 }
 
 pub fn set_ipv4_forwarding(val: bool) -> Result<()> {
+    //  "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
+
     todo!()
 }
 
