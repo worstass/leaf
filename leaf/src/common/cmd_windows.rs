@@ -4,8 +4,13 @@ use std::process::Command;
 use anyhow::Result;
 
 pub fn get_default_ipv4_gateway() -> Result<String> {
-
-    Ok("".to_string())
+    let line = get_default_ipv4_route_entry().unwrap();
+    let cols: Vec<&str> = line
+        .split_whitespace()
+        .map(str::trim)
+        .collect();
+    assert!(cols.len() == 6);
+    Ok(cols[5].to_string())
 }
 
 pub fn get_default_ipv6_gateway() -> Result<String> {
@@ -21,25 +26,35 @@ pub fn get_default_ipv6_address() -> Result<String> {
 }
 
 pub fn get_default_interface() -> Result<String> {
-    let out = Command::new("ip")
-        .arg("route")
-        .arg("get")
-        .arg("1")
+    let if_idx = get_default_ipv4_interface_index().unwrap();
+    let out = Command::new("netsh")
+        .arg("interface")
+        .arg("ipv4")
+        .arg("show")
+        .arg("interface")
         .output()
         .expect("failed to execute command");
     assert!(out.status.success());
-    let out = String::from_utf8_lossy(&out.stdout).to_string();
-    let cols: Vec<&str> = out
+    let output = String::from_utf8_lossy(&out.stdout).to_string();
+    let cols: Vec<&str> = output
         .lines()
-        .filter(|l| l.contains("via"))
-        .next()
-        .unwrap()
-        .split_whitespace()
-        .map(str::trim)
-        .collect();
-    assert!(cols.len() >= 5);
-    let res = cols[4].to_string();
-    Ok(res)}
+        .skip(3)
+        .map(|line| {
+            let a: Vec<&str> = line
+                .split_whitespace()
+                .map(str::trim)
+                .collect();
+            a
+        })
+        .find(|cols|
+            cols[0] == if_idx.as_str()
+        )
+        .unwrap();
+    assert!(cols.len() == 5);
+    Ok(cols[4].to_string())
+}
+
+use std::io::Write;
 
 pub fn add_interface_ipv4_address(
     name: &str,
@@ -47,14 +62,44 @@ pub fn add_interface_ipv4_address(
     gw: Ipv4Addr,
     mask: Ipv4Addr,
 ) -> Result<()> {
+    let out = Command::new("netsh")
+        .arg("interface").arg("ipv4").arg("set").arg("address")
+        .arg(format!("name={}", name))
+        .arg(format!("source={}", "static"))
+        .arg(format!("address={}", addr.to_string()))
+        .arg(format!("mask={}", mask.to_string()))
+        .arg(format!("gateway={}", gw.to_string()))
+        .output()
+        .expect("failed to execute command");
+    std::io::stdout().write(&out.stdout).unwrap();
+
+    assert!(out.status.success());
     Ok(())
 }
 
 pub fn add_interface_ipv6_address(name: &str, addr: Ipv6Addr, prefixlen: i32) -> Result<()> {
+    let out = Command::new("netsh")
+        .arg("interface").arg("ipv6").arg("set").arg("address")
+        .arg(format!("name={}", name))
+        .arg(format!("address={}", addr))
+        .output()
+        .expect("failed to execute command");
+    assert!(out.status.success());
     Ok(())
 }
 
 pub fn add_default_ipv4_route(gateway: Ipv4Addr, interface: String, primary: bool) -> Result<()> {
+    let if_idx = get_interface_index(interface.as_str()).unwrap();
+    let out = Command::new("route")
+        .arg("add")
+        .arg("-4")
+        .arg("0.0.0.0 mask 0.0.0.0")
+        .arg(gateway.to_string())
+        .arg("if")
+        .arg(if_idx)
+        .output()
+        .expect("failed to execute command");
+    assert!(out.status.success());
     Ok(())
 }
 
@@ -63,7 +108,35 @@ pub fn add_default_ipv6_route(gateway: Ipv6Addr, interface: String, primary: boo
 }
 
 pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
-    Ok(())
+    let gw = get_default_ipv4_gateway().unwrap();
+    if let Some(scope) = ifscope {
+        let if_idx = get_default_ipv4_interface_index().unwrap();
+        let out = Command::new("route")
+            .arg("delete")
+            .arg("-v")
+            .arg("0.0.0.0")
+            .arg("mask")
+            .arg("0.0.0.0")
+            .arg(gw)
+            .arg("if")
+            .arg(if_idx)
+            .output()
+            .expect("failed to execute command");
+        assert!(out.status.success());
+        Ok(())
+    } else {
+        let out = Command::new("route")
+            .arg("delete")
+            .arg("-v")
+            .arg("0.0.0.0")
+            .arg("mask")
+            .arg("0.0.0.0")
+            .arg(gw)
+            .output()
+            .expect("failed to execute command");
+        assert!(out.status.success());
+        Ok(())
+    }
 }
 
 pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
@@ -108,10 +181,91 @@ pub fn set_ipv6_forwarding(val: bool) -> Result<()> {
     todo!()
 }
 
-pub fn add_iptable_forward(interface: &str) -> Result<()> {
-    todo!()
+fn get_default_ipv4_route_entry() -> Result<String> {
+    let out = Command::new("netsh")
+        .arg("interface")
+        .arg("ipv4")
+        .arg("show")
+        .arg("route")
+        .output()
+        .expect("failed to execute command");
+    assert!(out.status.success());
+    let out = String::from_utf8_lossy(&out.stdout).to_string();
+    let line = out
+        .lines()
+        .skip(3)
+        .next()
+        .unwrap();
+    Ok(line.to_string())
 }
 
-pub fn delete_iptable_forward(interface: &str) -> Result<()> {
-    todo!()
+fn get_interface_index(interface: &str) -> Result<String> {
+    let col = get_interface_entry(interface).unwrap();
+    Ok(col[0].clone())
+}
+
+fn get_default_ipv4_interface_index() -> Result<String> {
+    let line = get_default_ipv4_route_entry().unwrap();
+    let cols: Vec<&str> = line
+        .split_whitespace()
+        .map(str::trim)
+        .collect();
+    assert!(cols.len() == 6);
+    Ok(cols[4].to_string())
+}
+
+fn get_default_ipv6_route_entry() -> Result<String> {
+    let out = Command::new("netsh")
+        .arg("interface")
+        .arg("ipv6")
+        .arg("show")
+        .arg("route")
+        .output()
+        .expect("failed to execute command");
+    assert!(out.status.success());
+    let out = String::from_utf8_lossy(&out.stdout).to_string();
+    let line = out
+        .lines()
+        .skip(3)
+        .next()
+        .unwrap();
+    Ok(line.to_string())
+}
+
+fn get_interface_entry(interface: &str) -> Result<Vec<String>> {
+    let entries = get_interface_entries().unwrap();
+    let entry = entries
+        .iter()
+        .filter(|&e| {
+            e[4].eq(interface)
+        }).last().unwrap().clone();
+        // .filter(|&&e| {
+        //     e[4].eq(interface)
+        // }).first();
+
+    Ok(entry)
+}
+
+fn get_interface_entries() -> Result<Vec<Vec<String>>> {
+    let out = Command::new("netsh")
+        .arg("interface")
+        .arg("ip")
+        .arg("show")
+        .arg("interface")
+        .output()
+        .expect("failed to execute command");
+    assert!(out.status.success());
+    let output = String::from_utf8_lossy(&out.stdout).to_string();
+    let cols = output
+        .lines()
+        .skip(3)
+        .map(|line| {
+            let a = line
+                .split_whitespace()
+                .map(str::trim)
+                .map(str::to_string)
+                .collect();
+            a
+        }).collect();
+    Ok(cols)
 }
