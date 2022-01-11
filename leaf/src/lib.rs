@@ -404,7 +404,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
     #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let net_info = if inbound_manager.has_tun_listener() && inbound_manager.tun_auto() {
+    let net_info = if inbound_manager.has_tun_listener() /*&& inbound_manager.tun_auto()*/ {
         sys::get_net_info()
     } else {
         sys::NetInfo::default()
@@ -444,8 +444,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    // sys::post_tun_creation_setup(&net_info);
     #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    sys::post_tun_creation_setup(&net_info);
+    if inbound_manager.tun_auto() { sys::post_tun_creation_setup(&net_info); }
 
     // MARKER BEGIN
     #[cfg(feature = "inbound-packet")]
@@ -544,8 +545,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    // sys::post_tun_completion_setup(&net_info);
     #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    sys::post_tun_completion_setup(&net_info);
+    if inbound_manager.tun_auto() { sys::post_tun_completion_setup(&net_info); }
 
     rt.shutdown_background();
 
