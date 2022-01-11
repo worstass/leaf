@@ -72,7 +72,6 @@ pub fn add_interface_ipv4_address(
         .output()
         .expect("failed to execute command");
     std::io::stdout().write(&out.stdout).unwrap();
-
     assert!(out.status.success());
     Ok(())
 }
@@ -80,8 +79,8 @@ pub fn add_interface_ipv4_address(
 pub fn add_interface_ipv6_address(name: &str, addr: Ipv6Addr, prefixlen: i32) -> Result<()> {
     let out = Command::new("netsh")
         .arg("interface").arg("ipv6").arg("set").arg("address")
-        .arg(format!("name={}", name))
-        .arg(format!("address={}", addr))
+        .arg(format!("interface={}", name))
+        .arg(format!("address={}", addr.to_string()))
         .output()
         .expect("failed to execute command");
     assert!(out.status.success());
@@ -90,16 +89,29 @@ pub fn add_interface_ipv6_address(name: &str, addr: Ipv6Addr, prefixlen: i32) ->
 
 pub fn add_default_ipv4_route(gateway: Ipv4Addr, interface: String, primary: bool) -> Result<()> {
     let if_idx = get_interface_index(interface.as_str()).unwrap();
-    let out = Command::new("route")
-        .arg("add")
-        .arg("-4")
-        .arg("0.0.0.0 mask 0.0.0.0")
-        .arg(gateway.to_string())
-        .arg("if")
-        .arg(if_idx)
-        .output()
-        .expect("failed to execute command");
-    assert!(out.status.success());
+    if primary {
+        Command::new("route")
+            .arg("add")
+            .arg("-4")
+            .arg("0.0.0.0")
+            .arg(mask)
+            .arg("0.0.0.0")
+            .arg(gateway.to_string())
+            .output()
+            .expect("failed to execute command");
+    } else {
+        Command::new("route")
+            .arg("add")
+            .arg("-4")
+            .arg("0.0.0.0")
+            .arg(mask)
+            .arg("0.0.0.0")
+            .arg(gateway.to_string())
+            .arg("if")
+            .arg(if_idx)
+            .output()
+            .expect("failed to execute command");
+    };
     Ok(())
 }
 
@@ -108,35 +120,29 @@ pub fn add_default_ipv6_route(gateway: Ipv6Addr, interface: String, primary: boo
 }
 
 pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
-    let gw = get_default_ipv4_gateway().unwrap();
     if let Some(scope) = ifscope {
-        let if_idx = get_default_ipv4_interface_index().unwrap();
+        let if_idx = get_interface_index(scope.as_str()).unwrap();
         let out = Command::new("route")
             .arg("delete")
-            .arg("-v")
             .arg("0.0.0.0")
             .arg("mask")
             .arg("0.0.0.0")
-            .arg(gw)
             .arg("if")
             .arg(if_idx)
             .output()
             .expect("failed to execute command");
         assert!(out.status.success());
-        Ok(())
     } else {
         let out = Command::new("route")
             .arg("delete")
-            .arg("-v")
             .arg("0.0.0.0")
             .arg("mask")
             .arg("0.0.0.0")
-            .arg(gw)
             .output()
             .expect("failed to execute command");
         assert!(out.status.success());
-        Ok(())
     }
+    Ok(())
 }
 
 pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
@@ -238,11 +244,9 @@ fn get_interface_entry(interface: &str) -> Result<Vec<String>> {
         .iter()
         .filter(|&e| {
             e[4].eq(interface)
-        }).last().unwrap().clone();
-        // .filter(|&&e| {
-        //     e[4].eq(interface)
-        // }).first();
-
+        })
+        .last()
+        .unwrap().clone();
     Ok(entry)
 }
 
@@ -260,12 +264,11 @@ fn get_interface_entries() -> Result<Vec<Vec<String>>> {
         .lines()
         .skip(3)
         .map(|line| {
-            let a = line
+            line
                 .split_whitespace()
                 .map(str::trim)
                 .map(str::to_string)
                 .collect();
-            a
         }).collect();
     Ok(cols)
 }
