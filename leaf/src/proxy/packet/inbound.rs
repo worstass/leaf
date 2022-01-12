@@ -126,14 +126,12 @@ pub fn new(
                     let nat_manager = nat_manager.clone();
                     let fakedns = fakedns.clone();
                     let tag = inbound.clone().tag;
-                    let stack =  NetStack::new(tag, dispatcher, nat_manager, fakedns);
+                    let stack = NetStack::new(tag, dispatcher, nat_manager, fakedns);
                     let (mut stack_reader, mut stack_writer) = io::split(stack);
-                    // let tun = sink_from_tun().unwrap();
-                    let tun = stream;
                     let pi = true;
-                    let mtu = 1504;
+                    let mtu = 1500;
                     let codec = TunPacketCodec::new(pi, mtu);
-                    let framed = Framed::new(tun, codec);
+                    let framed = Framed::new(stream, codec);
                     let (mut tun_sink, mut tun_stream) = framed.split();
 
                     let s2t = Box::pin(async move {
