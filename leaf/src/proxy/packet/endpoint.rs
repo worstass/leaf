@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::rc::Rc;
-use smoltcp::Result;
-use smoltcp::phy::{self, Checksum, ChecksumCapabilities, Device, DeviceCapabilities, Medium};
 use smoltcp::time::Instant;
-
+use smoltcp::phy;
+use smoltcp::phy::{Medium, Device, DeviceCapabilities};
+use smoltcp::Result;
 
 #[doc(hidden)]
 pub struct RxToken {
