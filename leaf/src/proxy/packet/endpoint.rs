@@ -6,7 +6,6 @@ use smoltcp::phy;
 use smoltcp::phy::{Medium, Device, DeviceCapabilities};
 use smoltcp::Result;
 
-#[doc(hidden)]
 pub struct RxToken {
     buffer: Vec<u8>,
 }
@@ -20,12 +19,11 @@ impl phy::RxToken for RxToken {
     }
 }
 
-#[doc(hidden)]
-pub struct TxToken<'a> {
-    queue: &'a mut VecDeque<Vec<u8>>,
+pub struct TxToken {
+    // queue: VecDeque<Vec<u8>>,
 }
 
-impl<'a> phy::TxToken for TxToken<'a> {
+impl<'a> phy::TxToken for TxToken {
     fn consume<R, F>(self, _timestamp: Instant, len: usize, f: F) -> Result<R>
         where
             F: FnOnce(&mut [u8]) -> Result<R>,
@@ -33,37 +31,51 @@ impl<'a> phy::TxToken for TxToken<'a> {
         let mut buffer = Vec::new();
         buffer.resize(len, 0);
         let result = f(&mut buffer);
-        self.queue.push_back(buffer);
+        // self.queue.push_back(buffer);
         result
     }
 }
 
 #[derive(Debug)]
 pub struct Endpoint {
-    queue: VecDeque<Vec<u8>>,
-    medium: Medium,
+    inqueue: VecDeque<Vec<u8>>,
+    outbuf: Vec<Vec<u8>>,
 }
 
 #[allow(clippy::new_without_default)]
 impl Endpoint {
-    pub fn new(/*medium: Medium*/) -> Endpoint {
+    pub fn new() -> Endpoint {
         Endpoint {
-            queue: VecDeque::new(),
-            medium: Medium::Ip,
-            // medium,
+            inqueue: VecDeque::new(),
+            outbuf: Vec::new(),
+        }
+    }
+
+    pub fn inject_packet(self: &mut Self, buf: &[u8]) -> std::io::Result<()> {
+        self.inqueue.push_back(Vec::from(buf));
+        Ok(())
+    }
+
+    pub fn extract_packet(self: &mut Self, mut buf: &mut [u8]) -> Option<()> {
+        match self.outbuf.pop() {
+            None => None,
+            Some(v) => {
+                std::io::copy( &mut v.as_slice(), &mut buf);
+                Some(())
+            }
         }
     }
 }
 
 impl<'a> Device<'a> for Endpoint {
     type RxToken = RxToken;
-    type TxToken = TxToken<'a>;
+    type TxToken = TxToken;
 
     fn receive(&'a mut self) -> Option<(Self::RxToken, Self::TxToken)> {
-        self.queue.pop_front().map(move |buffer| {
+        self.inqueue.pop_front().map(move |buffer| {
             let rx = RxToken { buffer };
             let tx = TxToken {
-                queue: &mut self.queue,
+                // queue: &mut self.inqueue,
             };
             (rx, tx)
         })
@@ -71,22 +83,11 @@ impl<'a> Device<'a> for Endpoint {
 
     fn transmit(&'a mut self) -> Option<Self::TxToken> {
         Some(TxToken {
-            queue: &mut self.queue,
+            // queue: &mut self.inqueue,
         })
     }
 
     fn capabilities(&self) -> DeviceCapabilities {
         DeviceCapabilities::default()
-        // DeviceCapabilities {
-        //     // max_transmission_unit: 65535,
-        //     // max_burst_size: None,
-        //     // medium: self.medium,
-        //     // // ..DeviceCapabilities::default()
-        //     // checksum: ChecksumCapabilities::default(),
-        //     medium: Medium::Ip,
-        //     max_transmission_unit: 0,
-        //     max_burst_size: None,
-        //     checksum: ChecksumCapabilities::default(),
-        // }
     }
 }
