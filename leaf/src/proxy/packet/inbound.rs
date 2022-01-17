@@ -61,22 +61,6 @@ fn sink_from_tcp(port: u32) -> Result<Pin<Box<dyn Sink>>>
 
 // impl Sink for AsyncDevice {}
 
-fn sink_from_tun() -> Result<Pin<Box<dyn Sink>>>
-{
-    let mut cfg = tun::Configuration::default();
-    cfg
-        .address((240, 255, 0, 2))
-        .netmask((255, 255, 255, 0))
-        .destination((240, 255, 0, 1))
-        .up();
-    #[cfg(target_os = "linux")]
-        cfg.platform(|config| {
-        cfg.packet_information(true);
-    });
-    let dev = tun::create_as_async(&cfg).unwrap();
-    Ok(Box::pin(dev))
-}
-
 impl Sink for File {}
 
 #[cfg(unix)]
