@@ -17,7 +17,8 @@ use crate::{
     option, Runner,
 };
 
-use crate::proxy::tun::netstack::NetStack;
+// use crate::proxy::tun::netstack::NetStack;
+use super::stack::NetStack;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use std::net::{SocketAddr, TcpStream};
@@ -61,22 +62,6 @@ fn sink_from_tcp(port: u32) -> Result<Pin<Box<dyn Sink>>>
 
 // impl Sink for AsyncDevice {}
 
-fn sink_from_tun() -> Result<Pin<Box<dyn Sink>>>
-{
-    let mut cfg = tun::Configuration::default();
-    cfg
-        .address((240, 255, 0, 2))
-        .netmask((255, 255, 255, 0))
-        .destination((240, 255, 0, 1))
-        .up();
-    #[cfg(target_os = "linux")]
-        cfg.platform(|config| {
-        cfg.packet_information(true);
-    });
-    let dev = tun::create_as_async(&cfg).unwrap();
-    Ok(Box::pin(dev))
-}
-
 impl Sink for File {}
 
 #[cfg(unix)]
@@ -108,12 +93,7 @@ pub fn new(
     // };
     let mut fakedns = FakeDns::new(FakeDnsMode::Exclude);
     let fakedns = Arc::new(TokioMutex::new(fakedns));
-    // for filter in fake_dns_filters.into_iter() {
-    //     fakedns.add_filter(filter);
-    // }
-    // let tun = sink_from_tun(&inbound.settings).unwrap();
-    // let stack =  NetStack::new(inbound.tag, dispatcher, nat_manager, Arc::new(TokioMutex::new(fakedns)));
-    // let stack = Arc::new(stack);
+
 
     Ok(Box::pin(async move {
         let listen_addr = format!("127.0.0.1:{}", port);
