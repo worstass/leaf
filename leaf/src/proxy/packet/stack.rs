@@ -5,7 +5,7 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use smoltcp::iface::{Interface, InterfaceBuilder, SocketHandle};
-use smoltcp::socket::{TcpSocket, TcpSocketBuffer, UdpPacketMetadata, UdpSocket, UdpSocketBuffer};
+use smoltcp::socket::{Socket, TcpSocket, TcpSocketBuffer, UdpPacketMetadata, UdpSocket, UdpSocketBuffer};
 use smoltcp::time::Instant;
 use smoltcp::wire::{IpAddress, IpCidr, IpEndpoint, IpProtocol, Ipv4Packet, Ipv6Packet, TcpPacket, UdpPacket};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
@@ -76,23 +76,44 @@ impl<'a> NetStack<'a> {
             // connections: HashMap::new(),
             iface,
         };
-        // tokio::spawn(async move {
-        //     loop {
-        //         let timestamp = Instant::now();
-        //         println!("{}", stack);
-        //         // stack
-        //         // match iface.poll(timestamp) {
-        //         //     Ok(_) => {}
-        //         //     Err(e) => {
-        //         //         debug!("poll error: {}", e);
-        //         //     }
-        //         // }
-        //         // for (conn, value) in stack.connections.iter_mut() {
-        //         //     let sock = iface.get_socket::<TcpSocket>(value.smoltcp_handle);
-        //         // }
-        //     }
-        // });
         stack
+    }
+
+    pub fn run(&mut self) {
+        loop {
+            let timestamp = Instant::now();
+            println!("{}", self.inbound_tag);
+            match self.iface.poll(timestamp) {
+                Ok(_) => {}
+                Err(e) => {
+                    debug!("poll error: {}", e);
+                }
+            }
+            for (h, sock) in self.iface.sockets() {
+               match sock {
+                   Socket::Tcp(tcp) => {
+                       if tcp.can_recv() {
+
+                       }
+                       if tcp.can_send() {
+
+                       }
+                   }
+                   Socket::Udp(udp) => {
+                       if udp.can_recv() {
+
+                       }
+                       if udp.can_send() {
+
+                       }
+                   }
+                   _ => {}
+               }
+            }
+            // for (conn, value) in stack.connections.iter_mut() {
+            //     let sock = iface.get_socket::<TcpSocket>(value.smoltcp_handle);
+            // }
+        }
     }
 
     fn check_packet(&mut self, frame: &[u8]) {
@@ -102,33 +123,33 @@ impl<'a> NetStack<'a> {
                 let dst: Ipv4Addr = packet.dst_addr().into();
                 match packet.protocol() {
                     smoltcp::wire::IpProtocol::Tcp => {
-                            match TcpPacket::new_checked(frame) {
-                                Ok(p) => {
-                                    p.src_port();
-                                    p.dst_port();
-                                    let first = p.syn() && !p.ack();
-                                    if first {
-                                        let mut socket = TcpSocket::new(
-                                            TcpSocketBuffer::new(vec![0; 4096]),
-                                            TcpSocketBuffer::new(vec![0; 4096]));
-                                        socket.set_ack_delay(None);
-                                        socket.listen(IpEndpoint::new(packet.dst_addr().into(), p.dst_port())).unwrap();
+                        match TcpPacket::new_checked(frame) {
+                            Ok(p) => {
+                                p.src_port();
+                                p.dst_port();
+                                let first = p.syn() && !p.ack();
+                                if first {
+                                    let mut socket = TcpSocket::new(
+                                        TcpSocketBuffer::new(vec![0; 4096]),
+                                        TcpSocketBuffer::new(vec![0; 4096]));
+                                    socket.set_ack_delay(None);
+                                    socket.listen(IpEndpoint::new(packet.dst_addr().into(), p.dst_port())).unwrap();
 
-                                        let handle = self.iface.add_socket(socket);
-                                        let socket = self.iface.get_socket::<TcpSocket>(handle);
-                                        if socket.can_recv() {}
-                                    }
+                                    let handle = self.iface.add_socket(socket);
+                                    let socket = self.iface.get_socket::<TcpSocket>(handle);
+                                    if socket.can_recv() {}
                                 }
-                                Err(_) => {}
                             }
-                    },
+                            Err(_) => {}
+                        }
+                    }
                     smoltcp::wire::IpProtocol::Udp => {
-                    //     match UdpPacket::new_checked(frame) {
-                    //         Ok(p) => {
-                    //             // Some(((result.src_port(), result.dst_port()), false, transport_offset + 8, packet.len() - 8))
-                    //         }
-                    //         Err(_) => {  },
-                    //     }
+                        //     match UdpPacket::new_checked(frame) {
+                        //         Ok(p) => {
+                        //             // Some(((result.src_port(), result.dst_port()), false, transport_offset + 8, packet.len() - 8))
+                        //         }
+                        //         Err(_) => {  },
+                        //     }
                     }
                     _ => {}
                 }

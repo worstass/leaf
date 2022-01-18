@@ -176,20 +176,15 @@ pub fn delete_default_ipv6_rule(addr: Ipv6Addr) -> Result<()> {
 }
 
 pub fn get_ipv4_forwarding() -> Result<bool> {
-
-    // "netsh interface ipv4 show interface "
     Ok(false)
 }
 
 pub fn get_ipv6_forwarding() -> Result<bool> {
-    // "netsh interface ipv6 show interface "
-
     Ok(false)
 }
 
 pub fn set_ipv4_forwarding(val: bool) -> Result<()> {
     //  "HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters"
-
     todo!()
 }
 
@@ -242,6 +237,12 @@ fn get_interface_entry(interface: &str) -> Result<Vec<String>> {
         .last()
         .unwrap().clone();
     Ok(entry)
+}
+
+fn get_interface_indices() -> Result<Vec<String>> {
+    let entires = get_interface_entries().unwrap();
+    let indices = entires.iter().map(|e| e[0].to_string()).collect();
+    Ok(indices)
 }
 
 fn get_interface_entries() -> Result<Vec<Vec<String>>> {
