@@ -121,7 +121,7 @@ pub fn add_default_ipv6_route(gateway: Ipv6Addr, interface: String, primary: boo
     Ok(())
 }
 
-pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
+pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
     if let Some(scope) = ifscope {
         let if_idx = get_interface_index(scope.as_str()).unwrap();
         let out =    Command::new("netsh")
@@ -140,12 +140,12 @@ pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
+pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
     if let Some(scope) = ifscope {
         let if_idx = get_interface_index(scope.as_str()).unwrap();
         let out =    Command::new("netsh")
             .arg("interface")
-            .arg("ipv6")
+            .arg("ipv4")
             .arg("delete")
             .arg("route")
             .arg("0.0.0.0/0")
