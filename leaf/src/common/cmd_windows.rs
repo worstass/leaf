@@ -73,7 +73,6 @@ pub fn add_interface_ipv4_address(
         .output()
         .expect("failed to execute command");
     std::io::stdout().write(&out.stdout).unwrap();
-    assert!(out.status.success());
     Ok(())
 }
 
@@ -85,12 +84,12 @@ pub fn add_interface_ipv6_address(name: &str, addr: Ipv6Addr, prefixlen: i32) ->
         .arg("store=active")
         .output()
         .expect("failed to execute command");
-    assert!(out.status.success());
     Ok(())
 }
 
 pub fn add_default_ipv4_route(gateway: Ipv4Addr, interface: String, primary: bool) -> Result<()> {
     let if_idx = get_interface_index(interface.as_str()).unwrap();
+    let metric = if primary { "metric=1" } else { "" };
     Command::new("netsh")
         .arg("interface")
         .arg("ipv4")
@@ -99,6 +98,7 @@ pub fn add_default_ipv4_route(gateway: Ipv4Addr, interface: String, primary: boo
         .arg("0.0.0.0/0")
         .arg(if_idx)
         .arg(gateway.to_string())
+        .arg(metric)
         .arg("store=active")
         .output()
         .expect("failed to execute command");
@@ -124,7 +124,7 @@ pub fn add_default_ipv6_route(gateway: Ipv6Addr, interface: String, primary: boo
 pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
     if let Some(scope) = ifscope {
         let if_idx = get_interface_index(scope.as_str()).unwrap();
-        let out =    Command::new("netsh")
+        let out = Command::new("netsh")
             .arg("interface")
             .arg("ipv4")
             .arg("delete")
@@ -135,7 +135,13 @@ pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
             .arg("store=active")
             .output()
             .expect("failed to execute command");
-        assert!(out.status.success());
+    } else {
+        let out = Command::new("route")
+            .arg("-6")
+            .arg("delete")
+            .arg("::/0")
+            .output()
+            .expect("failed to execute command");
     }
     Ok(())
 }
@@ -143,7 +149,7 @@ pub fn delete_default_ipv6_route(ifscope: Option<String>) -> Result<()> {
 pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
     if let Some(scope) = ifscope {
         let if_idx = get_interface_index(scope.as_str()).unwrap();
-        let out =    Command::new("netsh")
+        let out = Command::new("netsh")
             .arg("interface")
             .arg("ipv4")
             .arg("delete")
@@ -154,7 +160,13 @@ pub fn delete_default_ipv4_route(ifscope: Option<String>) -> Result<()> {
             .arg("store=active")
             .output()
             .expect("failed to execute command");
-        assert!(out.status.success());
+    } else {
+        let out = Command::new("route")
+            .arg("-4")
+            .arg("delete")
+            .arg("0.0.0.0/0")
+            .output()
+            .expect("failed to execute command");
     }
     Ok(())
 }
