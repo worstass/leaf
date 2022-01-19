@@ -53,7 +53,7 @@ struct Args {
     test_outbound: Option<String>,
 
     /// bound interface, explicitly sets the OUTBOUND_INTERFACE environment variable
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))] // MARKER BEGIN - END
     #[argh(option, short = 'b')]
     boundif: Option<String>,
 
@@ -80,7 +80,7 @@ fn main() {
         }
     }
 
-    #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))] // MARKER BEGIN - END
     if let Some(iface) = args.boundif {
         std::env::set_var("OUTBOUND_INTERFACE", &iface);
     }

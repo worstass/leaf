@@ -259,7 +259,14 @@ async fn bind_socket<T: BindSocket>(socket: &T, indicator: &SocketAddr) -> io::R
                     trace!("socket bind {}", iface);
                     return Ok(());
                 }
-                #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+                // MARKER BEGIN
+                #[cfg(target_os = "windows")]
+                unsafe {
+                    trace!("socket bind {}", iface);
+                    return Ok(());
+                }
+                // MARKER END
+                #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))] // MARKER BEGIN - END
                 {
                     return Err(io::Error::new(
                         io::ErrorKind::Other,
