@@ -31,45 +31,6 @@ use tun::{AsyncDevice, TunPacket, TunPacketCodec};
 use crate::config::TunInboundSettings;
 
 use crate::config::PacketInboundSettings_Sink;
-use crate::proxy::packet::{TcpSink, UdpSink};
-use crate::proxy::packet::Sink;
-
-#[cfg(unix)]
-use crate::proxy::packet::FdSink;
-
-#[cfg(unix)]
-fn sink_from_fd(fd: i32) -> Result<Pin<Box<dyn Sink>>> {
-    Ok(Box::pin(FdSink::new(fd)))
-}
-
-fn sink_from_udp(local_port: u32, remote_port: u32) -> Result<Pin<Box<dyn Sink>>>
-{
-    let local_addr: SocketAddr = format!("127.0.0.1:{}", local_port).parse()?;
-    let remote_addr: SocketAddr = format!("127.0.0.1:{}", remote_port).parse()?;
-    let sock = std::net::UdpSocket::bind(&local_addr)?;
-    debug!("udp sink listen on {}", sock.local_addr()?);
-    // sock.connect(remote_addr)?;
-    Ok(Box::pin(UdpSink::new(sock)))
-}
-
-fn sink_from_tcp(port: u32) -> Result<Pin<Box<dyn Sink>>>
-{
-    let listener = std::net::TcpListener::bind(format!("127.0.0.1:{}", port))?;
-    let (stream, _) = listener.accept()?;
-    debug!("tcp sink listen on {}", port);
-    Ok(Box::pin(TcpSink::new(stream)))
-}
-
-// impl Sink for AsyncDevice {}
-
-impl Sink for File {}
-
-#[cfg(unix)]
-fn sink_from_pipe(pipe: &str) -> Result<Pin<Box<dyn Sink>>> {
-    Ok(Box::pin(unsafe { File::from_raw_fd(21) }))
-}
-
-impl Sink for AsyncDevice {}
 
 pub fn new(
     inbound: Inbound,
@@ -173,13 +134,4 @@ pub fn new(
             }
         }
     }))
-}
-
-fn has_packet_information()->bool {
-    #[cfg(any(target_os = "linux", target_os = "macos"))]
-    return true;
-    #[cfg(any(target_os = "ios"))]
-    return true;
-    #[cfg(any(target_os = "windows", target_os = "android"))]
-    return false;
 }
