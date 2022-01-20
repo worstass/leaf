@@ -24,8 +24,10 @@ pub struct Tun {
 pub struct Packet {
     pub r#type: Option<String>,
     pub fd: Option<i32>,
-    pub local: Option<u32>,
-    pub remote: Option<u32>,
+    pub port: Option<u32>,
+    pub pipe: Option<String>,
+    pub pi: Option<bool>,
+    pub mtu: Option<i32>,
 }
 // MARKER END
 
@@ -321,8 +323,10 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
                     let packet = Packet {
                         r#type: Some(items[0].clone()),
                         fd:  get_value::<i32>(&items[1]),
-                        local:  get_value::<u32>(&items[2]),
-                        remote: get_value::<u32>(&items[3]),
+                        port:  get_value::<u32>(&items[2]),
+                        pipe: get_value::<String>(&items[3]),
+                        pi: get_value::<bool>(&items[4]),
+                        mtu: get_value::<i32>(&items[5]),
                     };
                     general.packet = Some(packet);
                 }
@@ -720,30 +724,31 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
             let mut inbound = internal::Inbound::new();
             inbound.protocol = "packet".to_string();
             inbound.tag = "packet".to_string();
+
             let mut settings = internal::PacketInboundSettings::new();
-            // let mut fake_dns_exclude = protobuf::RepeatedField::new();
-            // if let Some(ext_always_real_ip) = &ext_general.always_real_ip {
-            //     for item in ext_always_real_ip {
-            //         fake_dns_exclude.push(item.clone())
-            //     }
-            //     if fake_dns_exclude.len() > 0 {
-            //         settings.fake_dns_exclude = fake_dns_exclude;
-            //     }
-            // }
-            //
-            // let mut fake_dns_include = protobuf::RepeatedField::new();
-            // if let Some(ext_always_fake_ip) = &ext_general.always_fake_ip {
-            //     for item in ext_always_fake_ip {
-            //         fake_dns_include.push(item.clone())
-            //     }
-            //     if fake_dns_include.len() > 0 {
-            //         settings.fake_dns_include = fake_dns_include;
-            //     }
-            // }
+            let mut fake_dns_exclude = protobuf::RepeatedField::new();
+            if let Some(ext_always_real_ip) = &ext_general.always_real_ip {
+                for item in ext_always_real_ip {
+                    fake_dns_exclude.push(item.clone())
+                }
+                if fake_dns_exclude.len() > 0 {
+                    settings.fake_dns_exclude = fake_dns_exclude;
+                }
+            }
+
+            let mut fake_dns_include = protobuf::RepeatedField::new();
+            if let Some(ext_always_fake_ip) = &ext_general.always_fake_ip {
+                for item in ext_always_fake_ip {
+                    fake_dns_include.push(item.clone())
+                }
+                if fake_dns_include.len() > 0 {
+                    settings.fake_dns_include = fake_dns_include;
+                }
+            }
             let ext_packet = ext_general.packet.as_ref().unwrap();
             if let Some(ext_type) = &ext_packet.r#type {
                 settings.sink = match ext_type.as_str() {
-                    "udp" => internal::PacketInboundSettings_Sink::UDP,
+                    "tcp" => internal::PacketInboundSettings_Sink::TCP,
                     "fd"  => internal::PacketInboundSettings_Sink::FD,
                     "pipe"  => internal::PacketInboundSettings_Sink::PIPE,
                     _ =>  internal::PacketInboundSettings_Sink::PIPE,
@@ -752,11 +757,17 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
             if let Some(ext_fd) = &ext_packet.fd {
                 settings.fd = *ext_fd;
             }
-            if let Some(ext_local) = &ext_packet.local {
-                settings.local_port = *ext_local;
+            if let Some(ext_port) = &ext_packet.port {
+                settings.port = *ext_port;
             }
-            if let Some(ext_remote) = &ext_packet.remote {
-                settings.remote_port = *ext_remote;
+            if let Some(ext_pipe) = &ext_packet.pipe {
+                settings.pipe = ext_pipe.clone();
+            }
+            if let Some(ext_pi) = &ext_packet.pi {
+                settings.pi = *ext_pi;
+            }
+            if let Some(ext_mtu) = &ext_packet.mtu {
+                settings.mtu = *ext_mtu
             }
             let settings = settings.write_to_bytes().unwrap();
             inbound.settings = settings;

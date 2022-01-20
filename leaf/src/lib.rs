@@ -403,8 +403,8 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
-    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let net_info = if inbound_manager.has_tun_listener() /*&& inbound_manager.tun_auto()*/ {
+    #[cfg(all(any(feature = "inbound-tun", feature = "inbound-packet"), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    let net_info = if inbound_manager.has_tun_listener() || inbound_manager.has_packet_listener()  /*&& inbound_manager.tun_auto()*/ {
         sys::get_net_info()
     } else {
         sys::NetInfo::default()
@@ -412,7 +412,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
-    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    #[cfg(all(any(feature = "inbound-tun", feature = "inbound-packet"), any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         if let sys::NetInfo {
             default_interface: Some(iface),

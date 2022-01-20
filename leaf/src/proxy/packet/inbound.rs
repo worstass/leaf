@@ -17,8 +17,8 @@ use crate::{
     option, Runner,
 };
 
-// use crate::proxy::tun::netstack::NetStack;
-use super::stack::NetStack;
+use crate::proxy::tun::netstack::NetStack;
+// use super::stack::NetStack;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use std::net::{SocketAddr, TcpStream};
@@ -77,23 +77,30 @@ pub fn new(
     nat_manager: Arc<NatManager>,
 ) -> Result<Runner> {
     let settings = PacketInboundSettings::parse_from_bytes(&inbound.settings)?;
-    let port = settings.local_port;
-    // // FIXME it's a bad design to have 2 lists in config while we need only one
-    // let fake_dns_exclude = settings.fake_dns_exclude;
-    // let fake_dns_include = settings.fake_dns_include;
-    // if !fake_dns_exclude.is_empty() && !fake_dns_include.is_empty() {
-    //     return Err(anyhow!(
-    //         "fake DNS run in either include mode or exclude mode"
-    //     ));
-    // }
-    // let (fake_dns_mode, fake_dns_filters) = if !fake_dns_include.is_empty() {
-    //     (FakeDnsMode::Include, fake_dns_include)
-    // } else {
-    //     (FakeDnsMode::Exclude, fake_dns_exclude)
-    // };
-    let mut fakedns = FakeDns::new(FakeDnsMode::Exclude);
-    let fakedns = Arc::new(TokioMutex::new(fakedns));
+    let port = settings.port;
 
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    let pakcet_has_pi = settings.pi;
+    #[cfg(any(target_os = "ios"))]
+    let pakcet_has_pi = true;
+    #[cfg(any(target_os = "windows", target_os = "android"))]
+    let pakcet_has_pi =  false;
+
+    // // FIXME it's a bad design to have 2 lists in config while we need only one
+    let fake_dns_exclude = settings.fake_dns_exclude;
+    let fake_dns_include = settings.fake_dns_include;
+    if !fake_dns_exclude.is_empty() && !fake_dns_include.is_empty() {
+        return Err(anyhow!(
+            "fake DNS run in either include mode or exclude mode"
+        ));
+    }
+    let (fake_dns_mode, fake_dns_filters) = if !fake_dns_include.is_empty() {
+        (FakeDnsMode::Include, fake_dns_include)
+    } else {
+        (FakeDnsMode::Exclude, fake_dns_exclude)
+    };
+    let mut fakedns = FakeDns::new(fake_dns_mode);
+    let fakedns = Arc::new(TokioMutex::new(fakedns));
 
     Ok(Box::pin(async move {
         let listen_addr = format!("127.0.0.1:{}", port);
@@ -108,9 +115,9 @@ pub fn new(
                     let tag = inbound.clone().tag;
                     let stack = NetStack::new(tag, dispatcher, nat_manager, fakedns);
                     let (mut stack_reader, mut stack_writer) = io::split(stack);
-                    let pi = true;
-                    let mtu = 1500;
-                    let codec = TunPacketCodec::new(pi, mtu);
+                    // let pi = has_packet_information();
+                    let mtu = 1504;
+                    let codec = TunPacketCodec::new(pakcet_has_pi, mtu);
                     let framed = Framed::new(stream, codec);
                     let (mut tun_sink, mut tun_stream) = framed.split();
 
@@ -166,4 +173,13 @@ pub fn new(
             }
         }
     }))
+}
+
+fn has_packet_information()->bool {
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
+    return true;
+    #[cfg(any(target_os = "ios"))]
+    return true;
+    #[cfg(any(target_os = "windows", target_os = "android"))]
+    return false;
 }

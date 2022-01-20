@@ -80,14 +80,17 @@ message ChainInboundSettings {
 message PacketInboundSettings {
 	enum Sink {
 		FD = 0;
-		UDP = 1;
+		TCP = 1;
 		PIPE = 2;
 	}
 	Sink sink = 1;
 	int32 fd = 2;
-	uint32 local_port = 3;
-	uint32 remote_port = 4;
-	string pipe = 5;
+	uint32 port = 3;
+	string pipe = 4;
+	bool pi = 5;
+	int32 mtu = 6;
+	repeated string fake_dns_exclude = 7;
+	repeated string fake_dns_include = 8;
 }
 // MARKER END
 

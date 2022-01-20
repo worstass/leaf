@@ -1809,9 +1809,12 @@ pub struct PacketInboundSettings {
     // message fields
     pub sink: PacketInboundSettings_Sink,
     pub fd: i32,
-    pub local_port: u32,
-    pub remote_port: u32,
+    pub port: u32,
     pub pipe: ::std::string::String,
+    pub pi: bool,
+    pub mtu: i32,
+    pub fake_dns_exclude: ::protobuf::RepeatedField<::std::string::String>,
+    pub fake_dns_include: ::protobuf::RepeatedField<::std::string::String>,
     // special fields
     pub unknown_fields: ::protobuf::UnknownFields,
     pub cached_size: ::protobuf::CachedSize,
@@ -1842,25 +1845,46 @@ impl PacketInboundSettings {
         self.fd
     }
 
-    // uint32 local_port = 3;
+    // uint32 port = 3;
 
 
-    pub fn get_local_port(&self) -> u32 {
-        self.local_port
+    pub fn get_port(&self) -> u32 {
+        self.port
     }
 
-    // uint32 remote_port = 4;
-
-
-    pub fn get_remote_port(&self) -> u32 {
-        self.remote_port
-    }
-
-    // string pipe = 5;
+    // string pipe = 4;
 
 
     pub fn get_pipe(&self) -> &str {
         &self.pipe
+    }
+
+    // bool pi = 5;
+
+
+    pub fn get_pi(&self) -> bool {
+        self.pi
+    }
+
+    // int32 mtu = 6;
+
+
+    pub fn get_mtu(&self) -> i32 {
+        self.mtu
+    }
+
+    // repeated string fake_dns_exclude = 7;
+
+
+    pub fn get_fake_dns_exclude(&self) -> &[::std::string::String] {
+        &self.fake_dns_exclude
+    }
+
+    // repeated string fake_dns_include = 8;
+
+
+    pub fn get_fake_dns_include(&self) -> &[::std::string::String] {
+        &self.fake_dns_include
     }
 }
 
@@ -1888,17 +1912,30 @@ impl ::protobuf::Message for PacketInboundSettings {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
                     let tmp = is.read_uint32()?;
-                    self.local_port = tmp;
+                    self.port = tmp;
                 },
                 4 => {
+                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.pipe)?;
+                },
+                5 => {
                     if wire_type != ::protobuf::wire_format::WireTypeVarint {
                         return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
                     }
-                    let tmp = is.read_uint32()?;
-                    self.remote_port = tmp;
+                    let tmp = is.read_bool()?;
+                    self.pi = tmp;
                 },
-                5 => {
-                    ::protobuf::rt::read_singular_proto3_string_into(wire_type, is, &mut self.pipe)?;
+                6 => {
+                    if wire_type != ::protobuf::wire_format::WireTypeVarint {
+                        return ::std::result::Result::Err(::protobuf::rt::unexpected_wire_type(wire_type));
+                    }
+                    let tmp = is.read_int32()?;
+                    self.mtu = tmp;
+                },
+                7 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.fake_dns_exclude)?;
+                },
+                8 => {
+                    ::protobuf::rt::read_repeated_string_into(wire_type, is, &mut self.fake_dns_include)?;
                 },
                 _ => {
                     ::protobuf::rt::read_unknown_or_skip_group(field_number, wire_type, is, self.mut_unknown_fields())?;
@@ -1918,15 +1955,24 @@ impl ::protobuf::Message for PacketInboundSettings {
         if self.fd != 0 {
             my_size += ::protobuf::rt::value_size(2, self.fd, ::protobuf::wire_format::WireTypeVarint);
         }
-        if self.local_port != 0 {
-            my_size += ::protobuf::rt::value_size(3, self.local_port, ::protobuf::wire_format::WireTypeVarint);
-        }
-        if self.remote_port != 0 {
-            my_size += ::protobuf::rt::value_size(4, self.remote_port, ::protobuf::wire_format::WireTypeVarint);
+        if self.port != 0 {
+            my_size += ::protobuf::rt::value_size(3, self.port, ::protobuf::wire_format::WireTypeVarint);
         }
         if !self.pipe.is_empty() {
-            my_size += ::protobuf::rt::string_size(5, &self.pipe);
+            my_size += ::protobuf::rt::string_size(4, &self.pipe);
         }
+        if self.pi != false {
+            my_size += 2;
+        }
+        if self.mtu != 0 {
+            my_size += ::protobuf::rt::value_size(6, self.mtu, ::protobuf::wire_format::WireTypeVarint);
+        }
+        for value in &self.fake_dns_exclude {
+            my_size += ::protobuf::rt::string_size(7, &value);
+        };
+        for value in &self.fake_dns_include {
+            my_size += ::protobuf::rt::string_size(8, &value);
+        };
         my_size += ::protobuf::rt::unknown_fields_size(self.get_unknown_fields());
         self.cached_size.set(my_size);
         my_size
@@ -1939,15 +1985,24 @@ impl ::protobuf::Message for PacketInboundSettings {
         if self.fd != 0 {
             os.write_int32(2, self.fd)?;
         }
-        if self.local_port != 0 {
-            os.write_uint32(3, self.local_port)?;
-        }
-        if self.remote_port != 0 {
-            os.write_uint32(4, self.remote_port)?;
+        if self.port != 0 {
+            os.write_uint32(3, self.port)?;
         }
         if !self.pipe.is_empty() {
-            os.write_string(5, &self.pipe)?;
+            os.write_string(4, &self.pipe)?;
         }
+        if self.pi != false {
+            os.write_bool(5, self.pi)?;
+        }
+        if self.mtu != 0 {
+            os.write_int32(6, self.mtu)?;
+        }
+        for v in &self.fake_dns_exclude {
+            os.write_string(7, &v)?;
+        };
+        for v in &self.fake_dns_include {
+            os.write_string(8, &v)?;
+        };
         os.write_unknown_fields(self.get_unknown_fields())?;
         ::std::result::Result::Ok(())
     }
@@ -1992,9 +2047,12 @@ impl ::protobuf::Clear for PacketInboundSettings {
     fn clear(&mut self) {
         self.sink = PacketInboundSettings_Sink::FD;
         self.fd = 0;
-        self.local_port = 0;
-        self.remote_port = 0;
+        self.port = 0;
         self.pipe.clear();
+        self.pi = false;
+        self.mtu = 0;
+        self.fake_dns_exclude.clear();
+        self.fake_dns_include.clear();
         self.unknown_fields.clear();
     }
 }
@@ -2008,7 +2066,7 @@ impl ::protobuf::reflect::ProtobufValue for PacketInboundSettings {
 #[derive(Clone,PartialEq,Eq,Debug,Hash)]
 pub enum PacketInboundSettings_Sink {
     FD = 0,
-    UDP = 1,
+    TCP = 1,
     PIPE = 2,
 }
 
@@ -2020,7 +2078,7 @@ impl ::protobuf::ProtobufEnum for PacketInboundSettings_Sink {
     fn from_i32(value: i32) -> ::std::option::Option<PacketInboundSettings_Sink> {
         match value {
             0 => ::std::option::Option::Some(PacketInboundSettings_Sink::FD),
-            1 => ::std::option::Option::Some(PacketInboundSettings_Sink::UDP),
+            1 => ::std::option::Option::Some(PacketInboundSettings_Sink::TCP),
             2 => ::std::option::Option::Some(PacketInboundSettings_Sink::PIPE),
             _ => ::std::option::Option::None
         }
@@ -2029,7 +2087,7 @@ impl ::protobuf::ProtobufEnum for PacketInboundSettings_Sink {
     fn values() -> &'static [Self] {
         static values: &'static [PacketInboundSettings_Sink] = &[
             PacketInboundSettings_Sink::FD,
-            PacketInboundSettings_Sink::UDP,
+            PacketInboundSettings_Sink::TCP,
             PacketInboundSettings_Sink::PIPE,
         ];
         values
