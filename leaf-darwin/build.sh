@@ -36,7 +36,7 @@ else
 fi
 
 for target in $targets; do
-  if [[ $target == *macabi ]]; then flags="-Z build-std"; else flags=""; fi
+  if [[ $target == *macabi ]]; then flags="-Z build-std=panic_abort,std"; else flags=""; fi
   cd $PROJECT_BASE/leaf-ffi && cargo build $flags --target $target $cargo_build_flags
 done
 
@@ -53,18 +53,18 @@ if [ "$scheme" == "macos" ]; then
     lipo -info $lib_output/libleaf.a
   done
 elif [ "$scheme" == "ios" ]; then
-    for platform in iphoneos iphonesimulator maccatalyst; do
-      tgs=${platform}_platform_targets
-      targets=${!tgs}
-      libs=""
-      for target in $targets; do
-        libs="$libs $PROJECT_BASE/target/$target/$build_type/libleaf.a"
-      done
-      lib_output="$PROJECT_BASE/build/apple/$CONFIG-$platform"
-      mkdir -p $lib_output
-      lipo -create $libs -output $lib_output/libleaf.a
-      lipo -info $lib_output/libleaf.a
+  for platform in iphoneos iphonesimulator maccatalyst; do
+    tgs=${platform}_platform_targets
+    targets=${!tgs}
+    libs=""
+    for target in $targets; do
+      libs="$libs $PROJECT_BASE/target/$target/$build_type/libleaf.a"
     done
+    lib_output="$PROJECT_BASE/build/apple/$CONFIG-$platform"
+    mkdir -p $lib_output
+    lipo -create $libs -output $lib_output/libleaf.a
+    lipo -info $lib_output/libleaf.a
+  done
 else
   echo "Unknown scheme type: $scheme"
   exit

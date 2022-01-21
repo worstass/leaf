@@ -18,8 +18,7 @@ BUILD_DIR="$PROJECT_BASE/build/android/$mode"
 HOST_OS=`uname -s | tr "[:upper:]" "[:lower:]"`
 HOST_ARCH=`uname -m | tr "[:upper:]" "[:lower:]"`
 if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
-    # NDK DOESNT HAVE AN ARM64 TOOLCHAIN ON DARWIN
-    # WE USE x86-64 WITH ROSETTA INSTEAD
+    # NDK DOESNT HAVE AN ARM64 TOOLCHAIN ON DARWIN, WE USE x86-64 WITH ROSETTA INSTEAD
     HOST_ARCH=x86_64
 fi
 
@@ -37,8 +36,8 @@ for target in x86_64-linux-android aarch64-linux-android; do
             export AR_x86_64_linux_android="$android_tools/${target}-ar"
             export CARGO_TARGET_X86_64_LINUX_ANDROID_AR="$android_tools/$target-ar"
             export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER="$android_tools/${target}${api}-clang"
-            export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
-            mkdir -p "$BUILD_DIR/jni/x86_64/"
+            export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin":$PATH
+            mkdir -p "$BUILD_DIR/jni/x86_64"
             case $mode in
               'release')
                 cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
@@ -55,8 +54,8 @@ for target in x86_64-linux-android aarch64-linux-android; do
             export AR_aarch64_linux_android="$android_tools/${target}-ar"
             export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR="$android_tools/$target-ar"
             export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER="$android_tools/${target}${api}-clang"
-            export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin/":$PATH
-            mkdir -p "$BUILD_DIR/jni/arm64-v8a/"
+            export PATH="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin":$PATH
+            mkdir -p "$BUILD_DIR/jni/arm64-v8a"
             case $mode in
               'release')
                 cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release

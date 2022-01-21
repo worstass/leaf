@@ -16,10 +16,10 @@ IOS_ARCHIVE="$ARCHIVES_DIR/leaf-ios.ios.xcarchive"
 IOS_SIM_ARCHIVE="$ARCHIVES_DIR/leaf-ios.iossim.xcarchive"
 MAC_CATALYST_ARCHIVE="$ARCHIVES_DIR/leaf-ios.macos.xcarchive"
 
-xcodebuild archive -scheme leaf-macos    -archivePath $MACOS_ARCHIVE SKIP_INSTALL=NO
-xcodebuild archive -scheme leaf-ios    -destination "generic/platform=iOS" -archivePath $IOS_ARCHIVE SKIP_INSTALL=NO
-xcodebuild archive -scheme leaf-ios    -destination "platform=iOS Simulator,name=iPhone 11" -archivePath $IOS_SIM_ARCHIVE SKIP_INSTALL=NO
-xcodebuild archive -scheme leaf-ios    -destination "platform=macOS,variant=Mac Catalyst" -archivePath $MAC_CATALYST_ARCHIVE SKIP_INSTALL=NO
+xcodebuild archive -scheme leaf-macos -archivePath $MACOS_ARCHIVE SKIP_INSTALL=NO
+xcodebuild archive -scheme leaf-ios -destination "generic/platform=iOS" -archivePath $IOS_ARCHIVE SKIP_INSTALL=NO
+xcodebuild archive -scheme leaf-ios -destination "generic/platform=iOS Simulator" -archivePath $IOS_SIM_ARCHIVE SKIP_INSTALL=NO
+xcodebuild archive -scheme leaf-ios -destination "generic/platform=macOS,variant=Mac Catalyst" -archivePath $MAC_CATALYST_ARCHIVE SKIP_INSTALL=NO
 xcodebuild -create-xcframework \
     -framework "$MACOS_ARCHIVE/Products/Library/Frameworks/leaf.framework" \
     -framework "$IOS_ARCHIVE/Products/Library/Frameworks/leaf.framework" \
