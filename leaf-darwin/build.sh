@@ -37,6 +37,7 @@ fi
 
 for target in $targets; do
   if [[ $target == *macabi ]]; then flags="-Z build-std=panic_abort,std"; else flags=""; fi
+  echo "Build for target: ${target}"
   cd $PROJECT_BASE/leaf-ffi && cargo build $flags --target $target $cargo_build_flags
 done
 
