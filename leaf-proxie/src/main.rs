@@ -29,11 +29,10 @@ impl Proxie for ProxieService {
     ) -> Result<Response<StartResponse>, Status> {
         println!("Got a request: {:?}", request);
 
-        let res = StartResponse {
-            // message: format!("Hello {}!", request.into_inner().name).into(),
-        };
+        let options = request.into_inner().options;
+        println!("{}", options["config"]);
 
-        Ok(Response::new(res))
+        Ok(Response::new(StartResponse {}))
     }
 
     async fn stop(

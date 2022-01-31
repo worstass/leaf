@@ -10,8 +10,9 @@ service Proxie {
 }
 
 message StartRequest {
-  string config = 1;
+  map<string, string> options = 1;
 }
+
 message StartResponse {}
 
 message StopRequest {}
