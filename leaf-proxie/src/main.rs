@@ -1,6 +1,7 @@
 use std::pin::Pin;
 use tonic::{transport::Server, Request, Response, Status};
 use tonic::codegen::futures_core;
+use leaf::RuntimeId;
 
 pub mod proxie {
     tonic::include_proto!("proxie");
@@ -16,6 +17,8 @@ use proxie::{
 };
 use crate::futures_core::Stream;
 
+const RT_ID: RuntimeId = 0;
+
 #[derive(Debug, Default)]
 pub struct ProxieService {}
 
@@ -27,11 +30,17 @@ impl Proxie for ProxieService {
         &self,
         request: Request<StartRequest>,
     ) -> Result<Response<StartResponse>, Status> {
-        println!("Got a request: {:?}", request);
-
+        // println!("Got a request: {:?}", request);
         let options = request.into_inner().options;
         println!("{}", options["config"]);
-
+        let cfg = options["config"].to_string();
+        let opts = leaf::StartOptions {
+            config: leaf::Config::Str(cfg),
+            #[cfg(feature = "auto-reload")]
+            auto_reload: false,
+            runtime_opt: leaf::RuntimeOption::SingleThread,
+        };
+        if let Err(e) = leaf::start(RT_ID, opts) {}
         Ok(Response::new(StartResponse {}))
     }
 
@@ -40,12 +49,8 @@ impl Proxie for ProxieService {
         request: Request<StopRequest>,
     ) -> Result<Response<StopResponse>, Status> {
         println!("Got a request: {:?}", request);
-
-        let res = StopResponse {
-            // message: format!("Hello {}!", request.into_inner().name).into(),
-        };
-
-        Ok(Response::new(res))
+        if !leaf::shutdown(RT_ID) {}
+        Ok(Response::new(StopResponse {}))
     }
 
     async fn query(
