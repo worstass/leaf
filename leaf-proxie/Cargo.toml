@@ -8,14 +8,6 @@ edition = "2021"
 name = "leaf-proxie"
 path = "src/main.rs"
 
-[[bin]]
-name = "echo"
-path = "src/echo.rs"
-
-[[bin]]
-name = "hello"
-path = "src/server.rs"
-
 [features]
 default = [
     "default-ring",
