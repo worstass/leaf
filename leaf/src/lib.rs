@@ -92,6 +92,9 @@ impl RuntimeManager {
         router: Arc<RwLock<Router>>,
         dns_client: Arc<RwLock<DnsClient>>,
         outbound_manager: Arc<RwLock<OutboundManager>>,
+        // MARKER BEGIN
+        #[cfg(feature = "callback")] callback: Arc<RwLock<Box<dyn Callback>>>,
+        // MARKER END
     ) -> Arc<Self> {
         Arc::new(Self {
             #[cfg(feature = "auto-reload")]
@@ -470,6 +473,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         router,
         dns_client,
         outbound_manager,
+        // MARKER BEGIN
+        #[cfg(feature = "callback")] Arc::new(RwLock::new(opts.callback)),
+        // MARKER END
     );
 
     // Monitor config file changes.

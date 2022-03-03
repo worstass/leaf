@@ -10,7 +10,7 @@ use lazy_static::lazy_static;
 use crate::RuntimeId;
 
 lazy_static! {
-    pub static ref CALLBACK: Mutex<Arc<HashMap<RuntimeId, Box<dyn Callback>>>> =
+    pub static ref CALLBACKS: Mutex<Arc<HashMap<RuntimeId, Box<dyn Callback>>>> =
         Mutex::new(Arc::new(HashMap::new()));
 }
 

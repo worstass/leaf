@@ -1,5 +1,14 @@
 use std::{ffi::CStr, os::raw::c_char};
 
+// MARKER BEGIN
+#[cfg(feature = "callback")]
+mod callback;
+#[cfg(feature = "callback")]
+use callback::{
+    Callback, FfiCallback,
+};
+// MARKER END
+
 /// No error.
 pub const ERR_OK: i32 = 0;
 /// Config path error.
@@ -55,6 +64,7 @@ fn to_errno(e: leaf::Error) -> i32 {
 pub extern "C" fn leaf_run_with_options(
     rt_id: u16,
     config_path: *const c_char,
+    #[cfg(feature = "callback")] callback: *const Callback,
     auto_reload: bool, // requires this parameter anyway
     multi_thread: bool,
     auto_threads: bool,
@@ -65,6 +75,10 @@ pub extern "C" fn leaf_run_with_options(
         if let Err(e) = leaf::util::run_with_options(
             rt_id,
             config_path.to_string(),
+            // MARKER BEGIN
+            #[cfg(feature = "callback")]
+            Box::new(FfiCallback::new(callback)),
+            // MARKER BEGIN
             #[cfg(feature = "auto-reload")]
             auto_reload,
             multi_thread,
@@ -89,10 +103,14 @@ pub extern "C" fn leaf_run_with_options(
 ///                    or .json, according to the enabled features.
 /// @return ERR_OK on finish running, any other errors means a startup failure.
 #[no_mangle]
-pub extern "C" fn leaf_run(rt_id: u16, config_path: *const c_char) -> i32 {
+pub extern "C" fn leaf_run(rt_id: u16, config_path: *const c_char, #[cfg(feature = "callback")] callback: *const Callback,) -> i32 {
     if let Ok(config_path) = unsafe { CStr::from_ptr(config_path).to_str() } {
         let opts = leaf::StartOptions {
             config: leaf::Config::File(config_path.to_string()),
+            // MARKER BEGIN
+            #[cfg(feature = "callback")]
+            callback: Box::new(FfiCallback::new(callback)),
+            // MARKER BEGIN
             #[cfg(feature = "auto-reload")]
             auto_reload: false,
             runtime_opt: leaf::RuntimeOption::SingleThread,
