@@ -10,7 +10,7 @@ service Proxie {
 }
 
 message StartRequest {
-  map<string, string> options = 1;
+  string json = 1;
 }
 
 message StartResponse {}
@@ -32,11 +32,12 @@ message VpnTraffic {
 
 message VpnUpdate {
   enum VpnConnection {
-    disconnectd = 0;
+    disconnected = 0;
     connecting = 1;
     connected = 2;
     disconnecting =3;
   }
   VpnConnection connection = 1;
   VpnTraffic traffic = 2;
+  string message = 3;
 }

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module type="JAVA_MODULE" version="4">
+  <component name="NewModuleRootManager" inherit-compiler-output="true">
+    <exclude-output />
+    <content url="file://$MODULE_DIR$">
+      <sourceFolder url="file://$MODULE_DIR$/leaf-android" isTestSource="false" packagePrefix="leaf" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf-android/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf-bin/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf-ffi/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf-plugins/shadowsocks/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf-proxie/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/leaf/tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/rust-tun/examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/rust-tun/src" isTestSource="false" />
+      <excludeFolder url="file://$MODULE_DIR$/target" />
+    </content>
+    <orderEntry type="inheritedJdk" />
+    <orderEntry type="sourceFolder" forTests="false" />
+  </component>
+</module>

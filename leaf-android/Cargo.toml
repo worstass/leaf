@@ -41,9 +41,13 @@ default = [
 #    "leaf/inbound-quic",
 #    "leaf/outbound-quic",
     "auto-reload",
+    "stats",
+    "callback",
 ]
 
 auto-reload = ["leaf/auto-reload"]
+stats = ["leaf/stats"]
+callback = ["leaf/callback"]
 
 [dependencies]
 leaf = { path = "../leaf", default-features = false, optional = true }

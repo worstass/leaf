@@ -1,16 +1,21 @@
 package leaf;
 
 public class Leaf {
+    interface Callback {
+        void reportTraffic(float txRate, float rxRate, long txTotal, long rxTotal);
+    }
+
     public static native int runWithOptions(
             int rtId,
             final String configPath,
-//            boolean autoReload,
+            Callback callback,
+            boolean autoReload,
             boolean multiThread,
             boolean autoThreads,
             int threads,
             int stackSize);
 
-    public static native int run(int rtId, final String configPath);
+    public static native int run(int rtId, final String configPath, Callback callback);
 
     public static native boolean reload(int rtId);
 

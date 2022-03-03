@@ -15,8 +15,11 @@ use crate::{
     session::{Session, SocksAddr},
 };
 
+#[cfg(feature = "callback")] use crate::callback::Callback;
+
 fn get_start_options(
     config_path: String,
+    #[cfg(feature = "callback")] callback: Box<dyn Callback>, // MARKER BEGIN - END
     #[cfg(feature = "auto-reload")] auto_reload: bool,
     multi_thread: bool,
     auto_threads: bool,
@@ -26,6 +29,7 @@ fn get_start_options(
     if !multi_thread {
         return crate::StartOptions {
             config: crate::Config::File(config_path),
+            #[cfg(feature = "callback")] callback,
             #[cfg(feature = "auto-reload")]
             auto_reload,
             runtime_opt: crate::RuntimeOption::SingleThread,
@@ -34,6 +38,7 @@ fn get_start_options(
     if auto_threads {
         return crate::StartOptions {
             config: crate::Config::File(config_path),
+            #[cfg(feature = "callback")] callback, // MARKER BEGIN - END
             #[cfg(feature = "auto-reload")]
             auto_reload,
             runtime_opt: crate::RuntimeOption::MultiThreadAuto(stack_size),
@@ -41,6 +46,7 @@ fn get_start_options(
     }
     crate::StartOptions {
         config: crate::Config::File(config_path),
+        #[cfg(feature = "callback")] callback, // MARKER BEGIN - END
         #[cfg(feature = "auto-reload")]
         auto_reload,
         runtime_opt: crate::RuntimeOption::MultiThread(threads, stack_size),
@@ -50,6 +56,7 @@ fn get_start_options(
 pub fn run_with_options(
     rt_id: crate::RuntimeId,
     config_path: String,
+    #[cfg(feature = "callback")] callback: Box<dyn Callback>, // MARKER BEGIN - END
     #[cfg(feature = "auto-reload")] auto_reload: bool,
     multi_thread: bool,
     auto_threads: bool,
@@ -58,6 +65,7 @@ pub fn run_with_options(
 ) -> Result<(), crate::Error> {
     let opts = get_start_options(
         config_path,
+        #[cfg(feature = "callback")] callback, // MARKER BEGIN - END
         #[cfg(feature = "auto-reload")]
         auto_reload,
         multi_thread,

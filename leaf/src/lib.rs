@@ -40,6 +40,9 @@ pub mod mobile;
 #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 mod sys;
 
+#[cfg(feature = "callback")] pub mod callback; // MARKER BEGIN - END
+#[cfg(feature = "callback")] use callback::Callback; // MARKER BEGIN - END
+
 #[derive(Error, Debug)]
 pub enum Error {
     #[error(transparent)]
@@ -337,6 +340,7 @@ pub enum Config {
 pub struct StartOptions {
     // The path of the config.
     pub config: Config,
+    #[cfg(feature = "callback")] pub callback: Box<dyn Callback>, // MARKER BEGIN - END
     // Enable auto reload, take effect only when "auto-reload" feature is enabled.
     #[cfg(feature = "auto-reload")]
     pub auto_reload: bool,

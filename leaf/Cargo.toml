@@ -70,6 +70,9 @@ all-endpoints = [
     "outbound-chain",
     "outbound-retry",
     # "outbound-select",
+
+    "stats", # MARKER BEGIN - END
+    "callback", # MARKER BEGIN - END
 ]
 
 # Ring-related
@@ -114,11 +117,16 @@ inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
 inbound-tls = []
 inbound-chain = []
-inbound-packet = ["inbound-tun", "tokio/fs"]
+inbound-packet = ["inbound-tun", "tokio/fs"] # MARKER BEGIN - END
 
 api = ["warp"]
 auto-reload = ["notify"]
 ctrlc = ["tokio/signal"]
+
+# MARKER BEGIN
+stats = []  # MARKER BEGIN - END
+callback = []
+# MARKER END
 
 [dependencies]
 # Common

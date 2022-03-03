@@ -23,3 +23,8 @@ pub mod api;
 pub mod fake_dns;
 
 pub type SyncDnsClient = Arc<RwLock<dns_client::DnsClient>>;
+
+// MARKER BEGIN
+#[cfg(feature = "stats")]
+pub mod stats;
+// MARKER END
