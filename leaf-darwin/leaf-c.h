@@ -48,6 +48,10 @@
  */
 #define ERR_NO_CONFIG_FILE 8
 
+typedef struct Callback {
+  void (*report_traffic)(float tx_rate, float rx_rate, long long tx_total, long long rx_total);
+} Callback;
+
 /**
  * Starts leaf with options, on a successful start this function blocks the current
  * thread.
@@ -71,6 +75,7 @@
  */
 int32_t leaf_run_with_options(uint16_t rt_id,
                               const char *config_path,
+                              const struct Callback *callback,
                               bool auto_reload,
                               bool multi_thread,
                               bool auto_threads,
@@ -87,7 +92,7 @@ int32_t leaf_run_with_options(uint16_t rt_id,
  *                    or .json, according to the enabled features.
  * @return ERR_OK on finish running, any other errors means a startup failure.
  */
-int32_t leaf_run(uint16_t rt_id, const char *config_path);
+int32_t leaf_run(uint16_t rt_id, const char *config_path, const struct Callback *callback);
 
 /**
  * Reloads DNS servers, outbounds and routing rules from the config file.
