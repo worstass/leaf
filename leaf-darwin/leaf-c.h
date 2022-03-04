@@ -49,7 +49,7 @@
 #define ERR_NO_CONFIG_FILE 8
 
 typedef struct Callback {
-  void (*report_traffic)(float tx_rate, float rx_rate, long long tx_total, long long rx_total);
+  void (*report_traffic)(float tx_rate, float rx_rate, unsigned long long tx_total, unsigned long long rx_total);
 } Callback;
 
 /**
