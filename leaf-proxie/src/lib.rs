@@ -7,8 +7,8 @@ pub mod proxie {
     tonic::include_proto!("proxie");
 }
 
-use proxie::proxie_server::{Proxie, ProxieServer};
-use proxie::{
+pub use proxie::proxie_server::{Proxie, ProxieServer};
+pub use proxie::{
     QueryRequest, QueryResponse,
     StartRequest, StartResponse,
     StopRequest, StopResponse,
@@ -16,6 +16,9 @@ use proxie::{
     VpnUpdate,
 };
 use crate::futures_core::Stream;
+
+#[cfg(feature = "callback")] mod callback;
+#[cfg(feature = "callback")] use callback::GrpcCallback;
 
 const RT_ID: RuntimeId = 0;
 
@@ -31,11 +34,13 @@ impl Proxie for ProxieService {
         request: Request<StartRequest>,
     ) -> Result<Response<StartResponse>, Status> {
         // println!("Got a request: {:?}", request);
-        let options = request.into_inner().options;
-        println!("{}", options["config"]);
-        let cfg = options["config"].to_string();
+        let json = request.into_inner().json;
+        println!("{}", json);
+        let cfg = "".to_string();
+
         let opts = leaf::StartOptions {
             config: leaf::Config::Str(cfg),
+            #[cfg(feature = "callback")] callback: Box::new( GrpcCallback::new()),
             #[cfg(feature = "auto-reload")]
             auto_reload: false,
             runtime_opt: leaf::RuntimeOption::SingleThread,
@@ -72,21 +77,4 @@ impl Proxie for ProxieService {
     ) -> Result<Response<Self::ListenVpnUpdateStream>, Status> {
         todo!()
     }
-}
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let addr = "127.0.0.1:8081".parse().unwrap();
-    let proxie = ProxieService::default();
-    let proxie = ProxieServer::new(proxie);
-    let proxie = tonic_web::config()
-        .allow_all_origins()
-        .enable(proxie);
-    println!("Proxie server listening on {}", addr);
-    Server::builder()
-        .accept_http1(true)
-        .add_service(proxie)
-        .serve(addr)
-        .await?;
-    Ok(())
 }
