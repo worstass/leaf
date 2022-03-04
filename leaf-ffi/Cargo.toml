@@ -12,6 +12,10 @@ crate-type = ["staticlib"]
 [features]
 default = [
     "default-ring",
+]
+
+default-ring = [
+    "leaf/default-ring",
 
     # MARKER BEGIN
     "stats",
@@ -19,12 +23,13 @@ default = [
     # MARKER- END
 ]
 
-default-ring = [
-    "leaf/default-ring",
-]
-
 default-openssl = [
     "leaf/default-openssl",
+
+    # MARKER BEGIN
+    "stats",
+    "callback",
+    # MARKER- END
 ]
 
 auto-reload = ["leaf/auto-reload"]
