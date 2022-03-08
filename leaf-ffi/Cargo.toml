@@ -43,6 +43,7 @@ callback = ["leaf/callback"]
 leaf = { path = "../leaf", default-features = false, optional = true }
 tokio = { version = "1", features = ["rt"] }
 futures = "0.3"
+libc = "0.2.1"
 
 [build-dependencies]
 bindgen = "0.57"

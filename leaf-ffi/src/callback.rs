@@ -1,8 +1,11 @@
+use std::ffi::c_void;
 use std::fmt::{Debug, Formatter};
+use std::mem::size_of;
 use leaf::callback::Callback as Inner;
 use std::option::Option;
 use std::os::raw::{c_float, c_ulonglong};
 use std::ptr::null;
+use libc::free;
 
 type ReportTrafficFunc = Option<extern "C" fn(
     tx_rate: c_float,
@@ -32,11 +35,17 @@ pub extern "C" fn create_callback(
     //     rx_total: c_ulonglong,
     // ) -> ()>,
 ) -> *const Callback {
-    return null();
+    unsafe {
+        let p = libc::malloc(size_of::<Callback>()) as *mut Callback;
+        (*p).report_traffic = report_traffic;
+        p
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn destroy_callback(cb: *const Callback) {}
+pub extern "C" fn destroy_callback(cb: *const Callback) {
+    unsafe { free(cb as *mut c_void) }
+}
 
 pub(crate) struct FfiCallback {
     inner: *const Callback,
