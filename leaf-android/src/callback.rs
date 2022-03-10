@@ -3,6 +3,7 @@ use jni::JNIEnv;
 use jni::objects::{GlobalRef, JObject};
 use leaf::callback::Callback;
 
+#[derive(Debug)]
 pub struct JniCallback<'a> {
     env: JNIEnv<'a>,
     obj: JObject<'a>,
@@ -14,12 +15,6 @@ impl<'a> JniCallback<'a> {
             env,
             obj,
         };
-    }
-}
-
-impl<'a> Debug for JniCallback<'a> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        todo!()
     }
 }
 

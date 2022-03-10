@@ -7,7 +7,7 @@ edition = "2021"
 [lib]
 name = "leaf"
 path = "src/lib.rs"
-crate-type = ["staticlib"]
+crate-type = ["staticlib", "dylib"] # MARKER BEGIN - END
 
 [features]
 default = [
