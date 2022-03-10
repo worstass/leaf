@@ -38,6 +38,7 @@ pub extern "C" fn destroy_callback(cb: *mut Callback) {
     unsafe { free(cb as *mut c_void) }
 }
 
+#[derive(Debug)]
 pub(crate) struct FfiCallback {
     inner: *const Callback,
 }
@@ -47,12 +48,6 @@ impl FfiCallback {
         return FfiCallback {
             inner
         };
-    }
-}
-
-impl Debug for FfiCallback {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        Ok(())
     }
 }
 
