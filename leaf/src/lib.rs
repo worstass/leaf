@@ -4,6 +4,7 @@ use std::sync::mpsc::sync_channel;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::Once;
+use std::time::Duration;
 
 use anyhow::anyhow;
 use lazy_static::lazy_static;
@@ -15,6 +16,7 @@ use tokio::sync::RwLock;
 use notify::{
     event, Error as NotifyError, RecommendedWatcher, RecursiveMode, Result as NotifyResult, Watcher,
 };
+use tokio::time::sleep;
 
 use app::{
     dispatcher::Dispatcher, dns_client::DnsClient, inbound::manager::InboundManager,
@@ -92,9 +94,9 @@ impl RuntimeManager {
         router: Arc<RwLock<Router>>,
         dns_client: Arc<RwLock<DnsClient>>,
         outbound_manager: Arc<RwLock<OutboundManager>>,
-        // MARKER BEGIN
-        #[cfg(feature = "callback")] callback: Arc<RwLock<Box<dyn Callback>>>,
-        // MARKER END
+        // // MARKER BEGIN
+        // #[cfg(feature = "callback")] callback: Arc<RwLock<Box<dyn Callback>>>,
+        // // MARKER END
     ) -> Arc<Self> {
         Arc::new(Self {
             #[cfg(feature = "auto-reload")]
@@ -460,6 +462,31 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     if let Ok(r) = inbound_manager.get_packet_runner() {
         runners.push(r);
     }
+    #[cfg(feature = "callback")]
+    {
+        use rand::Rng;
+
+        let cb = opts.callback;
+        runners.push(Box::pin( async move {
+            let mut up_total = 0;
+            let mut down_total =0;
+            let mut end = std::time::Instant::now();
+            loop {
+                tokio::time::sleep(Duration::from_secs(1)).await;
+                let begin = std::time::Instant::now();
+                let elapsed = begin - end;
+                let mut rng = rand::thread_rng();
+                let up = rng.gen_range(0..16384);
+                let down = rng.gen_range(0..16384);
+                up_total += up;
+                down_total += down;
+                let up_rate = (up as f32) / (elapsed.as_secs() as f32);
+                let down_rate = (down as f32) / (elapsed.as_secs() as f32);
+                cb.report_traffic(up_rate, down_rate, up_total, down_total);
+                end = begin;
+            }
+        }));
+    }
     // MARKER END
 
     let runtime_manager = RuntimeManager::new(
@@ -473,9 +500,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         router,
         dns_client,
         outbound_manager,
-        // MARKER BEGIN
-        #[cfg(feature = "callback")] Arc::new(RwLock::new(opts.callback)),
-        // MARKER END
+        // // MARKER BEGIN
+        // #[cfg(feature = "callback")] Arc::new(RwLock::new(opts.callback)),
+        // // MARKER END
     );
 
     // Monitor config file changes.
