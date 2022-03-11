@@ -345,7 +345,7 @@ pub enum Config {
 pub struct StartOptions {
     // The path of the config.
     pub config: Config,
-    #[cfg(feature = "callback")] pub callback: Box<dyn Callback>, // MARKER BEGIN - END
+    #[cfg(feature = "callback")] pub callback: Option<Box<dyn Callback>>, // MARKER BEGIN - END
     // Enable auto reload, take effect only when "auto-reload" feature is enabled.
     #[cfg(feature = "auto-reload")]
     pub auto_reload: bool,
@@ -466,26 +466,27 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     {
         use rand::Rng;
 
-        let cb = opts.callback;
-        runners.push(Box::pin( async move {
-            let mut up_total = 0;
-            let mut down_total =0;
-            let mut end = std::time::Instant::now();
-            loop {
-                tokio::time::sleep(Duration::from_secs(1)).await;
-                let begin = std::time::Instant::now();
-                let elapsed = begin - end;
-                let mut rng = rand::thread_rng();
-                let up = rng.gen_range(0..16384);
-                let down = rng.gen_range(0..16384);
-                up_total += up;
-                down_total += down;
-                let up_rate = (up as f32) / (elapsed.as_secs() as f32);
-                let down_rate = (down as f32) / (elapsed.as_secs() as f32);
-                cb.report_traffic(up_rate, down_rate, up_total, down_total);
-                end = begin;
-            }
-        }));
+        if let Some(cb) = opts.callback {
+            runners.push(Box::pin( async move {
+                let mut up_total = 0;
+                let mut down_total =0;
+                let mut end = std::time::Instant::now();
+                loop {
+                    tokio::time::sleep(Duration::from_secs(1)).await;
+                    let begin = std::time::Instant::now();
+                    let elapsed = begin - end;
+                    let mut rng = rand::thread_rng();
+                    let up = rng.gen_range(0..16384);
+                    let down = rng.gen_range(0..16384);
+                    up_total += up;
+                    down_total += down;
+                    let up_rate = (up as f32) / (elapsed.as_secs() as f32);
+                    let down_rate = (down as f32) / (elapsed.as_secs() as f32);
+                    cb.report_traffic(up_rate, down_rate, up_total, down_total);
+                    end = begin;
+                }
+            }));
+        }
     }
     // MARKER END
 

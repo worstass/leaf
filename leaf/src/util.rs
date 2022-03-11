@@ -19,7 +19,7 @@ use crate::{
 
 fn get_start_options(
     config_path: String,
-    #[cfg(feature = "callback")] callback: Box<dyn Callback>, // MARKER BEGIN - END
+    #[cfg(feature = "callback")] callback: Option<Box<dyn Callback>>, // MARKER BEGIN - END
     #[cfg(feature = "auto-reload")] auto_reload: bool,
     multi_thread: bool,
     auto_threads: bool,
@@ -56,7 +56,7 @@ fn get_start_options(
 pub fn run_with_options(
     rt_id: crate::RuntimeId,
     config_path: String,
-    #[cfg(feature = "callback")] callback: Box<dyn Callback>, // MARKER BEGIN - END
+    #[cfg(feature = "callback")] callback: Option<Box<dyn Callback>>, // MARKER BEGIN - END
     #[cfg(feature = "auto-reload")] auto_reload: bool,
     multi_thread: bool,
     auto_threads: bool,
@@ -65,7 +65,7 @@ pub fn run_with_options(
 ) -> Result<(), crate::Error> {
     let opts = get_start_options(
         config_path,
-        #[cfg(feature = "callback")] callback, // MARKER BEGIN - END
+        #[cfg(feature = "callback")] None, // MARKER BEGIN - END
         #[cfg(feature = "auto-reload")]
         auto_reload,
         multi_thread,
