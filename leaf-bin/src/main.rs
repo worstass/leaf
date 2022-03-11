@@ -98,6 +98,7 @@ fn main() {
     if let Err(e) = leaf::util::run_with_options(
         0,
         args.config,
+        #[cfg(feature = "callback")] args.callback,
         #[cfg(feature = "auto-reload")]
         args.auto_reload,
         !args.single_thread,
