@@ -9,6 +9,8 @@ use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
 
+#[cfg(feature = "stats")] use super::stats::Stats; // MARKER BEGIN - END
+
 use crate::{
     app::SyncDnsClient,
     common::sniff,
@@ -54,6 +56,7 @@ pub struct Dispatcher {
     outbound_manager: Arc<RwLock<OutboundManager>>,
     router: Arc<RwLock<Router>>,
     dns_client: SyncDnsClient,
+    #[cfg(feature = "stats")] stats: Stats, // MARKER BEGIN - END
 }
 
 impl Dispatcher {
@@ -61,11 +64,13 @@ impl Dispatcher {
         outbound_manager: Arc<RwLock<OutboundManager>>,
         router: Arc<RwLock<Router>>,
         dns_client: SyncDnsClient,
+        #[cfg(feature = "stats")] stats: Stats, // MARKER BEGIN - END
     ) -> Self {
         Dispatcher {
             outbound_manager,
             router,
             dns_client,
+            stats, // MARKER BEGIN - END
         }
     }
 

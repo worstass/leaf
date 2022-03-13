@@ -4,7 +4,10 @@ members = [
     "leaf-bin",
     "leaf-ffi",
     "leaf-plugins/shadowsocks",
+    # MARKER BEGIN
     "leaf-android",
+    "leaf-proxie",
+    # MARKER EDN
 ]
 default-members = ["leaf-bin"]
 

@@ -43,7 +43,12 @@ pub mod mobile;
 mod sys;
 
 #[cfg(feature = "callback")] pub mod callback; // MARKER BEGIN - END
-#[cfg(feature = "callback")] use callback::Callback; // MARKER BEGIN - END
+#[cfg(feature = "callback")]
+use callback::{
+    Callback,
+    fake_callback_runner
+};
+// MARKER BEGIN - END
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -397,10 +402,14 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         &mut config.router,
         dns_client.clone(),
     )));
+    // MARKER BEGIN
+    let stats = crate::app::stats::Stats::new();
+    // MARKER END
     let dispatcher = Arc::new(Dispatcher::new(
         outbound_manager.clone(),
         router.clone(),
         dns_client.clone(),
+        stats, // MARKER BEGIN -  END
     ));
     let nat_manager = Arc::new(NatManager::new(dispatcher.clone()));
     let inbound_manager =
@@ -459,33 +468,16 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     #[cfg(feature = "inbound-packet")]
-    if let Ok(r) = inbound_manager.get_packet_runner() {
-        runners.push(r);
+    {
+        if let Ok(r) = inbound_manager.get_packet_runner() {
+            runners.push(r);
+        }
     }
+
     #[cfg(feature = "callback")]
     {
-        use rand::Rng;
-
         if let Some(cb) = opts.callback {
-            runners.push(Box::pin( async move {
-                let mut up_total = 0;
-                let mut down_total =0;
-                let mut end = std::time::Instant::now();
-                loop {
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    let begin = std::time::Instant::now();
-                    let elapsed = begin - end;
-                    let mut rng = rand::thread_rng();
-                    let up = rng.gen_range(0..16384);
-                    let down = rng.gen_range(0..16384);
-                    up_total += up;
-                    down_total += down;
-                    let up_rate = (up as f32) / (elapsed.as_secs() as f32);
-                    let down_rate = (down as f32) / (elapsed.as_secs() as f32);
-                    cb.report_traffic(up_rate, down_rate, up_total, down_total);
-                    end = begin;
-                }
-            }));
+            runners.push(fake_callback_runner(cb));
         }
     }
     // MARKER END

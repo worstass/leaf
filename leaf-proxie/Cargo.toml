@@ -1,0 +1,14 @@
+[package]
+name = "leaf-proxie"
+version = "0.1.0"
+authors = ["nobody <noreply>"]
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib"]
+
+[dependencies]
+leaf = { path = "../leaf", default-features = false, optional = true }
+tokio = { version = "1", features = ["rt"] }
+futures = "0.3"
