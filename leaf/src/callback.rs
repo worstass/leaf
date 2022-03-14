@@ -72,17 +72,14 @@ pub fn stats_callback_runner(cb: Box<dyn Callback>, stats: Arc<Stats>) -> Runner
             let begin = std::time::Instant::now();
             let elapsed = begin - end;
             let mut rng = rand::thread_rng();
-            // let up = rng.gen_range(0..16384);
-            // let down = rng.gen_range(0..16384);
-
-            let  up_total = (&stats.uplink_counter.clone().amt).load(Ordering::Relaxed);
-           let  down_total = (&stats.downlink_counter.clone().amt).load(Ordering::Relaxed);
-            let mut up  = up_total - last_up_total;
-            let mut down =  down_total- last_down_total;
+            let up_total = (&stats.uplink_counter.clone().amt).load(Ordering::Acquire);
+            let down_total = (&stats.downlink_counter.clone().amt).load(Ordering::Acquire);
+            let mut up = up_total - last_up_total;
+            let mut down = down_total - last_down_total;
             let up_rate = (up as f32) / (elapsed.as_secs() as f32);
             let down_rate = (down as f32) / (elapsed.as_secs() as f32);
-            last_up_total  = up_total;
-            last_down_total =  down_total;
+            last_up_total = up_total;
+            last_down_total = down_total;
             cb.report_traffic(up_rate, down_rate, up_total, down_total);
             end = begin;
         }

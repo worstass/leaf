@@ -15,8 +15,8 @@ fi
 BASE=`dirname "$0"`
 PROJECT_BASE=`realpath $BASE/../`
 BUILD_DIR="$PROJECT_BASE/build/android/$mode"
-HOST_OS=`uname -s | tr "[:upper:]" "[:lower:]"`
-HOST_ARCH=`uname -m | tr "[:upper:]" "[:lower:]"`
+HOST_OS=$(uname -s | tr "[:upper:]" "[:lower:]")
+HOST_ARCH=$(uname -m | tr "[:upper:]" "[:lower:]")
 if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
     # NDK DOESNT HAVE AN ARM64 TOOLCHAIN ON DARWIN, WE USE x86-64 WITH ROSETTA INSTEAD
     HOST_ARCH=x86_64
@@ -75,7 +75,7 @@ done
 
 javac $BASE/Leaf.java -d $BUILD_DIR
 pushd $BUILD_DIR > /dev/null
-jar cvf classes.jar leaf/Leaf.class
+jar cvf classes.jar leaf/*.class
 popd > /dev/null
 
 pushd $BUILD_DIR > /dev/null
