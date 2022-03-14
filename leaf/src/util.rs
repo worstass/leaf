@@ -65,7 +65,7 @@ pub fn run_with_options(
 ) -> Result<(), crate::Error> {
     let opts = get_start_options(
         config_path,
-        #[cfg(feature = "callback")] None, // MARKER BEGIN - END
+        #[cfg(feature = "callback")] callback, // MARKER BEGIN - END
         #[cfg(feature = "auto-reload")]
         auto_reload,
         multi_thread,

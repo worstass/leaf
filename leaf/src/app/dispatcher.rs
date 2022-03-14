@@ -56,7 +56,7 @@ pub struct Dispatcher {
     outbound_manager: Arc<RwLock<OutboundManager>>,
     router: Arc<RwLock<Router>>,
     dns_client: SyncDnsClient,
-    #[cfg(feature = "stats")] stats: Stats, // MARKER BEGIN - END
+    #[cfg(feature = "stats")] stats: Arc<Stats>, // MARKER BEGIN - END
 }
 
 impl Dispatcher {
@@ -64,13 +64,13 @@ impl Dispatcher {
         outbound_manager: Arc<RwLock<OutboundManager>>,
         router: Arc<RwLock<Router>>,
         dns_client: SyncDnsClient,
-        #[cfg(feature = "stats")] stats: Stats, // MARKER BEGIN - END
+        #[cfg(feature = "stats")] stats: Arc<Stats>, // MARKER BEGIN - END
     ) -> Self {
         Dispatcher {
             outbound_manager,
             router,
             dns_client,
-            stats, // MARKER BEGIN - END
+            #[cfg(feature = "stats")] stats, // MARKER BEGIN - END
         }
     }
 
@@ -189,9 +189,12 @@ impl Dispatcher {
                 let mut lr = BufReader::with_capacity(*option::LINK_BUFFER_SIZE * 1024, lr);
                 let mut rr = BufReader::with_capacity(*option::LINK_BUFFER_SIZE * 1024, rr);
 
-                let l2r = Box::pin(tokio::io::copy_buf(&mut lr, &mut rw));
-                let r2l = Box::pin(tokio::io::copy_buf(&mut rr, &mut lw));
-
+                // MARKER BEGIN
+                // let l2r = Box::pin(tokio::io::copy_buf(&mut lr, &mut rw));
+                // let r2l = Box::pin(tokio::io::copy_buf(&mut rr, &mut lw));
+                let l2r = Box::pin(super::stats::copy_buf(&mut lr, &mut rw, Some(self.stats.clone().uplink_counter.clone())));
+                let r2l = Box::pin(super::stats::copy_buf(&mut rr, &mut lw, Some(self.stats.clone().downlink_counter.clone())));
+                // MARKER END
                 // TODO Propagate EOF signal.
 
                 // Drives both uplink and downlink to completion, i.e. read till EOF.

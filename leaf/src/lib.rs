@@ -48,6 +48,7 @@ use callback::{
     Callback,
     fake_callback_runner
 };
+use crate::callback::{ConsoleCallback, stats_callback_runner};
 // MARKER BEGIN - END
 
 #[derive(Error, Debug)]
@@ -403,13 +404,13 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         dns_client.clone(),
     )));
     // MARKER BEGIN
-    let stats = crate::app::stats::Stats::new();
+    let stats = Arc::new(crate::app::stats::Stats::new());
     // MARKER END
     let dispatcher = Arc::new(Dispatcher::new(
         outbound_manager.clone(),
         router.clone(),
         dns_client.clone(),
-        stats, // MARKER BEGIN -  END
+        stats.clone(), // MARKER BEGIN -  END
     ));
     let nat_manager = Arc::new(NatManager::new(dispatcher.clone()));
     let inbound_manager =
@@ -476,6 +477,11 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     #[cfg(feature = "callback")]
     {
+        // let cb = match opts.callback {
+        //     None => Box::new(ConsoleCallback::new()),
+        //     Some(cb) => cb
+        // };
+        // runners.push(stats_callback_runner(cb, stats));
         if let Some(cb) = opts.callback {
             runners.push(fake_callback_runner(cb));
         }
