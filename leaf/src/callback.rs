@@ -21,8 +21,17 @@ lazy_static! {
         Mutex::new(Arc::new(HashMap::new()));
 }
 
+pub const STATE_UNKNOWN: i32 = 0;
+pub const STATE_REMOTE_CONNECTED: i32 = 1;
+pub const STATE_REMOTE_DISCONNECTED: i32 = 2;
+pub const STATE_LOCAL_STARTING: i32 = 3;
+pub const STATE_LOCAL_STARTED: i32 = 4;
+pub const STATE_LOCAL_STOPPING: i32 = 5;
+pub const STATE_LOCAL_STOPPED: i32 = 6;
+
 pub trait Callback: Debug + Send + Sync {
     fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, rx_total: u64, tx_total: u64);
+    fn report_state(self: &Self, state: i32);
 }
 
 #[derive(Debug)]
@@ -37,6 +46,10 @@ impl ConsoleCallback {
 impl Callback for ConsoleCallback {
     fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, rx_total: u64, tx_total: u64) {
         debug!("traffic: up_rate: {} down_rate {} up_total: {} down_total {}", tx_rate, rx_rate, rx_total, tx_total);
+    }
+
+    fn report_state(self: &Self, state: i32) {
+        info!("engine state: {}", state)
     }
 }
 
@@ -62,7 +75,7 @@ pub fn fake_callback_runner(cb: Box<dyn Callback>) -> Runner {
     })
 }
 
-pub fn stats_callback_runner(cb: Box<dyn Callback>, stats: Arc<Stats>) -> Runner {
+pub fn stats_callback_runner(cb: Arc<Box<dyn Callback>>, stats: Arc<Stats>) -> Runner {
     Box::pin(async move {
         let mut last_up_total = 0;
         let mut last_down_total = 0;

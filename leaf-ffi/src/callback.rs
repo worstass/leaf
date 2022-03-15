@@ -5,7 +5,7 @@ use leaf::callback::Callback as Inner;
 use std::option::Option;
 use std::os::raw::{c_float, c_ulonglong};
 use std::ptr::null;
-use libc::free;
+use libc::{c_int, free};
 
 #[repr(C)]
 pub struct Callback {
@@ -14,6 +14,9 @@ pub struct Callback {
         rx_rate: c_float,
         tx_total: c_ulonglong,
         rx_total: c_ulonglong,
+    ) -> ()>,
+    report_state: Option<extern "C" fn(
+        state: c_int,
     ) -> ()>,
 }
 
@@ -25,10 +28,14 @@ pub extern "C" fn create_callback(
         tx_total: c_ulonglong,
         rx_total: c_ulonglong,
     ) -> ()>,
+    report_state: Option<extern "C" fn(
+        state: c_int,
+    ) -> ()>,
 ) -> *mut Callback {
     unsafe {
         let p = libc::malloc(size_of::<Callback>()) as *mut Callback;
         (*p).report_traffic = report_traffic;
+        (*p).report_state = report_state;
         p
     }
 }
@@ -60,6 +67,13 @@ impl Inner for FfiCallback {
         unsafe {
             let f = (*self.inner).report_traffic.unwrap();
             f(tx_rate as c_float, rx_rate as c_float, rx_total as c_ulonglong, tx_total as c_ulonglong);
+        }
+    }
+
+    fn report_state(self: &Self, state: i32) {
+        unsafe {
+            let f = (*self.inner).report_state.unwrap();
+            f(state as c_int);
         }
     }
 }

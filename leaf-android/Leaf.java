@@ -3,6 +3,7 @@ package leaf;
 public class Leaf {
     interface Callback {
         void reportTraffic(float txRate, float rxRate, long txTotal, long rxTotal);
+        void reportState(int state);
     }
 
     public static native int runWithOptions(

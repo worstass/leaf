@@ -110,7 +110,7 @@ pub extern "C" fn leaf_run(rt_id: u16, config_path: *const c_char, #[cfg(feature
             // MARKER BEGIN
             #[cfg(feature = "callback")]
             callback: Some(Box::new(FfiCallback::new(callback))),
-            // MARKER BEGIN
+            // MARKER END
             #[cfg(feature = "auto-reload")]
             auto_reload: false,
             runtime_opt: leaf::RuntimeOption::SingleThread,

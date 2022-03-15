@@ -48,7 +48,7 @@ use callback::{
     Callback,
     fake_callback_runner
 };
-use crate::callback::{ConsoleCallback, stats_callback_runner};
+use crate::callback::{ConsoleCallback, STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, stats_callback_runner};
 // MARKER BEGIN - END
 
 #[derive(Error, Debug)]
@@ -100,9 +100,6 @@ impl RuntimeManager {
         router: Arc<RwLock<Router>>,
         dns_client: Arc<RwLock<DnsClient>>,
         outbound_manager: Arc<RwLock<OutboundManager>>,
-        // // MARKER BEGIN
-        // #[cfg(feature = "callback")] callback: Arc<RwLock<Box<dyn Callback>>>,
-        // // MARKER END
     ) -> Arc<Self> {
         Arc::new(Self {
             #[cfg(feature = "auto-reload")]
@@ -361,7 +358,20 @@ pub struct StartOptions {
 
 pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     println!("start with options:\n{:#?}", opts);
-
+    // MARKER BEGIN
+    #[cfg(feature = "callback")]
+    let cb = match opts.callback {
+        None => {
+            let _cb: Box<dyn Callback> =Box::new(ConsoleCallback::new());
+            Some(Arc::new(_cb))
+        },
+        Some(_cb) => Some(Arc::new(_cb)),
+    };
+    #[cfg(feature = "callback")]
+    if let Some(ref _cb) = cb {
+        _cb.clone().report_state(STATE_LOCAL_STARTING)
+    }
+    // MARKER END
     let (reload_tx, mut reload_rx) = mpsc::channel(1);
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
 
@@ -469,22 +479,13 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     #[cfg(feature = "inbound-packet")]
-    {
-        if let Ok(r) = inbound_manager.get_packet_runner() {
-            runners.push(r);
-        }
+    if let Ok(r) = inbound_manager.get_packet_runner() {
+        runners.push(r);
     }
 
     #[cfg(feature = "callback")]
-    {
-        // let cb = match opts.callback {
-        //     None => Box::new(ConsoleCallback::new()),
-        //     Some(cb) => cb
-        // };
-        // runners.push(stats_callback_runner(cb, stats));
-        if let Some(cb) = opts.callback {
-            runners.push(fake_callback_runner(cb));
-        }
+    if let Some(ref _cb) = cb {
+        runners.push(stats_callback_runner(_cb.clone(), stats));
     }
     // MARKER END
 
@@ -499,9 +500,6 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         router,
         dns_client,
         outbound_manager,
-        // // MARKER BEGIN
-        // #[cfg(feature = "callback")] Arc::new(RwLock::new(opts.callback)),
-        // // MARKER END
     );
 
     // Monitor config file changes.
@@ -577,6 +575,12 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     log::trace!("added runtime {}", &rt_id);
 
+    // MARKER BEGIN
+    #[cfg(feature = "callback")]
+    if let Some(ref _cb) = cb {
+        _cb.clone().report_state(STATE_LOCAL_STARTED)
+    }
+    // MARKER END
     rt.block_on(futures::future::select_all(tasks));
 
     // MARKER BEGIN

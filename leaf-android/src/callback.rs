@@ -34,7 +34,12 @@ impl<'a> Callback for JniCallback<'a> {
             rx_rate.into(),
             (tx_total as i64).into(),
             (rx_total as i64).into(),
-        ])
-            .unwrap();
+        ]).unwrap();
+    }
+
+    fn report_state(self: &Self, state: i32) {
+        self.env.call_method(self.obj, "reportState", "(V)I", &[
+            state.into(),
+        ]).unwrap();
     }
 }

@@ -39,7 +39,7 @@ pub unsafe extern "C" fn Java_leaf_Leaf_runWithOptions(
     if let Err(e) = leaf::util::run_with_options(
         rt_id as u16,
         config_path.to_string(),
-        #[cfg(feature = "callback")] cb,
+        #[cfg(feature = "callback")] Some(cb),
         #[cfg(feature = "auto-reload")] auto_reload,
         multi_thread != 0,
         auto_threads != 0,
@@ -70,7 +70,7 @@ pub unsafe extern "C" fn Java_leaf_Leaf_run(
     let cb = Box::new(JniCallback::new(env, callback));
     let opts = leaf::StartOptions {
         config: leaf::Config::File(config_path),
-        #[cfg(feature = "callback")] callback: cb,
+        #[cfg(feature = "callback")] callback: Some(cb),
         #[cfg(feature = "auto-reload")]
         auto_reload: false,
         runtime_opt: leaf::RuntimeOption::SingleThread,
