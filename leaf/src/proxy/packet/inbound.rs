@@ -90,11 +90,14 @@ pub fn new(
                                     debug!("read stack eof");
                                     return;
                                 }
-                                Ok(n) => match tun_sink.send(TunPacket::new((&buf[..n]).to_vec())).await {
-                                    Ok(_) => (),
-                                    Err(e) => {
-                                        warn!("send pkt to tun failed: {}", e);
-                                        return;
+                                Ok(n) => {
+                                    debug!("stack->tun:{:02X?}", &buf[..n]);
+                                    match tun_sink.send(TunPacket::new((&buf[..n]).to_vec())).await {
+                                        Ok(_) => (),
+                                        Err(e) => {
+                                            warn!("send pkt to tun failed: {}", e);
+                                            return;
+                                        }
                                     }
                                 },
                                 Err(err) => {
@@ -108,11 +111,14 @@ pub fn new(
                     let t2s = Box::pin(async move {
                         while let Some(packet) = tun_stream.next().await {
                             match packet {
-                                Ok(packet) => match stack_writer.write(packet.get_bytes()).await {
-                                    Ok(_) => (),
-                                    Err(e) => {
-                                        warn!("write pkt to stack failed: {}", e);
-                                        return;
+                                Ok(packet) => {
+                                    debug!("tun->stack:{:02X?}", packet.get_bytes());
+                                    match stack_writer.write(packet.get_bytes()).await {
+                                        Ok(_) => (),
+                                        Err(e) => {
+                                            warn!("write pkt to stack failed: {}", e);
+                                            return;
+                                        }
                                     }
                                 },
                                 Err(err) => {

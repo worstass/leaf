@@ -48,7 +48,7 @@ use callback::{
     Callback,
     fake_callback_runner
 };
-use crate::callback::{ConsoleCallback, STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, stats_callback_runner};
+use crate::callback::{ConsoleCallback, STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, STATE_LOCAL_STOPPED, STATE_LOCAL_STOPPING, stats_callback_runner};
 // MARKER BEGIN - END
 
 #[derive(Error, Debug)]
@@ -584,6 +584,13 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     rt.block_on(futures::future::select_all(tasks));
 
     // MARKER BEGIN
+    #[cfg(feature = "callback")]
+    if let Some(ref _cb) = cb {
+        _cb.clone().report_state(STATE_LOCAL_STOPPING)
+    }
+    // MARKER END
+
+    // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
     // sys::post_tun_completion_setup(&net_info);
     #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
@@ -597,6 +604,13 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         .remove(&rt_id);
 
     log::trace!("removed runtime {}", &rt_id);
+
+    // MARKER BEGIN
+    #[cfg(feature = "callback")]
+    if let Some(ref _cb) = cb {
+        _cb.clone().report_state(STATE_LOCAL_STOPPED)
+    }
+    // MARKER END
 
     Ok(())
 }
@@ -624,6 +638,7 @@ Direct = direct
             thread::spawn(move || {
                 let opts = StartOptions {
                     config: Config::Str(conf.to_string()),
+                    #[cfg(feature = "callback")] callback: None, // MARKER BEGIN - END
                     #[cfg(feature = "auto-reload")]
                     auto_reload: false,
                     runtime_opt: RuntimeOption::SingleThread,
