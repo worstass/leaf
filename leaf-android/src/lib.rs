@@ -67,6 +67,7 @@ pub unsafe extern "C" fn Java_leaf_Leaf_run(
         .unwrap()
         .to_owned();
 
+    #[cfg(feature = "callback")]
     let cb = Box::new(JniCallback::new(env, callback));
     let opts = leaf::StartOptions {
         config: leaf::Config::File(config_path),

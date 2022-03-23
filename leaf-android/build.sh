@@ -24,17 +24,21 @@ fi
 
 api=30
 ndk_version=22.1.7171670
-android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
-#android_tools="$NDK_HOME/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
+#android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
+android_tools="$NDK_HOME/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
 
 export PATH=$android_tools:$PATH
 export CC_x86_64_linux_android=$android_tools/x86_64-linux-android30-clang
-export AR_x86_64_linux_android=$android_tools/x86_64-linux-android30-ar
-export CARGO_TARGET_X86_64_LINUX_ANDROID_AR=$android_tools/x86_64-linux-android30-ar
+#export AR_x86_64_linux_android=$android_tools/x86_64-linux-android30-ar
+export AR_x86_64_linux_android=$android_tools/llvm-ar
+#export CARGO_TARGET_X86_64_LINUX_ANDROID_AR=$android_tools/x86_64-linux-android30-ar
+export CARGO_TARGET_X86_64_LINUX_ANDROID_AR=$android_tools/llvm-ar
 export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$android_tools/x86_64-linux-android30-clang
 export CC_aarch64_linux_android=$android_tools/aarch64-linux-android30-clang
-export AR_aarch64_linux_android=$android_tools/aarch64-linux-android30-ar
-export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$android_tools/aarch64-linux-android30-ar
+#export AR_aarch64_linux_android=$android_tools/aarch64-linux-android30-ar
+export AR_aarch64_linux_android=$android_tools/llvm-ar
+#export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$android_tools/aarch64-linux-android30-ar
+export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$android_tools/llvm-ar
 export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$android_tools/aarch64-linux-android30-clang
 
 for target in x86_64-linux-android aarch64-linux-android; do

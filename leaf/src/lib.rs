@@ -362,7 +362,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     #[cfg(feature = "callback")]
     let cb = match opts.callback {
         None => {
-            let _cb: Box<dyn Callback> =Box::new(ConsoleCallback::new());
+            let _cb: Box<dyn Callback> = Box::new(ConsoleCallback::new());
             Some(Arc::new(_cb))
         },
         Some(_cb) => Some(Arc::new(_cb)),
@@ -460,9 +460,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     #[cfg(all(
         feature = "inbound-tun",
         any(
-            target_os = "ios",
+            // target_os = "ios", // MARKER BEGIN - END
             target_os = "android",
-            target_os = "macos",
+            // target_os = "macos", // MARKER BEGIN - END
             target_os = "linux",
             target_os = "windows", // MARKER BEGIN - END
         )
