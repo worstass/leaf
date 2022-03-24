@@ -122,6 +122,7 @@ bool leaf_shutdown(uint16_t rt_id);
  */
 int32_t leaf_test_config(const char *config_path);
 
-struct Callback *create_callback(void (*report_traffic)(float tx_rate, float rx_rate, unsigned long long tx_total, unsigned long long rx_total));
+struct Callback *create_callback(void (*report_traffic)(float tx_rate, float rx_rate, unsigned long long tx_total, unsigned long long rx_total),
+                                 void (*report_state)(int state));
 
 void destroy_callback(struct Callback *cb);

@@ -4,8 +4,9 @@ use std::{ffi::CStr, os::raw::c_char};
 #[cfg(feature = "callback")]
 mod callback;
 #[cfg(feature = "callback")]
-use callback::{
-    Callback, FfiCallback,
+pub use callback::{
+    Callback,
+    create_callback, destroy_callback,
 };
 // MARKER END
 
@@ -77,7 +78,7 @@ pub extern "C" fn leaf_run_with_options(
             config_path.to_string(),
             // MARKER BEGIN
             #[cfg(feature = "callback")]
-            Some(Box::new(FfiCallback::new(callback))),
+            Some(Box::new(callback::FfiCallback::new(callback))),
             // MARKER BEGIN
             #[cfg(feature = "auto-reload")]
             auto_reload,
@@ -109,7 +110,7 @@ pub extern "C" fn leaf_run(rt_id: u16, config_path: *const c_char, #[cfg(feature
             config: leaf::Config::File(config_path.to_string()),
             // MARKER BEGIN
             #[cfg(feature = "callback")]
-            callback: Some(Box::new(FfiCallback::new(callback))),
+            callback: Some(Box::new(callback::FfiCallback::new(callback))),
             // MARKER END
             #[cfg(feature = "auto-reload")]
             auto_reload: false,
