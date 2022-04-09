@@ -1,16 +1,14 @@
 mod common;
 
-// app(socks) -> (socks)client(random(shadowsocks)) -> (shadowsocks)server(direct) -> echo
 #[cfg(all(
     feature = "outbound-socks",
     feature = "inbound-socks",
     feature = "outbound-shadowsocks",
     feature = "inbound-shadowsocks",
     feature = "outbound-direct",
-    feature = "outbound-random",
 ))]
 #[test]
-fn test_random() {
+fn test_tcp_half_close_shadowsocks() {
     let config1 = r#"
     {
         "inbounds": [
@@ -22,16 +20,8 @@ fn test_random() {
         ],
         "outbounds": [
             {
-                "protocol": "random",
-                "settings": {
-                    "actors": [
-                        "ss_out"
-                    ]
-                }
-            },
-            {
                 "protocol": "shadowsocks",
-                "tag": "ss_out",
+                "tag": "shadowsocks",
                 "settings": {
                     "address": "127.0.0.1",
                     "port": 3001,
@@ -48,6 +38,7 @@ fn test_random() {
         "inbounds": [
             {
                 "protocol": "shadowsocks",
+                "tag": "shadowsocks",
                 "address": "127.0.0.1",
                 "port": 3001,
                 "settings": {
@@ -65,5 +56,5 @@ fn test_random() {
     "#;
 
     let configs = vec![config1.to_string(), config2.to_string()];
-    common::test_configs(configs, "127.0.0.1", 1086);
+    common::test_tcp_half_close_on_configs(configs, "127.0.0.1", 1086);
 }

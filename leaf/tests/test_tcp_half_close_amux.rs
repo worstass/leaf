@@ -1,19 +1,19 @@
 mod common;
 
-// app(socks) -> (socks)client(chain(ws+trojan)) -> (chain(ws+trojan))server(direct) -> echo
+// app(socks) -> (socks)client(chain(amux(tcp)+trojan)) -> (chain(amux(tcp)+trojan))server(direct) -> echo
 #[cfg(all(
     feature = "outbound-socks",
     feature = "inbound-socks",
-    feature = "outbound-ws",
+    feature = "outbound-amux",
     feature = "outbound-trojan",
-    feature = "inbound-ws",
+    feature = "inbound-amux",
     feature = "inbound-trojan",
     feature = "outbound-direct",
     feature = "inbound-chain",
     feature = "outbound-chain",
 ))]
 #[test]
-fn test_ws_trojan() {
+fn test_tcp_half_close_amux() {
     let config1 = r#"
     {
         "inbounds": [
@@ -28,24 +28,23 @@ fn test_ws_trojan() {
                 "protocol": "chain",
                 "settings": {
                     "actors": [
-                        "ws",
+                        "amux",
                         "trojan"
                     ]
                 }
             },
             {
-                "protocol": "ws",
-                "tag": "ws",
+                "protocol": "amux",
+                "tag": "amux",
                 "settings": {
-                    "path": "/leaf"
+                    "address": "127.0.0.1",
+                    "port": 3001
                 }
             },
             {
                 "protocol": "trojan",
                 "tag": "trojan",
                 "settings": {
-                    "address": "127.0.0.1",
-                    "port": 3001,
                     "password": "password"
                 }
             }
@@ -62,17 +61,14 @@ fn test_ws_trojan() {
                 "port": 3001,
                 "settings": {
                     "actors": [
-                        "ws",
+                        "amux",
                         "trojan"
                     ]
                 }
             },
             {
-                "protocol": "ws",
-                "tag": "ws",
-                "settings": {
-                    "path": "/leaf"
-                }
+                "protocol": "amux",
+                "tag": "amux"
             },
             {
                 "protocol": "trojan",
@@ -93,5 +89,5 @@ fn test_ws_trojan() {
     "#;
 
     let configs = vec![config1.to_string(), config2.to_string()];
-    common::test_configs(configs, "127.0.0.1", 1086);
+    common::test_tcp_half_close_on_configs(configs, "127.0.0.1", 1086);
 }

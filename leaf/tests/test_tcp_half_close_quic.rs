@@ -1,19 +1,19 @@
 mod common;
 
-// app(socks) -> (socks)client(chain(tls+trojan)) -> (chain(tls+trojan))server(direct) -> echo
+// app(socks) -> (socks)client(chain(quic+trojan)) -> (chain(quic+trojan))server(direct) -> echo
 #[cfg(all(
     feature = "outbound-socks",
     feature = "inbound-socks",
-    feature = "outbound-tls",
+    feature = "outbound-quic",
     feature = "outbound-trojan",
-    feature = "inbound-tls",
+    feature = "inbound-quic",
     feature = "inbound-trojan",
     feature = "outbound-direct",
     feature = "inbound-chain",
     feature = "outbound-chain",
 ))]
 #[test]
-fn test_tls_trojan() {
+fn test_tcp_half_close_quic() {
     let config1 = r#"
     {
         "inbounds": [
@@ -28,25 +28,25 @@ fn test_tls_trojan() {
                 "protocol": "chain",
                 "settings": {
                     "actors": [
-                        "tls",
+                        "quic",
                         "trojan"
                     ]
                 }
             },
             {
-                "protocol": "tls",
-                "tag": "tls",
+                "protocol": "quic",
+                "tag": "quic",
                 "settings": {
+                    "address": "127.0.0.1",
+                    "port": 3001,
                     "serverName": "localhost",
-                    "certificate": "cert.pem"
+                    "certificate": "cert.der"
                 }
             },
             {
                 "protocol": "trojan",
                 "tag": "trojan",
                 "settings": {
-                    "address": "127.0.0.1",
-                    "port": 3001,
                     "password": "password"
                 }
             }
@@ -63,17 +63,17 @@ fn test_tls_trojan() {
                 "port": 3001,
                 "settings": {
                     "actors": [
-                        "tls",
+                        "quic",
                         "trojan"
                     ]
                 }
             },
             {
-                "protocol": "tls",
-                "tag": "tls",
+                "protocol": "quic",
+                "tag": "quic",
                 "settings": {
-                    "certificate": "cert.pem",
-                    "certificateKey": "key.pem"
+                    "certificate": "cert.der",
+                    "certificateKey": "key.der"
                 }
             },
             {
@@ -108,15 +108,17 @@ fn test_tls_trojan() {
                 "protocol": "chain",
                 "settings": {
                     "actors": [
-                        "tls",
+                        "quic",
                         "trojan"
                     ]
                 }
             },
             {
-                "protocol": "tls",
-                "tag": "tls",
+                "protocol": "quic",
+                "tag": "quic",
                 "settings": {
+                    "address": "127.0.0.1",
+                    "port": 3002,
                     "serverName": "localhost",
                     "certificate": "cert.pem"
                 }
@@ -125,8 +127,6 @@ fn test_tls_trojan() {
                 "protocol": "trojan",
                 "tag": "trojan",
                 "settings": {
-                    "address": "127.0.0.1",
-                    "port": 3002,
                     "password": "password"
                 }
             }
@@ -143,14 +143,14 @@ fn test_tls_trojan() {
                 "port": 3002,
                 "settings": {
                     "actors": [
-                        "tls",
+                        "quic",
                         "trojan"
                     ]
                 }
             },
             {
-                "protocol": "tls",
-                "tag": "tls",
+                "protocol": "quic",
+                "tag": "quic",
                 "settings": {
                     "certificate": "cert.pem",
                     "certificateKey": "key.pem"
@@ -182,7 +182,7 @@ fn test_tls_trojan() {
     std::fs::write(&path.join("key.pem"), &cert.serialize_private_key_pem()).unwrap();
     std::fs::write(&path.join("cert.pem"), &cert.serialize_pem().unwrap()).unwrap();
     let configs = vec![config1.to_string(), config2.to_string()];
-    common::test_configs(configs, "127.0.0.1", 1086);
+    common::test_tcp_half_close_on_configs(configs, "127.0.0.1", 1086);
     let configs = vec![config3.to_string(), config4.to_string()];
-    common::test_configs(configs, "127.0.0.1", 1087);
+    common::test_tcp_half_close_on_configs(configs, "127.0.0.1", 1087);
 }

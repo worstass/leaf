@@ -141,12 +141,9 @@ message TryAllOutboundSettings {
 	uint32 delay_base = 2;
 }
 
-message RandomOutboundSettings {
+message StaticOutboundSettings {
 	repeated string actors = 1;
-}
-
-message RROutboundSettings {
-	repeated string actors = 1;
+	string method = 2;
 }
 
 message AMuxOutboundSettings {
@@ -166,11 +163,6 @@ message QuicOutboundSettings {
 
 message ChainOutboundSettings {
 	repeated string actors = 1;
-}
-
-message RetryOutboundSettings {
-	repeated string actors = 1;
-	uint32 attempts = 2;
 }
 
 message FailOverOutboundSettings {

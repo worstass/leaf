@@ -135,8 +135,9 @@ pub struct TryAllOutboundSettings {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RandomOutboundSettings {
+pub struct StaticOutboundSettings {
     pub actors: Option<Vec<String>>,
+    pub method: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -671,18 +672,23 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                     outbound.settings = settings;
                     outbounds.push(outbound);
                 }
-                "random" => {
+                "static" => {
                     if ext_outbound.settings.is_none() {
-                        return Err(anyhow!("invalid random outbound settings"));
+                        return Err(anyhow!("invalid static outbound settings"));
                     }
-                    let mut settings = internal::RandomOutboundSettings::new();
-                    let ext_settings: RandomOutboundSettings =
+                    let mut settings = internal::StaticOutboundSettings::new();
+                    let ext_settings: StaticOutboundSettings =
                         serde_json::from_str(ext_outbound.settings.as_ref().unwrap().get())
                             .unwrap();
                     if let Some(ext_actors) = ext_settings.actors {
                         for ext_actor in ext_actors {
                             settings.actors.push(ext_actor);
                         }
+                    }
+                    if let Some(ext_method) = &ext_settings.method {
+                        settings.method = ext_method.clone();
+                    } else {
+                        settings.method = "random".to_string();
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
@@ -815,28 +821,6 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
                         for ext_actor in ext_actors {
                             settings.actors.push(ext_actor);
                         }
-                    }
-                    let settings = settings.write_to_bytes().unwrap();
-                    outbound.settings = settings;
-                    outbounds.push(outbound);
-                }
-                "retry" => {
-                    if ext_outbound.settings.is_none() {
-                        return Err(anyhow!("invalid retry outbound settings"));
-                    }
-                    let mut settings = internal::RetryOutboundSettings::new();
-                    let ext_settings: RetryOutboundSettings =
-                        serde_json::from_str(ext_outbound.settings.as_ref().unwrap().get())
-                            .unwrap();
-                    if let Some(ext_actors) = ext_settings.actors {
-                        for ext_actor in ext_actors {
-                            settings.actors.push(ext_actor);
-                        }
-                    }
-                    if let Some(ext_attempts) = ext_settings.attempts {
-                        settings.attempts = ext_attempts;
-                    } else {
-                        settings.attempts = 2;
                     }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;

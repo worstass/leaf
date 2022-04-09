@@ -28,11 +28,9 @@ default = [
     "leaf/outbound-amux",
     "leaf/outbound-quic",
     "leaf/outbound-failover",
-    "leaf/outbound-random",
-    "leaf/outbound-rr",
+    "leaf/outbound-static",
     "leaf/outbound-tryall",
     "leaf/outbound-chain",
-    "leaf/outbound-retry",
     # "leaf/outbound-select",
 
     "leaf/ring-aead",
