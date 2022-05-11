@@ -18,83 +18,51 @@ use crate::Runner;
 async fn handle_inbound_datagram(
     inbound_tag: String,
     socket: Box<dyn InboundDatagram>,
+    sess: Option<Session>,
     nat_manager: Arc<NatManager>,
 ) {
-    let (mut client_sock_recv, mut client_sock_send) = socket.split();
+    // Left-hand side socket, it's usually encapsulated with inbound protocol layers.
+    let (mut lr, mut ls) = socket.split();
 
-    let (client_ch_tx, mut client_ch_rx): (TokioSender<UdpPacket>, TokioReceiver<UdpPacket>) =
-        tokio_channel(100);
+    // Datagrams read from the left-hand side socket would go through the NAT manager first,
+    // which maintains UDP sessions, the NAT manager creates the right-hand side socket
+    // by dispatching UDP sessions, then datagrams are sent to the socket by the NAT manager.
+    // When the NAT manager reads some packets from the right-hand side socket, they would
+    // be sent back here through a channel, then we can send them to left-hand side socket.
+    let (l_tx, mut l_rx): (TokioSender<UdpPacket>, TokioReceiver<UdpPacket>) = tokio_channel(100);
 
     tokio::spawn(async move {
-        while let Some(pkt) = client_ch_rx.recv().await {
-            let dst_addr = match pkt.dst_addr {
-                Some(a) => a,
-                None => {
-                    warn!("ignore udp pkt with unexpected empty dst addr");
-                    continue;
-                }
-            };
-            let dst_addr = match dst_addr {
-                SocksAddr::Ip(a) => a,
-                _ => {
-                    error!("unexpected domain address");
-                    continue;
-                }
-            };
-            let src_addr = match pkt.src_addr {
-                Some(a) => a,
-                None => {
-                    warn!("ignore udp pkt with unexpected empty src addr");
-                    continue;
-                }
-            };
-            if let Err(e) = client_sock_send
-                .send_to(&pkt.data[..], Some(&src_addr), &dst_addr)
-                .await
-            {
-                warn!("send udp pkt failed: {}", e);
-                return;
-            }
-        }
-        debug!("udp downlink ended");
-    });
-
-    let mut buf = [0u8; 2 * 1024];
-    loop {
-        match client_sock_recv.recv_from(&mut buf).await {
-            Err(e) => {
-                debug!("udp recv error: {}", e);
+        while let Some(pkt) = l_rx.recv().await {
+            let dst_addr = pkt.dst_addr.must_ip();
+            if let Err(e) = ls.send_to(&pkt.data[..], &pkt.src_addr, &dst_addr).await {
+                debug!("Send datagram failed: {}", e);
                 break;
             }
+        }
+        if let Err(e) = ls.close().await {
+            debug!("Failed to close inbound datagram: {}", e);
+        }
+    });
+
+    let mut buf = vec![0u8; *crate::option::DATAGRAM_BUFFER_SIZE * 1024];
+    loop {
+        match lr.recv_from(&mut buf).await {
+            Err(ProxyError::DatagramFatal(e)) => {
+                debug!("Fatal error when receiving datagram: {}", e);
+                break;
+            }
+            Err(ProxyError::DatagramWarn(e)) => {
+                debug!("Warning when receiving datagram: {}", e);
+                continue;
+            }
             Ok((n, dgram_src, dst_addr)) => {
-                if n == 0 {
-                    // Means a proxy layer error, e.g. the ss handler failed to
-                    // decrypt a message.
-                    //
-                    // TODO use error matching for this purpose?
-                    //
-                    // The problem here is we don't want to exit the receive loop
-                    // because of a proxy protocol error if the underlying socket
-                    // is UDP-based. But we do wnat to exit the loop and the task
-                    // spawned above if the underlying socket is TCP-based. More
-                    // careful investigation needed.
-                    continue;
-                }
-                let dst_addr = if let Some(dst_addr) = dst_addr {
-                    dst_addr
-                } else {
-                    warn!("inbound datagram receives message without destination");
-                    continue;
-                };
-
-                let pkt = UdpPacket {
-                    data: (&buf[..n]).to_vec(),
-                    src_addr: Some(SocksAddr::from(dgram_src.address)),
-                    dst_addr: Some(dst_addr.clone()),
-                };
-
+                let pkt = UdpPacket::new(
+                    (&buf[..n]).to_vec(),
+                    SocksAddr::from(dgram_src.address),
+                    dst_addr,
+                );
                 nat_manager
-                    .send(&dgram_src, dst_addr, &inbound_tag, pkt, &client_ch_tx)
+                    .send(sess.as_ref(), &dgram_src, &inbound_tag, &l_tx, pkt)
                     .await;
             }
         }
@@ -123,26 +91,26 @@ async fn handle_inbound_stream(
 
     match TcpInboundHandler::handle(h.as_ref(), sess, Box::new(stream)).await {
         Ok(res) => match res {
-            InboundTransport::Stream(stream, mut sess) => {
-                dispatcher.dispatch_tcp(&mut sess, stream).await;
+            InboundTransport::Stream(stream, sess) => {
+                dispatcher.dispatch_tcp(sess, stream).await;
             }
-            InboundTransport::Datagram(socket) => {
-                handle_inbound_datagram(h.tag().clone(), socket, nat_manager).await;
+            InboundTransport::Datagram(socket, sess) => {
+                handle_inbound_datagram(h.tag().clone(), socket, sess, nat_manager).await;
             }
             InboundTransport::Incoming(mut incoming) => {
                 while let Some(transport) = incoming.next().await {
                     match transport {
-                        BaseInboundTransport::Stream(stream, mut sess) => {
-                            let dispatcher2 = dispatcher.clone();
+                        BaseInboundTransport::Stream(stream, sess) => {
+                            let dispatcher_cloned = dispatcher.clone();
                             tokio::spawn(async move {
-                                dispatcher2.dispatch_tcp(&mut sess, stream).await;
+                                dispatcher_cloned.dispatch_tcp(sess, stream).await;
                             });
                         }
-                        BaseInboundTransport::Datagram(socket) => {
+                        BaseInboundTransport::Datagram(socket, sess) => {
                             let nat_manager2 = nat_manager.clone();
                             let tag = h.tag().clone();
                             tokio::spawn(async move {
-                                handle_inbound_datagram(tag, socket, nat_manager2).await;
+                                handle_inbound_datagram(tag, socket, sess, nat_manager2).await;
                             });
                         }
                         BaseInboundTransport::Empty => (),
@@ -218,28 +186,38 @@ impl NetworkInboundListener {
                 .await
                 {
                     Ok(res) => match res {
-                        InboundTransport::Stream(stream, mut sess) => {
-                            dispatcher.dispatch_tcp(&mut sess, stream).await;
+                        InboundTransport::Stream(stream, sess) => {
+                            dispatcher.dispatch_tcp(sess, stream).await;
                         }
-                        InboundTransport::Datagram(socket) => {
-                            handle_inbound_datagram(handler.tag().clone(), socket, nat_manager)
-                                .await;
+                        InboundTransport::Datagram(socket, sess) => {
+                            handle_inbound_datagram(
+                                handler.tag().clone(),
+                                socket,
+                                sess,
+                                nat_manager,
+                            )
+                            .await;
                         }
                         InboundTransport::Incoming(mut incoming) => {
                             while let Some(transport) = incoming.next().await {
                                 match transport {
-                                    BaseInboundTransport::Stream(stream, mut sess) => {
-                                        let dispatcher2 = dispatcher.clone();
+                                    BaseInboundTransport::Stream(stream, sess) => {
+                                        let dispatcher_cloned = dispatcher.clone();
                                         tokio::spawn(async move {
-                                            dispatcher2.dispatch_tcp(&mut sess, stream).await;
+                                            dispatcher_cloned.dispatch_tcp(sess, stream).await;
                                         });
                                     }
-                                    BaseInboundTransport::Datagram(socket) => {
+                                    BaseInboundTransport::Datagram(socket, sess) => {
                                         let nat_manager2 = nat_manager.clone();
                                         let tag = handler.tag().clone();
                                         tokio::spawn(async move {
-                                            handle_inbound_datagram(tag, socket, nat_manager2)
-                                                .await;
+                                            handle_inbound_datagram(
+                                                tag,
+                                                socket,
+                                                sess,
+                                                nat_manager2,
+                                            )
+                                            .await;
                                         });
                                     }
                                     BaseInboundTransport::Empty => (),

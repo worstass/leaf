@@ -8,11 +8,7 @@ use async_trait::async_trait;
 use futures::future::TryFutureExt;
 use tokio::io::{AsyncRead, AsyncWrite};
 
-use crate::{
-    app::SyncDnsClient,
-    proxy::*,
-    session::{Session, SocksAddr},
-};
+use crate::{app::SyncDnsClient, proxy::*, session::*};
 
 pub struct Handler {
     pub address: String,
@@ -25,22 +21,19 @@ impl UdpConnector for Handler {}
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    type UStream = AnyStream;
-    type Datagram = AnyOutboundDatagram;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        Some(OutboundConnect::Proxy(self.address.clone(), self.port))
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Proxy(Network::Udp, self.address.clone(), self.port)
     }
 
     fn transport_type(&self) -> DatagramTransportType {
-        DatagramTransportType::Datagram
+        DatagramTransportType::Unreliable
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        _transport: Option<OutboundTransport<Self::UStream, Self::Datagram>>,
-    ) -> io::Result<Self::Datagram> {
+        _transport: Option<AnyOutboundTransport>,
+    ) -> io::Result<AnyOutboundDatagram> {
         // TODO support chaining, this requires implementing our own socks5 client
         let stream = self
             .new_tcp_stream(self.dns_client.clone(), &self.address, &self.port)
@@ -118,5 +111,10 @@ where
                 "socks outbound does not support sending UDP packets to domain address",
             )),
         }
+    }
+
+    async fn close(&mut self) -> io::Result<()> {
+        // FIXME implement our own socks5 outbound to propagate this.
+        Ok(())
     }
 }

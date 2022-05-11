@@ -41,16 +41,15 @@ async fn health_check_task(
     i: usize,
     h: AnyOutboundHandler,
     dns_client: SyncDnsClient,
-    mut delay: Option<time::Duration>,
+    delay: time::Duration,
     health_check_timeout: u32,
 ) -> Measure {
-    if let Some(d) = delay.take() {
-        tokio::time::sleep(d).await;
-    }
+    tokio::time::sleep(delay).await;
     debug!("health checking udp for [{}] index [{}]", h.tag(), i);
     let measure = async move {
         let sess = Session {
             destination: SocksAddr::Ip(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53)),
+            new_conn_once: true,
             ..Default::default()
         };
         let start = tokio::time::Instant::now();
@@ -58,7 +57,12 @@ async fn health_check_task(
             Ok(t) => t,
             Err(_) => return Measure(i, u128::MAX),
         };
-        match UdpOutboundHandler::handle(h.as_ref(), &sess, transport).await {
+        let uh = if let Ok(uh) = h.udp() {
+            uh
+        } else {
+            return Measure(i, u128::MAX);
+        };
+        match uh.handle(&sess, transport).await {
             Ok(socket) => {
                 let addr =
                     SocksAddr::Ip(SocketAddr::new(IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)), 53));
@@ -127,6 +131,7 @@ impl Handler {
         failover: bool,
         last_resort: Option<AnyOutboundHandler>,
         health_check_timeout: u32,
+        health_check_delay: u32,
         dns_client: SyncDnsClient,
     ) -> (Self, Vec<AbortHandle>) {
         let mut abort_handles = Vec::new();
@@ -148,11 +153,9 @@ impl Handler {
                     let mut rng = StdRng::from_entropy();
                     for (i, a) in (&actors2).iter().enumerate() {
                         let dns_client4 = dns_client3.clone();
-                        let delay: Option<time::Duration> = if actors2.len() >= 4 {
-                            Some(time::Duration::from_millis(rng.gen_range(0..=1000) as u64))
-                        } else {
-                            None
-                        };
+                        let delay = time::Duration::from_millis(
+                            rng.gen_range(0..=health_check_delay) as u64,
+                        );
                         checks.push(Box::pin(health_check_task(
                             i,
                             a.clone(),
@@ -238,22 +241,19 @@ impl Handler {
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    type UStream = AnyStream;
-    type Datagram = AnyOutboundDatagram;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        None
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Unknown
     }
 
     fn transport_type(&self) -> DatagramTransportType {
-        DatagramTransportType::Undefined
+        DatagramTransportType::Unknown
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        _transport: Option<OutboundTransport<Self::UStream, Self::Datagram>>,
-    ) -> io::Result<Self::Datagram> {
+        _transport: Option<AnyOutboundTransport>,
+    ) -> io::Result<AnyOutboundDatagram> {
         if let Some(task) = self.health_check_task.lock().await.take() {
             tokio::spawn(task);
         }
@@ -268,12 +268,12 @@ impl UdpOutboundHandler for Handler {
                     &self.last_resort.as_ref().unwrap(),
                 )
                 .await?;
-                UdpOutboundHandler::handle(
-                    self.last_resort.as_ref().unwrap().as_ref(),
-                    sess,
-                    transport,
-                )
-                .await
+                self.last_resort
+                    .as_ref()
+                    .unwrap()
+                    .udp()?
+                    .handle(sess, transport)
+                    .await
             };
             return handle.await;
         }
@@ -296,7 +296,7 @@ impl UdpOutboundHandler for Handler {
                     &self.actors[i],
                 )
                 .await?;
-                UdpOutboundHandler::handle(self.actors[i].as_ref(), sess, transport).await
+                self.actors[i].udp()?.handle(sess, transport).await
             };
             match timeout(time::Duration::from_secs(self.fail_timeout as u64), handle).await {
                 // return before timeout

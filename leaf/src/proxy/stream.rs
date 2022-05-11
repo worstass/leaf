@@ -23,8 +23,8 @@ impl<T> BufHeadProxyStream<T> {
 }
 
 impl<T> AsyncRead for BufHeadProxyStream<T>
-where
-    T: AsyncRead + Unpin,
+    where
+        T: AsyncRead + Unpin,
 {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -40,8 +40,8 @@ fn early_eof() -> io::Error {
 }
 
 impl<T> AsyncWrite for BufHeadProxyStream<T>
-where
-    T: AsyncWrite + Unpin,
+    where
+        T: AsyncWrite + Unpin,
 {
     fn poll_write(
         mut self: Pin<&mut Self>,

@@ -1,13 +1,9 @@
-use std::{cmp::min, convert::TryFrom, io, sync::Arc};
+use std::{convert::TryFrom, io, sync::Arc};
 
 use async_trait::async_trait;
 use bytes::{BufMut, BytesMut};
-use log::*;
 
-use crate::{
-    proxy::*,
-    session::{Session, SocksAddr, SocksAddrWireType},
-};
+use crate::{proxy::*, session::*};
 
 use super::shadow::{self, ShadowedDatagram};
 
@@ -20,28 +16,27 @@ pub struct Handler {
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    type UStream = AnyStream;
-    type Datagram = AnyOutboundDatagram;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        Some(OutboundConnect::Proxy(self.address.clone(), self.port))
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Proxy(Network::Udp, self.address.clone(), self.port)
     }
 
     fn transport_type(&self) -> DatagramTransportType {
-        DatagramTransportType::Datagram
+        DatagramTransportType::Unreliable
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        transport: Option<OutboundTransport<Self::UStream, Self::Datagram>>,
-    ) -> io::Result<Self::Datagram> {
+        transport: Option<AnyOutboundTransport>,
+    ) -> io::Result<AnyOutboundDatagram> {
         let server_addr = SocksAddr::try_from((&self.address, self.port))?;
 
         let socket = if let Some(OutboundTransport::Datagram(socket)) = transport {
             socket
         } else {
-            return Err(io::Error::new(io::ErrorKind::Other, "invalid input"));
+            // Don't accept stream transport because we can't determine datagram
+            // boundary.
+            return Err(io::Error::new(io::ErrorKind::Other, "invalid ss input"));
         };
 
         let dgram = ShadowedDatagram::new(&self.cipher, &self.password)?;
@@ -98,24 +93,20 @@ pub struct DatagramRecvHalf(
 #[async_trait]
 impl OutboundDatagramRecvHalf for DatagramRecvHalf {
     async fn recv_from(&mut self, buf: &mut [u8]) -> io::Result<(usize, SocksAddr)> {
-        let mut buf2 = BytesMut::new();
-        buf2.resize(2 * 1024, 0);
-        let (n, _) = self.1.recv_from(&mut buf2).await?;
-        buf2.resize(n, 0);
-        let plaintext = self.0.decrypt(buf2).map_err(|_| shadow::crypto_err())?;
+        let mut recv_buf = BytesMut::new();
+        recv_buf.resize(buf.len(), 0);
+        let (n, _) = self.1.recv_from(&mut recv_buf).await?;
+        recv_buf.resize(n, 0);
+        let plaintext = self.0.decrypt(recv_buf).map_err(|_| shadow::crypto_err())?;
         let src_addr = SocksAddr::try_from((&plaintext[..], SocksAddrWireType::PortLast))?;
         let payload_len = plaintext.len() - src_addr.size();
-        let to_write = min(payload_len, buf.len());
-        if to_write < payload_len {
-            warn!("truncated udp packet, please report this issue");
-        }
-        buf[..to_write].copy_from_slice(&plaintext[src_addr.size()..src_addr.size() + to_write]);
-        if self.2.is_some() {
-            // must be a domain destination
-            Ok((to_write, self.2.as_ref().unwrap().clone()))
-        } else {
-            Ok((to_write, src_addr))
-        }
+        assert!(payload_len <= buf.len());
+        buf[..payload_len]
+            .copy_from_slice(&plaintext[src_addr.size()..src_addr.size() + payload_len]);
+        Ok((
+            payload_len,
+            self.2.as_ref().map(Clone::clone).unwrap_or(src_addr),
+        ))
     }
 }
 
@@ -128,14 +119,20 @@ pub struct DatagramSendHalf {
 #[async_trait]
 impl OutboundDatagramSendHalf for DatagramSendHalf {
     async fn send_to(&mut self, buf: &[u8], target: &SocksAddr) -> io::Result<usize> {
-        let mut buf2 = BytesMut::new();
-        target.write_buf(&mut buf2, SocksAddrWireType::PortLast)?;
-        buf2.put_slice(buf);
+        let mut send_buf = BytesMut::new();
+        target.write_buf(&mut send_buf, SocksAddrWireType::PortLast);
+        send_buf.put_slice(buf);
+        let ciphertext = self
+            .dgram
+            .encrypt(send_buf)
+            .map_err(|_| shadow::crypto_err())?;
+        self.send_half
+            .send_to(&ciphertext, &self.server_addr)
+            .map_ok(|_| buf.len())
+            .await
+    }
 
-        let ciphertext = self.dgram.encrypt(buf2).map_err(|_| shadow::crypto_err())?;
-        match self.send_half.send_to(&ciphertext, &self.server_addr).await {
-            Ok(_) => Ok(buf.len()),
-            Err(err) => Err(err),
-        }
+    async fn close(&mut self) -> io::Result<()> {
+        self.send_half.close().await
     }
 }

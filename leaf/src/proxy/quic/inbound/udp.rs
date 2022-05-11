@@ -68,6 +68,8 @@ impl Stream for Incoming {
         if !new_conns.is_empty() {
             self.new_conns.append(&mut new_conns);
         }
+
+        #[allow(unused_must_use)]
         for idx in completed.iter().rev() {
             self.connectings.swap_remove(*idx);
         }
@@ -138,13 +140,10 @@ impl Handler {
 
 #[async_trait]
 impl UdpInboundHandler for Handler {
-    type UStream = AnyStream;
-    type UDatagram = AnyInboundDatagram;
-
     async fn handle<'a>(
         &'a self,
-        socket: Self::UDatagram,
-    ) -> io::Result<InboundTransport<Self::UStream, Self::UDatagram>> {
+        socket: AnyInboundDatagram,
+    ) -> io::Result<AnyInboundTransport> {
         let (cert, key) =
             fs::read(&self.certificate).and_then(|x| Ok((x, fs::read(&self.certificate_key)?)))?;
 

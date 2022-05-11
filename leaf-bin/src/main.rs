@@ -9,7 +9,9 @@ const COMMIT_DATE: Option<&'static str> = option_env!("CFG_COMMIT_DATE");
 fn get_version_string() -> String {
     match (VERSION, COMMIT_HASH, COMMIT_DATE) {
         (Some(ver), None, None) => ver.to_string(),
-        (Some(ver), Some(hash), Some(date)) => format!("{} ({} - {})", ver, hash, date),
+        (Some(ver), Some(hash), Some(date)) => {
+            format!("{} ({} - {})", ver, hash, date)
+        }
         _ => "unknown".to_string(),
     }
 }
@@ -52,6 +54,10 @@ struct Args {
     #[argh(option, short = 't')]
     test_outbound: Option<String>,
 
+    /// timeout for outbound connectivity tests, in seconds
+    #[argh(option, short = 'd', default = "4")]
+    test_outbound_timeout: u64,
+
     /// bound interface, explicitly sets the OUTBOUND_INTERFACE environment variable
     #[cfg(any(target_os = "macos", target_os = "linux", target_os = "windows"))] // MARKER BEGIN - END
     #[argh(option, short = 'b')]
@@ -91,8 +97,27 @@ fn main() {
             .enable_all()
             .build()
             .unwrap();
-        rt.block_on(leaf::util::test_outbound(&tag, &config));
-        exit(0);
+        match rt.block_on(leaf::util::test_outbound(
+            &tag,
+            &config,
+            Some(std::time::Duration::from_secs(args.test_outbound_timeout)),
+        )) {
+            Err(e) => {
+                println!("test outbound failed: {}", e);
+                exit(1);
+            }
+            Ok((tcp_res, udp_res)) => {
+                match tcp_res {
+                    Ok(duration) => println!("TCP ok in {}ms", duration.as_millis()),
+                    Err(e) => println!("TCP failed: {}", e),
+                }
+                match udp_res {
+                    Ok(duration) => println!("UDP ok in {}ms", duration.as_millis()),
+                    Err(e) => println!("UDP failed: {}", e),
+                }
+                exit(0);
+            }
+        }
     }
 
     if let Err(e) = leaf::util::run_with_options(

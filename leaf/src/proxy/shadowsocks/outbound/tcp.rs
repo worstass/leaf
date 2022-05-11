@@ -5,10 +5,7 @@ use bytes::BytesMut;
 use tokio::io::AsyncWriteExt;
 
 use super::shadow::ShadowedStream;
-use crate::{
-    proxy::*,
-    session::{Session, SocksAddrWireType},
-};
+use crate::{proxy::*, session::*};
 
 pub struct Handler {
     pub address: String,
@@ -19,23 +16,20 @@ pub struct Handler {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    type Stream = AnyStream;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        Some(OutboundConnect::Proxy(self.address.clone(), self.port))
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Proxy(Network::Tcp, self.address.clone(), self.port)
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        stream: Option<Self::Stream>,
-    ) -> io::Result<Self::Stream> {
+        stream: Option<AnyStream>,
+    ) -> io::Result<AnyStream> {
         let stream = stream.ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid input"))?;
         let mut stream = ShadowedStream::new(stream, &self.cipher, &self.password)?;
         let mut buf = BytesMut::new();
         sess.destination
-            .write_buf(&mut buf, SocksAddrWireType::PortLast)?;
-        // FIXME combine header and first payload
+            .write_buf(&mut buf, SocksAddrWireType::PortLast);
         stream.write_all(&buf).await?;
         Ok(Box::new(stream))
     }

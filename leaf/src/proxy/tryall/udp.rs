@@ -13,22 +13,19 @@ pub struct Handler {
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    type UStream = AnyStream;
-    type Datagram = AnyOutboundDatagram;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        None
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Unknown
     }
 
     fn transport_type(&self) -> DatagramTransportType {
-        DatagramTransportType::Undefined
+        DatagramTransportType::Unknown
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        _transport: Option<OutboundTransport<Self::UStream, Self::Datagram>>,
-    ) -> io::Result<Self::Datagram> {
+        _transport: Option<AnyOutboundTransport>,
+    ) -> io::Result<AnyOutboundDatagram> {
         let mut tasks = Vec::new();
         for (i, a) in self.actors.iter().enumerate() {
             let t = async move {
@@ -40,7 +37,7 @@ impl UdpOutboundHandler for Handler {
                 }
                 let transport =
                     crate::proxy::connect_udp_outbound(sess, self.dns_client.clone(), a).await?;
-                UdpOutboundHandler::handle(a.as_ref(), sess, transport).await
+                a.udp()?.handle(sess, transport).await
             };
             tasks.push(Box::pin(t));
         }

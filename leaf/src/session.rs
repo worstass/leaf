@@ -7,7 +7,6 @@ use std::{
 
 use byteorder::{BigEndian, ByteOrder};
 use bytes::BufMut;
-use log::*;
 use tokio::io::{AsyncRead, AsyncReadExt};
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -60,8 +59,15 @@ pub struct Session {
     pub destination: SocksAddr,
     /// The tag of the inbound handler this session initiated.
     pub inbound_tag: String,
+    /// The tag of the first outbound handler this session goes.
+    pub outbound_tag: String,
     /// Optional stream ID for multiplexing transports.
     pub stream_id: Option<StreamId>,
+    /// Optional source address which is forwarded via HTTP reverse proxy.
+    pub forwarded_source: Option<IpAddr>,
+    /// Instructs a multiplexed transport should creates a new underlying
+    /// connection for this session, and it will be used only once.
+    pub new_conn_once: bool,
 }
 
 impl Clone for Session {
@@ -72,7 +78,10 @@ impl Clone for Session {
             local_addr: self.local_addr,
             destination: self.destination.clone(),
             inbound_tag: self.inbound_tag.clone(),
+            outbound_tag: self.outbound_tag.clone(),
             stream_id: self.stream_id,
+            forwarded_source: self.forwarded_source,
+            new_conn_once: self.new_conn_once,
         }
     }
 }
@@ -85,7 +94,10 @@ impl Default for Session {
             local_addr: *crate::option::UNSPECIFIED_BIND_ADDR,
             destination: SocksAddr::any(),
             inbound_tag: "".to_string(),
+            outbound_tag: "".to_string(),
             stream_id: None,
+            forwarded_source: None,
+            new_conn_once: false,
         }
     }
 }
@@ -146,8 +158,7 @@ impl SocksAddr {
         match self {
             SocksAddr::Ip(a) => a,
             _ => {
-                error!("assert SocksAddr as SocketAddr failed");
-                panic!("");
+                panic!("assert SocksAddr as SocketAddr failed");
             }
         }
     }
@@ -203,11 +214,7 @@ impl SocksAddr {
     }
 
     /// Writes `self` into `buf`.
-    pub fn write_buf<T: BufMut>(
-        &self,
-        buf: &mut T,
-        addr_type: SocksAddrWireType,
-    ) -> io::Result<()> {
+    pub fn write_buf<T: BufMut>(&self, buf: &mut T, addr_type: SocksAddrWireType) {
         match self {
             Self::Ip(addr) => match addr {
                 SocketAddr::V4(addr) => match addr_type {
@@ -250,7 +257,6 @@ impl SocksAddr {
                 }
             },
         }
-        Ok(())
     }
 
     pub async fn read_from<T: AsyncRead + Unpin>(

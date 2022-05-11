@@ -1,9 +1,6 @@
-syntax = "proto3";
+// Every time you make changes to this file, run `make proto-gen` to re-generate protobuf files.
 
-message Api {
-	string address = 1;
-	uint32 port = 2;
-}
+syntax = "proto3";
 
 message Dns {
 	message Ips {
@@ -161,6 +158,13 @@ message QuicOutboundSettings {
 	string certificate = 4;
 }
 
+message VMessOutboundSettings {
+    string address = 1;
+    uint32 port = 2;
+    string uuid = 3;
+    string security = 4;
+}
+
 message ChainOutboundSettings {
 	repeated string actors = 1;
 }
@@ -178,6 +182,7 @@ message FailOverOutboundSettings {
 	uint32 cache_timeout = 8;
 	string last_resort = 9;
 	uint32 health_check_timeout = 10;
+	uint32 health_check_delay = 11;
 }
 
 message SelectOutboundSettings {
@@ -232,5 +237,4 @@ message Config {
 	repeated Outbound outbounds = 3;
 	Router router = 4;
 	Dns dns = 5;
-	Api api = 6;
 }

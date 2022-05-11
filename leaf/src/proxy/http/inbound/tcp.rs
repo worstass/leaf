@@ -57,14 +57,12 @@ pub struct Handler;
 
 #[async_trait]
 impl TcpInboundHandler for Handler {
-    type TStream = AnyStream;
-    type TDatagram = AnyInboundDatagram;
 
     async fn handle<'a>(
         &'a self,
         mut sess: Session,
         stream: Box<dyn ProxyStream>,
-    ) -> std::io::Result<InboundTransport<Self::TStream, Self::TDatagram>> {
+    ) -> std::io::Result<InboundTransport<AnyStream, AnyInboundDatagram>> {
         let http = Http::new();
         let proxy_service = ProxyService::new();
         let conn = http

@@ -30,7 +30,7 @@ impl<'a> tungstenite::client::IntoClientRequest for Request<'a> {
         let mut builder = http::Request::builder()
             .method("GET")
             .uri(self.uri)
-            .header("User-Agent", &*crate::option::USER_AGENT);
+            .header("User-Agent", &*crate::option::HTTP_USER_AGENT);
         for (k, v) in self.headers.iter() {
             if k != "Host" {
                 builder = builder.header(k, v);
@@ -42,17 +42,15 @@ impl<'a> tungstenite::client::IntoClientRequest for Request<'a> {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    type Stream = AnyStream;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        None
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Next
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        stream: Option<Self::Stream>,
-    ) -> io::Result<Self::Stream> {
+        stream: Option<AnyStream>,
+    ) -> io::Result<AnyStream> {
         if let Some(stream) = stream {
             let host = if let Some(host) = self.headers.get("Host") {
                 host.to_owned()

@@ -12,21 +12,20 @@ pub struct Handler {
 
 #[async_trait]
 impl UdpInboundHandler for Handler {
-    type UStream = AnyStream;
-    type UDatagram = AnyInboundDatagram;
-
     async fn handle<'a>(
         &'a self,
-        mut socket: Self::UDatagram,
-    ) -> io::Result<InboundTransport<Self::UStream, Self::UDatagram>> {
+        mut socket: AnyInboundDatagram,
+    ) -> io::Result<AnyInboundTransport> {
+        let mut sess: Option<Session> = None;
         for (i, a) in self.actors.iter().enumerate() {
             let transport = UdpInboundHandler::handle(a.as_ref(), socket).await?;
             match transport {
                 InboundTransport::Stream(..) => {
                     unimplemented!();
                 }
-                InboundTransport::Datagram(new_socket) => {
+                InboundTransport::Datagram(new_socket, new_sess) => {
                     socket = new_socket;
+                    sess = new_sess;
                 }
                 InboundTransport::Incoming(incoming) => {
                     return Ok(InboundTransport::Incoming(Box::new(Incoming::new(
@@ -39,6 +38,6 @@ impl UdpInboundHandler for Handler {
                 }
             }
         }
-        Ok(InboundTransport::Datagram(socket))
+        Ok(InboundTransport::Datagram(socket, sess))
     }
 }

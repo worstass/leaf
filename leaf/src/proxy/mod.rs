@@ -10,6 +10,7 @@ use futures::stream::Stream;
 use futures::TryFutureExt;
 use log::*;
 use socket2::SockRef;
+use thiserror::Error;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpSocket, TcpStream, UdpSocket};
 use tokio::time::timeout;
@@ -28,15 +29,13 @@ use crate::{
     app::SyncDnsClient,
     common::resolver::Resolver,
     option,
-    session::{DatagramSource, Session, SocksAddr},
+    session::{DatagramSource, Network, Session, SocksAddr},
 };
 
 pub mod datagram;
 pub mod inbound;
 pub mod outbound;
-pub mod stream;
-
-pub mod null;
+pub mod stream; // MARKER BEGIN - END
 
 #[cfg(any(feature = "inbound-amux", feature = "outbound-amux"))]
 pub mod amux;
@@ -79,6 +78,8 @@ pub mod tryall;
     )
 ))]
 pub mod tun;
+#[cfg(feature = "outbound-vmess")]
+pub mod vmess;
 #[cfg(any(feature = "inbound-ws", feature = "outbound-ws"))]
 pub mod ws;
 
@@ -91,13 +92,22 @@ pub use datagram::{
     SimpleInboundDatagram, SimpleInboundDatagramRecvHalf, SimpleInboundDatagramSendHalf,
     SimpleOutboundDatagram, SimpleOutboundDatagramRecvHalf, SimpleOutboundDatagramSendHalf,
 };
-pub use stream::BufHeadProxyStream;
+
+#[derive(Error, Debug)]
+pub enum ProxyError {
+    #[error(transparent)]
+    DatagramWarn(anyhow::Error),
+    #[error(transparent)]
+    DatagramFatal(anyhow::Error),
+}
+
+pub type ProxyResult<T> = std::result::Result<T, ProxyError>;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum DatagramTransportType {
-    Stream,
-    Datagram,
-    Undefined,
+    Reliable,
+    Unreliable,
+    Unknown,
 }
 
 pub trait Tag {
@@ -336,6 +346,19 @@ fn apply_socket_opts<S: AsRawSocket>(socket: &S) -> io::Result<()> {
     apply_socket_opts_internal(sock_ref)
 }
 
+// TCP dial order.
+#[derive(PartialEq)]
+pub enum DialOrder {
+    // Leave the order of IPs untouched.
+    Ordered,
+    // Randomize the IPs.
+    Random,
+    // Randomize the IPs except the first one. We have a little optimization in
+    // the DNS client that moves the previously connected IP to the head, we want
+    // that IP always tried first.
+    PartialRandom,
+}
+
 // A single TCP dial.
 async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<(AnyStream, SocketAddr)> {
     let socket = match dial_addr {
@@ -349,15 +372,22 @@ async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<(AnyStream, SocketAd
     protect_socket(socket.as_raw_fd()).await?;
 
     trace!("tcp dialing {}", &dial_addr);
+    let start = tokio::time::Instant::now();
     let stream = timeout(
         Duration::from_secs(*option::OUTBOUND_DIAL_TIMEOUT),
         socket.connect(dial_addr),
     )
     .await??;
+    let elapsed = tokio::time::Instant::now().duration_since(start);
 
     apply_socket_opts(&stream)?;
 
-    trace!("tcp connected {} <-> {}", stream.local_addr()?, &dial_addr);
+    trace!(
+        "tcp {} <-> {} connected in {}ms",
+        stream.local_addr()?,
+        &dial_addr,
+        elapsed.as_millis()
+    );
     Ok((Box::new(stream), dial_addr))
 }
 
@@ -366,11 +396,11 @@ pub async fn connect_tcp_outbound(
     dns_client: SyncDnsClient,
     handler: &AnyOutboundHandler,
 ) -> io::Result<Option<AnyStream>> {
-    match TcpOutboundHandler::connect_addr(handler.as_ref()) {
-        Some(OutboundConnect::Proxy(addr, port)) => {
+    match handler.tcp()?.connect_addr() {
+        OutboundConnect::Proxy(_, addr, port) => {
             Ok(Some(new_tcp_stream(dns_client, &addr, &port).await?))
         }
-        Some(OutboundConnect::Direct) => Ok(Some(
+        OutboundConnect::Direct => Ok(Some(
             new_tcp_stream(
                 dns_client,
                 &sess.destination.host(),
@@ -378,7 +408,7 @@ pub async fn connect_tcp_outbound(
             )
             .await?,
         )),
-        Some(OutboundConnect::NoConnect) | None => Ok(None),
+        _ => Ok(None),
     }
 }
 
@@ -387,23 +417,20 @@ pub async fn connect_udp_outbound(
     dns_client: SyncDnsClient,
     handler: &AnyOutboundHandler,
 ) -> io::Result<Option<AnyOutboundTransport>> {
-    match UdpOutboundHandler::connect_addr(handler.as_ref()) {
-        Some(OutboundConnect::Proxy(addr, port)) => {
-            match UdpOutboundHandler::transport_type(handler.as_ref()) {
-                DatagramTransportType::Datagram => {
-                    let socket = new_udp_socket(&sess.source).await?;
-                    Ok(Some(OutboundTransport::Datagram(Box::new(
-                        SimpleOutboundDatagram::new(socket, None, dns_client.clone()),
-                    ))))
-                }
-                DatagramTransportType::Stream => {
-                    let stream = new_tcp_stream(dns_client.clone(), &addr, &port).await?;
-                    Ok(Some(OutboundTransport::Stream(stream)))
-                }
-                DatagramTransportType::Undefined => Ok(None),
+    match handler.udp()?.connect_addr() {
+        OutboundConnect::Proxy(network, addr, port) => match network {
+            Network::Udp => {
+                let socket = new_udp_socket(&sess.source).await?;
+                Ok(Some(OutboundTransport::Datagram(Box::new(
+                    SimpleOutboundDatagram::new(socket, None, dns_client.clone()),
+                ))))
             }
-        }
-        Some(OutboundConnect::Direct) => {
+            Network::Tcp => {
+                let stream = new_tcp_stream(dns_client.clone(), &addr, &port).await?;
+                Ok(Some(OutboundTransport::Stream(stream)))
+            }
+        },
+        OutboundConnect::Direct => {
             let socket = new_udp_socket(&sess.source).await?;
             let dest = match &sess.destination {
                 SocksAddr::Domain(domain, port) => {
@@ -415,7 +442,7 @@ pub async fn connect_udp_outbound(
                 SimpleOutboundDatagram::new(socket, dest, dns_client.clone()),
             ))))
         }
-        Some(OutboundConnect::NoConnect) | None => Ok(None),
+        _ => Ok(None),
     }
 }
 
@@ -508,41 +535,34 @@ impl<S> ProxyStream for S where S: AsyncRead + AsyncWrite + Send + Sync + Unpin 
 pub type AnyStream = Box<dyn ProxyStream>;
 
 /// An outbound handler for both UDP and TCP outgoing connections.
-pub trait OutboundHandler:
-    TcpOutboundHandler + UdpOutboundHandler + Tag + Color + Send + Unpin
-{
+pub trait OutboundHandler: Tag + Color + Sync + Send + Unpin {
+    fn tcp(&self) -> io::Result<&AnyTcpOutboundHandler>;
+    fn udp(&self) -> io::Result<&AnyUdpOutboundHandler>;
 }
 
-pub type AnyOutboundHandler = Arc<
-    dyn OutboundHandler<Stream = AnyStream, UStream = AnyStream, Datagram = AnyOutboundDatagram>,
->;
+pub type AnyOutboundHandler = Arc<dyn OutboundHandler>;
 
 #[derive(Debug, Clone)]
 pub enum OutboundConnect {
-    Proxy(String, u16),
+    Proxy(Network, String, u16),
     Direct,
-    NoConnect,
+    Next,
+    Unknown,
 }
 
 /// An outbound handler for outgoing TCP conections.
 #[async_trait]
-pub trait TcpOutboundHandler: Send + Sync + Unpin {
-    type Stream;
-
+pub trait TcpOutboundHandler<S = AnyStream>: Send + Sync + Unpin {
     /// Returns the address which the underlying transport should
     /// communicate with.
-    fn connect_addr(&self) -> Option<OutboundConnect>;
+    fn connect_addr(&self) -> OutboundConnect;
 
     /// Handles a session with the given stream. On success, returns a
     /// stream wraps the incoming stream.
-    async fn handle<'a>(
-        &'a self,
-        sess: &'a Session,
-        stream: Option<Self::Stream>,
-    ) -> io::Result<Self::Stream>;
+    async fn handle<'a>(&'a self, sess: &'a Session, stream: Option<S>) -> io::Result<S>;
 }
 
-type AnyTcpOutboundHandler = Box<dyn TcpOutboundHandler<Stream = AnyStream>>;
+type AnyTcpOutboundHandler = Box<dyn TcpOutboundHandler>;
 
 /// An unreliable transport for outbound handlers.
 pub trait OutboundDatagram: Send + Unpin {
@@ -573,17 +593,17 @@ pub trait OutboundDatagramSendHalf: Sync + Send + Unpin {
     ///
     /// `dst_addr` is not the proxy server address.
     async fn send_to(&mut self, buf: &[u8], dst_addr: &SocksAddr) -> io::Result<usize>;
+
+    /// Close the soccket gracefully.
+    async fn close(&mut self) -> io::Result<()>;
 }
 
 /// An outbound handler for outgoing UDP connections.
 #[async_trait]
-pub trait UdpOutboundHandler: Send + Sync + Unpin {
-    type UStream;
-    type Datagram;
-
+pub trait UdpOutboundHandler<S = AnyStream, D = AnyOutboundDatagram>: Send + Sync + Unpin {
     /// Returns the address which the underlying transport should
     /// communicate with.
-    fn connect_addr(&self) -> Option<OutboundConnect>;
+    fn connect_addr(&self) -> OutboundConnect;
 
     /// Returns the transport type of this handler.
     ///
@@ -598,12 +618,11 @@ pub trait UdpOutboundHandler: Send + Sync + Unpin {
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        transport: Option<OutboundTransport<Self::UStream, Self::Datagram>>,
-    ) -> io::Result<Self::Datagram>;
+        transport: Option<OutboundTransport<S, D>>,
+    ) -> io::Result<D>;
 }
 
-type AnyUdpOutboundHandler =
-    Box<dyn UdpOutboundHandler<UStream = AnyStream, Datagram = AnyOutboundDatagram>>;
+type AnyUdpOutboundHandler = Box<dyn UdpOutboundHandler>;
 
 /// An outbound transport represents either a reliable or unreliable transport.
 pub enum OutboundTransport<S, D> {
@@ -622,45 +641,27 @@ pub trait InboundHandler:
     fn has_udp(&self) -> bool;
 }
 
-pub type AnyInboundHandler = Arc<
-    dyn InboundHandler<
-        TStream = AnyStream,
-        TDatagram = AnyInboundDatagram,
-        UStream = AnyStream,
-        UDatagram = AnyInboundDatagram,
-    >,
->;
+pub type AnyInboundHandler = Arc<dyn InboundHandler>;
 
 /// An inbound handler for incoming TCP connections.
 #[async_trait]
-pub trait TcpInboundHandler: Send + Sync + Unpin {
-    type TStream;
-    type TDatagram;
-
+pub trait TcpInboundHandler<S = AnyStream, D = AnyInboundDatagram>: Send + Sync + Unpin {
     async fn handle<'a>(
         &'a self,
         sess: Session,
-        stream: Self::TStream,
-    ) -> std::io::Result<InboundTransport<Self::TStream, Self::TDatagram>>;
+        stream: S,
+    ) -> std::io::Result<InboundTransport<S, D>>;
 }
 
-pub type AnyTcpInboundHandler =
-    Arc<dyn TcpInboundHandler<TStream = AnyStream, TDatagram = AnyInboundDatagram>>;
+pub type AnyTcpInboundHandler = Arc<dyn TcpInboundHandler>;
 
 /// An inbound handler for incoming UDP connections.
 #[async_trait]
-pub trait UdpInboundHandler: Send + Sync + Unpin {
-    type UStream;
-    type UDatagram;
-
-    async fn handle<'a>(
-        &'a self,
-        socket: Self::UDatagram,
-    ) -> io::Result<InboundTransport<Self::UStream, Self::UDatagram>>;
+pub trait UdpInboundHandler<S = AnyStream, D = AnyInboundDatagram>: Send + Sync + Unpin {
+    async fn handle<'a>(&'a self, socket: D) -> io::Result<InboundTransport<S, D>>;
 }
 
-pub type AnyUdpInboundHandler =
-    Arc<dyn UdpInboundHandler<UStream = AnyStream, UDatagram = AnyInboundDatagram>>;
+pub type AnyUdpInboundHandler = Arc<dyn UdpInboundHandler>;
 
 /// An unreliable transport for inbound handlers.
 pub trait InboundDatagram: Send + Sync + Unpin {
@@ -691,7 +692,7 @@ pub trait InboundDatagramRecvHalf: Sync + Send + Unpin {
     async fn recv_from(
         &mut self,
         buf: &mut [u8],
-    ) -> io::Result<(usize, DatagramSource, Option<SocksAddr>)>;
+    ) -> ProxyResult<(usize, DatagramSource, SocksAddr)>;
 }
 
 /// The send half.
@@ -707,16 +708,19 @@ pub trait InboundDatagramSendHalf: Sync + Send + Unpin {
     async fn send_to(
         &mut self,
         buf: &[u8],
-        src_addr: Option<&SocksAddr>,
+        src_addr: &SocksAddr,
         dst_addr: &SocketAddr,
     ) -> io::Result<usize>;
+
+    /// Close the socket gracefully.
+    async fn close(&mut self) -> io::Result<()>;
 }
 
 pub enum BaseInboundTransport<S, D> {
     /// The reliable transport.
     Stream(S, Session),
     /// The unreliable transport.
-    Datagram(D),
+    Datagram(D, Option<Session>),
     /// None.
     Empty,
 }
@@ -733,7 +737,7 @@ pub enum InboundTransport<S, D> {
     /// The reliable transport.
     Stream(S, Session),
     /// The unreliable transport.
-    Datagram(D),
+    Datagram(D, Option<Session>),
     Incoming(IncomingTransport<S, D>),
     /// None.
     Empty,

@@ -1,35 +1,36 @@
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::{io, sync::Arc};
 
 use async_trait::async_trait;
-use log::*;
-use tokio::sync::RwLock;
 
-use crate::{
-    app::outbound::selector::OutboundSelector,
-    proxy::{OutboundConnect, ProxyStream, TcpOutboundHandler},
-    session::Session,
-};
+use crate::{proxy::*, session::Session};
 
 pub struct Handler {
-    pub selector: Arc<RwLock<OutboundSelector>>,
+    pub actors: Vec<AnyOutboundHandler>,
+    pub selected: Arc<AtomicUsize>,
 }
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        None
+    fn connect_addr(&self) -> OutboundConnect {
+        let a = &self.actors[self.selected.load(Ordering::Relaxed)];
+        match a.tcp() {
+            Ok(h) => return h.connect_addr(),
+            _ => match a.udp() {
+                Ok(h) => return h.connect_addr(),
+                _ => (),
+            },
+        }
+        OutboundConnect::Unknown
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        stream: Option<Box<dyn ProxyStream>>,
-    ) -> io::Result<Box<dyn ProxyStream>> {
-        if let Some(a) = self.selector.read().await.get_selected() {
-            debug!("select handles tcp [{}] to [{}]", sess.destination, a.tag());
-            TcpOutboundHandler::handle(a.as_ref(), sess, stream).await
-        } else {
-            Err(io::Error::new(io::ErrorKind::Other, "no selected outbound"))
-        }
+        stream: Option<AnyStream>,
+    ) -> io::Result<AnyStream> {
+        let a = &self.actors[self.selected.load(Ordering::Relaxed)];
+        log::debug!("select handles to [{}]", a.tag());
+        a.tcp()?.handle(sess, stream).await
     }
 }

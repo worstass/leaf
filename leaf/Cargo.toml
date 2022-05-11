@@ -22,7 +22,9 @@ default-ring = [
     # quinn supports only rustls as tls backend for now
     "inbound-quic",
     "outbound-quic",
-    # "api",
+    "api",
+    "stat",
+    # "plugin",
 ]
 
 default-openssl = [
@@ -30,7 +32,6 @@ default-openssl = [
     "all-endpoints",
     "openssl-aead",
     "openssl-tls",
-    # "api",
 ]
 
 # Grouping all features
@@ -62,6 +63,7 @@ all-endpoints = [
     "outbound-tls",
     "outbound-ws",
     "outbound-amux",
+    "outbound-vmess",
     # "outbound-quic",
     "outbound-failover",
     "outbound-static",
@@ -69,7 +71,7 @@ all-endpoints = [
     "outbound-chain",
     # "outbound-select",
 
-    "stats", # MARKER BEGIN - END
+#    "stats", # MARKER BEGIN - END
     "callback", # MARKER BEGIN - END
 ]
 
@@ -101,13 +103,14 @@ outbound-chain = []
 outbound-amux= ["tokio-util"]
 outbound-quic = ["quinn", "rustls", "webpki-roots"]
 outbound-select = []
+outbound-vmess = ["lz_fnv", "cfb-mode", "hmac", "aes", "sha3", "digest", "uuid", "md-5", "tokio-util"]
 
 # Inbounds
 inbound-trojan = ["sha2", "hex"]
 inbound-shadowsocks = ["hkdf", "sha-1", "md-5", "tokio-util"]
 inbound-socks = []
 inbound-http = ["hyper"]
-inbound-tun = ["tun"]
+inbound-tun = ["tun", "netstack-lwip"]
 inbound-ws = ["tungstenite", "tokio-tungstenite", "url", "http"]
 inbound-amux = ["tokio-util"]
 inbound-quic = ["quinn", "rustls", "webpki-roots"]
@@ -115,12 +118,14 @@ inbound-tls = []
 inbound-chain = []
 inbound-packet = ["inbound-tun", "tokio/fs"] # MARKER BEGIN - END
 
+plugin = []
+stat = []
 api = ["warp"]
 auto-reload = ["notify"]
 ctrlc = ["tokio/signal"]
 
 # MARKER BEGIN
-stats = []  # MARKER BEGIN - END
+#stats = []  # MARKER BEGIN - END
 callback = []
 # MARKER END
 
@@ -196,12 +201,21 @@ async-socks5 = { version = "0.5", optional = true }
 
 # Shadowsocks
 hkdf = { version = "0.11", optional = true }
-md-5 = { version = "0.9", optional = true }
+md-5 = { version = "0.10", optional = true }
 sha-1 = { version = "0.9", optional = true }
 
 # Trojan
 sha2 = { version = "0.9", optional = true }
 hex = { version = "0.4", optional = true }
+
+# VMess
+lz_fnv = { version = "0.1", optional = true }
+cfb-mode = { version = "0.8", optional = true }
+hmac = { version = "0.12", optional = true }
+aes = { version = "0.8", optional = true }
+sha3 = { version = "0.10", optional = true }
+digest = { version = "0.10", optional = true }
+uuid = { version = "1", optional = true }
 
 # Failover
 lru_time_cache = { version = "0.11", optional = true }
@@ -224,6 +238,7 @@ notify = { version = "5.0.0-pre.13", optional = true }
 #tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
 [target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
 tun = { path = "../rust-tun", features = ["async"], optional = true }
+netstack-lwip = { git = "https://github.com/eycorsican/netstack-lwip.git", tag = "v0.3.2", optional = true }
 
 # MARKER BEGIN
 # Packet
@@ -241,6 +256,8 @@ memchr = { version = "2" }
 
 [dev-dependencies]
 rcgen = "0.8"
+sha2 = "0.9"
+tokio = { version = "1", features = ["fs", "sync", "io-util", "net", "time", "rt", "rt-multi-thread"] }
 
 [build-dependencies]
 cc = "1.0"

@@ -54,9 +54,26 @@ lazy_static! {
     };
 }
 
+#[cfg(feature = "stat")]
 lazy_static! {
-    pub static ref USER_AGENT: String = {
-        get_env_var_or("USER_AGENT", "".to_string())
+    pub static ref ENABLE_STATS: bool = get_env_var_or("ENABLE_STATS", false);
+}
+
+lazy_static! {
+    pub static ref HTTP_USER_AGENT: String = {
+        get_env_var_or(
+            "HTTP_USER_AGENT",
+            get_env_var_or("USER_AGENT", "".to_string()), // legacy support
+        )
+    };
+
+    // The purpose is not to propagate the header, but to extract the forwarded
+    // source IP. Expects only comma separated IP list and only the first IP is
+    // taken as the forwarded source. Having this value customizable would benefit
+    // in case you don't trust the X-Forwarded-For header but there is another header
+    // which you can trust, for example the CF-Connecting-IP provided by Cloudflare.
+    pub static ref HTTP_FORWARDED_HEADER: String = {
+        get_env_var_or("HTTP_FORWARDED_HEADER", "X-Forwarded-For".to_string())
     };
 
     pub static ref LOG_CONSOLE_OUT: bool = {
@@ -82,8 +99,21 @@ lazy_static! {
         get_env_var_or("LINK_BUFFER_SIZE", 2)
     };
 
+    /// Buffer size for UDP datagrams receiving/sending, in KB.
+    pub static ref DATAGRAM_BUFFER_SIZE: usize = {
+        get_env_var_or("DATAGRAM_BUFFER_SIZE", 2)
+    };
+
     pub static ref OUTBOUND_DIAL_TIMEOUT: u64 = {
         get_env_var_or("OUTBOUND_DIAL_TIMEOUT", 4)
+    };
+
+    pub static ref OUTBOUND_DIAL_ORDER: crate::proxy::DialOrder = {
+        match get_env_var_or("OUTBOUND_DIAL_ORDER", "ordered".to_string()).as_str() {
+            "random" => crate::proxy::DialOrder::Random,
+            "partial-random" => crate::proxy::DialOrder::PartialRandom,
+            _ => crate::proxy::DialOrder::Ordered,
+        }
     };
 
     /// Maximum outbound dial concurrency.

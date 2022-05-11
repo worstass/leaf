@@ -13,17 +13,15 @@ pub struct Handler {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    type Stream = AnyStream;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        None
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Unknown
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        _stream: Option<Self::Stream>,
-    ) -> io::Result<Self::Stream> {
+        _stream: Option<AnyStream>,
+    ) -> io::Result<AnyStream> {
         let mut tasks = Vec::new();
         for (i, a) in self.actors.iter().enumerate() {
             let t = async move {
@@ -35,7 +33,7 @@ impl TcpOutboundHandler for Handler {
                 }
                 let stream =
                     crate::proxy::connect_tcp_outbound(sess, self.dns_client.clone(), a).await?;
-                TcpOutboundHandler::handle(a.as_ref(), sess, stream).await
+                a.tcp()?.handle(sess, stream).await
             };
             tasks.push(Box::pin(t));
         }

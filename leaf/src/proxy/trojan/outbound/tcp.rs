@@ -5,10 +5,7 @@ use bytes::{BufMut, BytesMut};
 use sha2::{Digest, Sha224};
 use tokio::io::AsyncWriteExt;
 
-use crate::{
-    proxy::*,
-    session::{Session, SocksAddrWireType},
-};
+use crate::{proxy::*, session::*};
 
 pub struct Handler {
     pub address: String,
@@ -18,17 +15,15 @@ pub struct Handler {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    type Stream = AnyStream;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        Some(OutboundConnect::Proxy(self.address.clone(), self.port))
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Proxy(Network::Tcp, self.address.clone(), self.port)
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        stream: Option<Self::Stream>,
-    ) -> io::Result<Self::Stream> {
+        stream: Option<AnyStream>,
+    ) -> io::Result<AnyStream> {
         let mut stream =
             stream.ok_or_else(|| io::Error::new(io::ErrorKind::Other, "invalid input"))?;
         let mut buf = BytesMut::new();
@@ -38,7 +33,7 @@ impl TcpOutboundHandler for Handler {
         buf.put_slice(b"\r\n");
         buf.put_u8(0x01); // tcp
         sess.destination
-            .write_buf(&mut buf, SocksAddrWireType::PortLast)?;
+            .write_buf(&mut buf, SocksAddrWireType::PortLast);
         buf.put_slice(b"\r\n");
         // FIXME combine header and first payload
         stream.write_all(&buf).await?;

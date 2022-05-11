@@ -1,4 +1,4 @@
-use std::io;
+use std::io::{self, ErrorKind};
 
 use async_trait::async_trait;
 use futures::TryFutureExt;
@@ -11,17 +11,40 @@ use super::stream;
 
 use ::http; // MARKER BEGIN - END
 
-struct SimpleCallback {
-    path: String,
+struct SimpleCallback<'a> {
+    sess: &'a mut Session,
+    path: &'a str,
 }
 
-impl Callback for SimpleCallback {
+impl<'a> SimpleCallback<'a> {
+    pub fn new(sess: &'a mut Session, path: &'a str) -> Self {
+        Self { sess, path }
+    }
+}
+
+impl<'a> Callback for SimpleCallback<'a> {
     fn on_request(self, request: &Request, response: Response) -> Result<Response, ErrorResponse> {
         if request.uri().path() != self.path {
             return Err(http::response::Response::builder()
                 .status(http::StatusCode::NOT_FOUND)
                 .body(None)
                 .unwrap());
+        }
+        if let Some(Ok(forwarded)) = request
+            .headers()
+            .get(&*crate::option::HTTP_FORWARDED_HEADER)
+            .map(|x| x.to_str())
+        {
+            if let Some(f) = forwarded
+                .split(',')
+                .map(str::trim)
+                .map(|x| x.parse::<IpAddr>())
+                .take_while(|x| x.is_ok())
+                .map(|x| x.unwrap())
+                .last()
+            {
+                self.sess.forwarded_source.replace(f);
+            }
         }
         Ok(response)
     }
@@ -39,21 +62,20 @@ impl Handler {
 
 #[async_trait]
 impl TcpInboundHandler for Handler {
-    type TStream = AnyStream;
-    type TDatagram = AnyInboundDatagram;
-
     async fn handle<'a>(
         &'a self,
-        sess: Session,
-        stream: Self::TStream,
-    ) -> std::io::Result<InboundTransport<Self::TStream, Self::TDatagram>> {
-        let cb = SimpleCallback {
-            path: self.path.clone(), // TODO optimize the copy
-        };
-        let socket = accept_hdr_async(stream, cb)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, format!("accept ws failed: {}", e)))
-            .await?;
-        let ws_stream = stream::WebSocketToStream::new(socket);
-        Ok(InboundTransport::Stream(Box::new(ws_stream), sess))
+        mut sess: Session,
+        stream: AnyStream,
+    ) -> std::io::Result<AnyInboundTransport> {
+        Ok(InboundTransport::Stream(
+            Box::new(stream::WebSocketToStream::new(
+                accept_hdr_async(stream, SimpleCallback::new(&mut sess, &self.path))
+                    .map_err(|e| {
+                        io::Error::new(ErrorKind::Other, format!("accept ws failed: {}", e))
+                    })
+                    .await?,
+            )),
+            sess,
+        ))
     }
 }

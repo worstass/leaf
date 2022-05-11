@@ -59,7 +59,8 @@ impl Stream for Incoming {
                             self.state = State::Pending(0, t);
                         }
                         Some(_) => {
-                            return Poll::Ready(None);
+                            log::warn!("unexpected non-stream chain inbound incoming transport");
+                            continue;
                         }
                         None => {
                             return Poll::Ready(None);
@@ -86,13 +87,20 @@ impl Stream for Incoming {
                             });
                             self.state = State::Pending(idx + 1, t);
                         }
-                        Ok(InboundTransport::Datagram(socket)) => {
+                        Ok(InboundTransport::Datagram(socket, sess)) => {
                             // FIXME Assume the last one, but not necessary the last one?
                             self.state = State::WaitingIncoming;
-                            return Poll::Ready(Some(AnyBaseInboundTransport::Datagram(socket)));
+                            return Poll::Ready(Some(AnyBaseInboundTransport::Datagram(
+                                socket, sess,
+                            )));
+                        }
+                        Err(e) => {
+                            log::debug!("chain inbound incoming error: {}", e);
+                            self.state = State::WaitingIncoming;
+                            continue;
                         }
                         _ => {
-                            log::warn!("unexpected non-stream transport");
+                            log::warn!("unexpected chain inbound incoming transport");
                             self.state = State::WaitingIncoming;
                             return Poll::Ready(None);
                         }

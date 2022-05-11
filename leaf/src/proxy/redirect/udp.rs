@@ -3,10 +3,7 @@ use std::{io, net::IpAddr};
 use async_trait::async_trait;
 use futures::TryFutureExt;
 
-use crate::{
-    proxy::*,
-    session::{Session, SocksAddr},
-};
+use crate::{proxy::*, session::*};
 
 /// Handler with a redirect target address.
 pub struct Handler {
@@ -16,22 +13,19 @@ pub struct Handler {
 
 #[async_trait]
 impl UdpOutboundHandler for Handler {
-    type UStream = AnyStream;
-    type Datagram = AnyOutboundDatagram;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        Some(OutboundConnect::Proxy(self.address.clone(), self.port))
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Proxy(Network::Udp, self.address.clone(), self.port)
     }
 
     fn transport_type(&self) -> DatagramTransportType {
-        DatagramTransportType::Datagram
+        DatagramTransportType::Unreliable
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        transport: Option<OutboundTransport<Self::UStream, Self::Datagram>>,
-    ) -> io::Result<Self::Datagram> {
+        transport: Option<AnyOutboundTransport>,
+    ) -> io::Result<AnyOutboundDatagram> {
         let dgram = if let Some(OutboundTransport::Datagram(dgram)) = transport {
             dgram
         } else {
@@ -91,5 +85,9 @@ pub struct DatagramSendHalf(Box<dyn OutboundDatagramSendHalf>, SocksAddr);
 impl OutboundDatagramSendHalf for DatagramSendHalf {
     async fn send_to(&mut self, buf: &[u8], _target: &SocksAddr) -> io::Result<usize> {
         self.0.send_to(buf, &self.1).await
+    }
+
+    async fn close(&mut self) -> io::Result<()> {
+        self.0.close().await
     }
 }

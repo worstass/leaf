@@ -1,24 +1,160 @@
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use futures::{sink::SinkExt, stream::StreamExt};
 use log::*;
 use protobuf::Message;
-use tokio::io::{self, AsyncReadExt, AsyncWriteExt};
-use tokio::sync::Mutex as TokioMutex;
-use tun::{self, Device, TunPacket};
+use tokio::sync::mpsc::channel as tokio_channel;
+use tokio::sync::mpsc::{Receiver as TokioReceiver, Sender as TokioSender};
+use tun::{self, TunPacket};
 
 use crate::{
     app::dispatcher::Dispatcher,
     app::fake_dns::{FakeDns, FakeDnsMode},
     app::nat_manager::NatManager,
+    app::nat_manager::UdpPacket,
     config::{Inbound, TunInboundSettings},
-    option, Runner,
+    option,
+    session::{DatagramSource, Network, Session, SocksAddr},
+    Runner,
 };
 
-use super::netstack::NetStack;
+use super::netstack;
 
-const MTU: usize = 1500;
+async fn handle_inbound_stream(
+    stream: netstack::TcpStream,
+    local_addr: SocketAddr,
+    remote_addr: SocketAddr,
+    inbound_tag: String,
+    dispatcher: Arc<Dispatcher>,
+    fakedns: Arc<FakeDns>,
+) {
+    let mut sess = Session {
+        network: Network::Tcp,
+        source: local_addr,
+        local_addr: remote_addr.clone(),
+        destination: SocksAddr::Ip(remote_addr.clone()),
+        inbound_tag: inbound_tag,
+        ..Default::default()
+    };
+    // Whether to override the destination according to Fake DNS.
+    if fakedns.is_fake_ip(&remote_addr.ip()).await {
+        if let Some(domain) = fakedns.query_domain(&remote_addr.ip()).await {
+            sess.destination = SocksAddr::Domain(domain, remote_addr.port());
+        } else {
+            // Although requests targeting fake IPs are assumed
+            // never happen in real network traffic, which are
+            // likely caused by poisoned DNS cache records, we
+            // still have a chance to sniff the request domain
+            // for TLS traffic in dispatcher.
+            if remote_addr.port() != 443 {
+                log::debug!(
+                    "No paired domain found for this fake IP: {}, connection is rejected.",
+                    &remote_addr.ip()
+                );
+                return;
+            }
+        }
+    }
+    dispatcher.dispatch_tcp(sess, stream).await;
+}
+
+async fn handle_inbound_datagram(
+    socket: Box<netstack::UdpSocket>,
+    inbound_tag: String,
+    nat_manager: Arc<NatManager>,
+    fakedns: Arc<FakeDns>,
+) {
+    // The socket to receive/send packets from/to the netstack.
+    let (ls, mut lr) = socket.split();
+    let ls = Arc::new(ls);
+
+    // The channel for sending back datagrams from NAT manager to netstack.
+    let (l_tx, mut l_rx): (TokioSender<UdpPacket>, TokioReceiver<UdpPacket>) = tokio_channel(32);
+
+    // Receive datagrams from NAT manager and send back to netstack.
+    let fakedns_cloned = fakedns.clone();
+    let ls_cloned = ls.clone();
+    tokio::spawn(async move {
+        while let Some(pkt) = l_rx.recv().await {
+            let src_addr = match pkt.src_addr {
+                SocksAddr::Ip(a) => a,
+                SocksAddr::Domain(domain, port) => {
+                    if let Some(ip) = fakedns_cloned.query_fake_ip(&domain).await {
+                        SocketAddr::new(ip, port)
+                    } else {
+                        warn!(
+                                "Received datagram with source address {}:{} without paired fake IP found.",
+                                &domain, &port
+                            );
+                        continue;
+                    }
+                }
+            };
+            if let Err(e) = ls_cloned.send_to(&pkt.data[..], &src_addr, &pkt.dst_addr.must_ip()) {
+                warn!("A packet failed to send to the netstack: {}", e);
+            }
+        }
+    });
+
+    // Accept datagrams from netstack and send to NAT manager.
+    loop {
+        match lr.recv_from().await {
+            Err(e) => {
+                log::warn!("Failed to accept a datagram from netstack: {}", e);
+            }
+            Ok((data, src_addr, dst_addr)) => {
+                // Fake DNS logic.
+                if dst_addr.port() == 53 {
+                    match fakedns.generate_fake_response(&data).await {
+                        Ok(resp) => {
+                            if let Err(e) = ls.send_to(resp.as_ref(), &dst_addr, &src_addr) {
+                                warn!("A packet failed to send to the netstack: {}", e);
+                            }
+                            continue;
+                        }
+                        Err(err) => {
+                            trace!("generate fake ip failed: {}", err);
+                        }
+                    }
+                }
+
+                // Whether to override the destination according to Fake DNS.
+                //
+                // WARNING
+                //
+                // This allows datagram to have a domain name as destination,
+                // but real UDP traffic are sent with IP address only. If the
+                // outbound for this datagram is a direct one, the outbound
+                // would resolve the domain to IP address before sending out
+                // the datagram. If the outbound is a proxy one, it would
+                // require a proxy server with the ability to handle datagrams
+                // with domain name destination, leaf itself of course supports
+                // this feature very well.
+                let dst_addr = if fakedns.is_fake_ip(&dst_addr.ip()).await {
+                    if let Some(domain) = fakedns.query_domain(&dst_addr.ip()).await {
+                        SocksAddr::Domain(domain, dst_addr.port())
+                    } else {
+                        log::debug!(
+                            "No paired domain found for this fake IP: {}, datagram is rejected.",
+                            &dst_addr.ip()
+                        );
+                        continue;
+                    }
+                } else {
+                    SocksAddr::Ip(dst_addr)
+                };
+
+                let dgram_src = DatagramSource::new(src_addr, None);
+                let pkt = UdpPacket::new(data, SocksAddr::Ip(src_addr), dst_addr);
+                nat_manager
+                    .send(None, &dgram_src, &inbound_tag, &l_tx, pkt)
+                    .await;
+            }
+        }
+    }
+}
 
 pub fn new(
     inbound: Inbound,
@@ -87,62 +223,60 @@ pub fn new(
     }
 
     Ok(Box::pin(async move {
-        let fakedns = Arc::new(TokioMutex::new(FakeDns::new(fake_dns_mode)));
-
+        let fakedns = Arc::new(FakeDns::new(fake_dns_mode));
         for filter in fake_dns_filters.into_iter() {
-            fakedns.lock().await.add_filter(filter);
+            fakedns.add_filter(filter).await;
         }
 
-        let stack = NetStack::new(inbound.tag.clone(), dispatcher, nat_manager, fakedns);
-
-        let mtu = tun.get_ref().mtu().unwrap_or(MTU as i32);
+        let inbound_tag = inbound.tag.clone();
         let framed = tun.into_framed();
         let (mut tun_sink, mut tun_stream) = framed.split();
-        let (mut stack_reader, mut stack_writer) = io::split(stack);
+        let (stack, mut tcp_listener, udp_socket) = netstack::NetStack::new();
+        let (mut stack_sink, mut stack_stream) = stack.split();
 
-        let s2t = Box::pin(async move {
-            let mut buf = vec![0; mtu as usize];
-            loop {
-                match stack_reader.read(&mut buf).await {
-                    Ok(0) => {
-                        debug!("read stack eof");
-                        return;
-                    }
-                    Ok(n) => match tun_sink.send(TunPacket::new((&buf[..n]).to_vec())).await {
-                        Ok(_) => (),
-                        Err(e) => {
-                            warn!("send pkt to tun failed: {}", e);
-                            return;
-                        }
-                    },
-                    Err(err) => {
-                        warn!("read stack failed {:?}", err);
-                        return;
-                    }
+        let mut futs: Vec<Runner> = Vec::new();
+
+        // Reads packet from stack and sends to TUN.
+        futs.push(Box::pin(async move {
+            while let Some(pkt) = stack_stream.next().await {
+                if let Ok(pkt) = pkt {
+                    tun_sink.send(TunPacket::new(pkt)).await.unwrap();
                 }
             }
-        });
+        }));
 
-        let t2s = Box::pin(async move {
-            while let Some(packet) = tun_stream.next().await {
-                match packet {
-                    Ok(packet) => match stack_writer.write(packet.get_bytes()).await {
-                        Ok(_) => (),
-                        Err(e) => {
-                            warn!("write pkt to stack failed: {}", e);
-                            return;
-                        }
-                    },
-                    Err(err) => {
-                        warn!("read tun failed {:?}", err);
-                        return;
-                    }
+        // Reads packet from TUN and sends to stack.
+        futs.push(Box::pin(async move {
+            while let Some(pkt) = tun_stream.next().await {
+                if let Ok(pkt) = pkt {
+                    stack_sink.send(pkt.get_bytes().to_vec()).await.unwrap();
                 }
             }
-        });
+        }));
 
-        info!("tun inbound started");
-        futures::future::select(t2s, s2t).await;
-        info!("tun inbound exited");
+        // Extracts TCP connections from stack and sends them to the dispatcher.
+        let inbound_tag_cloned = inbound_tag.clone();
+        let fakedns_cloned = fakedns.clone();
+        futs.push(Box::pin(async move {
+            while let Some((stream, local_addr, remote_addr)) = tcp_listener.next().await {
+                tokio::spawn(handle_inbound_stream(
+                    stream,
+                    local_addr,
+                    remote_addr,
+                    inbound_tag_cloned.clone(),
+                    dispatcher.clone(),
+                    fakedns_cloned.clone(),
+                ));
+            }
+        }));
+
+        // Receive and send UDP packets between netstack and NAT manager. The NAT
+        // manager would maintain UDP sessions and send them to the dispatcher.
+        futs.push(Box::pin(async move {
+            handle_inbound_datagram(udp_socket, inbound_tag, nat_manager, fakedns.clone()).await;
+        }));
+
+        info!("start tun inbound");
+        futures::future::select_all(futs).await;
     }))
 }

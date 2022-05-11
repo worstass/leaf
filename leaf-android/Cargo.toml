@@ -39,12 +39,12 @@ default = [
 #    "leaf/inbound-quic",
 #    "leaf/outbound-quic",
     "auto-reload",
-    "stats",
+#    "stats",
     "callback",
 ]
 
 auto-reload = ["leaf/auto-reload"]
-stats = ["leaf/stats"]
+#stats = ["leaf/stats"]
 callback = ["leaf/callback"]
 
 [dependencies]

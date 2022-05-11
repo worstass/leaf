@@ -34,16 +34,15 @@ async fn health_check_task(
     i: usize,
     h: AnyOutboundHandler,
     dns_client: SyncDnsClient,
-    mut delay: Option<time::Duration>,
+    delay: time::Duration,
     health_check_timeout: u32,
 ) -> Measure {
-    if let Some(d) = delay.take() {
-        tokio::time::sleep(d).await;
-    }
+    tokio::time::sleep(delay).await;
     debug!("health checking tcp for [{}] index [{}]", h.tag(), i);
     let measure = async move {
         let sess = Session {
             destination: SocksAddr::Domain("www.google.com".to_string(), 80),
+            new_conn_once: true,
             ..Default::default()
         };
         let start = tokio::time::Instant::now();
@@ -51,7 +50,13 @@ async fn health_check_task(
             Ok(s) => s,
             Err(_) => return Measure(i, u128::MAX),
         };
-        match TcpOutboundHandler::handle(h.as_ref(), &sess, stream).await {
+        let m: Measure;
+        let th = if let Ok(th) = h.tcp() {
+            th
+        } else {
+            return Measure(i, u128::MAX);
+        };
+        match th.handle(&sess, stream).await {
             Ok(mut stream) => {
                 if stream.write_all(b"HEAD / HTTP/1.1\r\n\r\n").await.is_err() {
                     return Measure(i, u128::MAX - 2); // handshake is ok
@@ -61,15 +66,21 @@ async fn health_check_task(
                     // handshake, write and read are ok
                     Ok(_) => {
                         let elapsed = tokio::time::Instant::now().duration_since(start);
-                        Measure(i, elapsed.as_millis())
+                        m = Measure(i, elapsed.as_millis());
                     }
                     // handshake and write are ok
-                    Err(_) => Measure(i, u128::MAX - 3),
+                    Err(_) => {
+                        m = Measure(i, u128::MAX - 3);
+                    }
                 }
+                let _ = stream.shutdown().await;
             }
             // handshake not ok
-            Err(_) => Measure(i, u128::MAX),
+            Err(_) => {
+                m = Measure(i, u128::MAX);
+            }
         }
+        m
     };
     match timeout(
         time::Duration::from_secs(health_check_timeout.into()),
@@ -96,6 +107,7 @@ impl Handler {
         cache_timeout: u64, // in minutes
         last_resort: Option<AnyOutboundHandler>,
         health_check_timeout: u32,
+        health_check_delay: u32,
         dns_client: SyncDnsClient,
     ) -> (Self, Vec<AbortHandle>) {
         let mut abort_handles = Vec::new();
@@ -117,11 +129,9 @@ impl Handler {
                     let mut rng = StdRng::from_entropy();
                     for (i, a) in (&actors2).iter().enumerate() {
                         let dns_client4 = dns_client3.clone();
-                        let delay: Option<time::Duration> = if actors2.len() >= 4 {
-                            Some(time::Duration::from_millis(rng.gen_range(0..=1000) as u64))
-                        } else {
-                            None
-                        };
+                        let delay = time::Duration::from_millis(
+                            rng.gen_range(0..=health_check_delay) as u64,
+                        );
                         checks.push(Box::pin(health_check_task(
                             i,
                             a.clone(),
@@ -220,17 +230,15 @@ impl Handler {
 
 #[async_trait]
 impl TcpOutboundHandler for Handler {
-    type Stream = AnyStream;
-
-    fn connect_addr(&self) -> Option<OutboundConnect> {
-        None
+    fn connect_addr(&self) -> OutboundConnect {
+        OutboundConnect::Unknown
     }
 
     async fn handle<'a>(
         &'a self,
         sess: &'a Session,
-        _stream: Option<Self::Stream>,
-    ) -> io::Result<Self::Stream> {
+        _stream: Option<AnyStream>,
+    ) -> io::Result<AnyStream> {
         if let Some(task) = self.health_check_task.lock().await.take() {
             tokio::spawn(task);
         }
@@ -252,7 +260,7 @@ impl TcpOutboundHandler for Handler {
                         &self.actors[*idx],
                     )
                     .await?;
-                    TcpOutboundHandler::handle(self.actors[*idx].as_ref(), sess, stream).await
+                    self.actors[*idx].tcp()?.handle(sess, stream).await
                 };
                 let task = timeout(time::Duration::from_secs(self.fail_timeout as u64), handle);
                 if let Ok(Ok(v)) = task.await {
@@ -271,12 +279,12 @@ impl TcpOutboundHandler for Handler {
                     &self.last_resort.as_ref().unwrap(),
                 )
                 .await?;
-                TcpOutboundHandler::handle(
-                    self.last_resort.as_ref().unwrap().as_ref(),
-                    sess,
-                    stream,
-                )
-                .await
+                self.last_resort
+                    .as_ref()
+                    .unwrap()
+                    .tcp()?
+                    .handle(sess, stream)
+                    .await
             };
             return handle.await;
         }
@@ -299,7 +307,7 @@ impl TcpOutboundHandler for Handler {
                     &self.actors[actor_idx],
                 )
                 .await?;
-                TcpOutboundHandler::handle(self.actors[actor_idx].as_ref(), sess, stream).await
+                self.actors[actor_idx].tcp()?.handle(sess, stream).await
             };
             match timeout(time::Duration::from_secs(self.fail_timeout as u64), handle).await {
                 // return before timeout
