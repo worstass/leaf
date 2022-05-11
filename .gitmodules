@@ -1,3 +1,6 @@
 [submodule "rust-tun"]
 	path = rust-tun
 	url = https://github.com/worstass/rust-tun.git
+[submodule "netstack-lwip"]
+	path = netstack-lwip
+	url = https://github.com/worstass/netstack-lwip.git
