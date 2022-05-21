@@ -488,7 +488,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         any(
             // target_os = "ios", // MARKER BEGIN - END
             target_os = "android",
-            // target_os = "macos", // MARKER BEGIN - END
+            target_os = "macos", // MARKER BEGIN - END
             target_os = "linux",
             target_os = "windows", // MARKER BEGIN - END
         )

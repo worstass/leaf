@@ -1,3 +1,5 @@
+use std::future::Future;
+use std::io::Error;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
@@ -18,19 +20,157 @@ use crate::{
 };
 
 use crate::proxy::tun::netstack::NetStack;
-// use super::stack::NetStack;
+
+use tokio::sync::mpsc::{Receiver as TokioReceiver, Sender as TokioSender};
+use tokio::sync::mpsc::channel as tokio_channel;
 
 use bytes::{BufMut, Bytes, BytesMut};
 use std::net::{SocketAddr, TcpStream};
-#[cfg(unix)]
-use std::os::unix::io::FromRawFd;
 use std::pin::Pin;
+use futures_util::stream::{Next, SplitStream};
 use tokio::fs::File;
 use tokio::net::TcpListener;
 use tun::{AsyncDevice, TunPacket, TunPacketCodec};
+use crate::app::nat_manager::UdpPacket;
 use crate::config::TunInboundSettings;
 
 use crate::config::PacketInboundSettings_Sink;
+use crate::proxy::tun::netstack;
+use crate::session::{DatagramSource, Network, Session, SocksAddr};
+
+async fn handle_inbound_stream(
+    stream: netstack::TcpStream,
+    local_addr: SocketAddr,
+    remote_addr: SocketAddr,
+    inbound_tag: String,
+    dispatcher: Arc<Dispatcher>,
+    fakedns: Arc<FakeDns>,
+) {
+    let mut sess = Session {
+        network: Network::Tcp,
+        source: local_addr,
+        local_addr: remote_addr.clone(),
+        destination: SocksAddr::Ip(remote_addr.clone()),
+        inbound_tag: inbound_tag,
+        ..Default::default()
+    };
+    // Whether to override the destination according to Fake DNS.
+    if fakedns.is_fake_ip(&remote_addr.ip()).await {
+        if let Some(domain) = fakedns.query_domain(&remote_addr.ip()).await {
+            sess.destination = SocksAddr::Domain(domain, remote_addr.port());
+        } else {
+            // Although requests targeting fake IPs are assumed
+            // never happen in real network traffic, which are
+            // likely caused by poisoned DNS cache records, we
+            // still have a chance to sniff the request domain
+            // for TLS traffic in dispatcher.
+            if remote_addr.port() != 443 {
+                log::debug!(
+                    "No paired domain found for this fake IP: {}, connection is rejected.",
+                    &remote_addr.ip()
+                );
+                return;
+            }
+        }
+    }
+    dispatcher.dispatch_tcp(sess, stream).await;
+}
+
+async fn handle_inbound_datagram(
+    socket: Box<netstack::UdpSocket>,
+    inbound_tag: String,
+    nat_manager: Arc<NatManager>,
+    fakedns: Arc<FakeDns>,
+) {
+    // The socket to receive/send packets from/to the netstack.
+    let (ls, mut lr) = socket.split();
+    let ls = Arc::new(ls);
+
+    // The channel for sending back datagrams from NAT manager to netstack.
+    let (l_tx, mut l_rx): (TokioSender<UdpPacket>, TokioReceiver<UdpPacket>) = tokio_channel(32);
+
+    // Receive datagrams from NAT manager and send back to netstack.
+    let fakedns_cloned = fakedns.clone();
+    let ls_cloned = ls.clone();
+    tokio::spawn(async move {
+        while let Some(pkt) = l_rx.recv().await {
+            let src_addr = match pkt.src_addr {
+                SocksAddr::Ip(a) => a,
+                SocksAddr::Domain(domain, port) => {
+                    if let Some(ip) = fakedns_cloned.query_fake_ip(&domain).await {
+                        SocketAddr::new(ip, port)
+                    } else {
+                        warn!(
+                                "Received datagram with source address {}:{} without paired fake IP found.",
+                                &domain, &port
+                            );
+                        continue;
+                    }
+                }
+            };
+            if let Err(e) = ls_cloned.send_to(&pkt.data[..], &src_addr, &pkt.dst_addr.must_ip()) {
+                warn!("A packet failed to send to the netstack: {}", e);
+            }
+        }
+    });
+
+    // Accept datagrams from netstack and send to NAT manager.
+    loop {
+        match lr.recv_from().await {
+            Err(e) => {
+                log::warn!("Failed to accept a datagram from netstack: {}", e);
+            }
+            Ok((data, src_addr, dst_addr)) => {
+                // Fake DNS logic.
+                if dst_addr.port() == 53 {
+                    match fakedns.generate_fake_response(&data).await {
+                        Ok(resp) => {
+                            if let Err(e) = ls.send_to(resp.as_ref(), &dst_addr, &src_addr) {
+                                warn!("A packet failed to send to the netstack: {}", e);
+                            }
+                            continue;
+                        }
+                        Err(err) => {
+                            trace!("generate fake ip failed: {}", err);
+                        }
+                    }
+                }
+
+                // Whether to override the destination according to Fake DNS.
+                //
+                // WARNING
+                //
+                // This allows datagram to have a domain name as destination,
+                // but real UDP traffic are sent with IP address only. If the
+                // outbound for this datagram is a direct one, the outbound
+                // would resolve the domain to IP address before sending out
+                // the datagram. If the outbound is a proxy one, it would
+                // require a proxy server with the ability to handle datagrams
+                // with domain name destination, leaf itself of course supports
+                // this feature very well.
+                let dst_addr = if fakedns.is_fake_ip(&dst_addr.ip()).await {
+                    if let Some(domain) = fakedns.query_domain(&dst_addr.ip()).await {
+                        SocksAddr::Domain(domain, dst_addr.port())
+                    } else {
+                        log::debug!(
+                            "No paired domain found for this fake IP: {}, datagram is rejected.",
+                            &dst_addr.ip()
+                        );
+                        continue;
+                    }
+                } else {
+                    SocksAddr::Ip(dst_addr)
+                };
+
+                let dgram_src = DatagramSource::new(src_addr, None);
+                let pkt = UdpPacket::new(data, SocksAddr::Ip(src_addr), dst_addr);
+                nat_manager
+                    .send(None, &dgram_src, &inbound_tag, &l_tx, pkt)
+                    .await;
+            }
+        }
+    }
+}
 
 pub fn new(
     inbound: Inbound,
@@ -60,114 +200,125 @@ pub fn new(
     } else {
         (FakeDnsMode::Exclude, fake_dns_exclude)
     };
-    let mut fakedns = FakeDns::new(fake_dns_mode);
-    let fakedns = Arc::new(TokioMutex::new(fakedns));
+    let fakedns = Arc::new(FakeDns::new(fake_dns_mode));
 
     Ok(Box::pin(async move {
         let listen_addr = format!("127.0.0.1:{}", port);
         let listener = TcpListener::bind(&listen_addr).await.unwrap();
         info!("packet inbound listening tcp {}", &listen_addr);
-        // loop {
-        //     match listener.accept().await {
-        //         Ok((mut stream, _)) => {
-        //             let dispatcher = dispatcher.clone();
-        //             let nat_manager = nat_manager.clone();
-        //             let fakedns = fakedns.clone();
-        //             let tag = inbound.clone().tag;
-        //             let stack = NetStack::new(tag, dispatcher, nat_manager, fakedns);
-        //             let (mut stack_reader, mut stack_writer) = io::split(stack);
-        //             // let pi = has_packet_information();
-        //             let mtu = 1504;
-        //             let (mut stream_reader, mut stream_writer) = stream.split();
-        //             let s2t = Box::pin(async move {
-        //                 let mut buf = vec![0; mtu as usize];
-        //                 loop {
-        //                     match stack_reader.read(&mut buf).await {
-        //                         Ok(0) => {
-        //                             debug!("read stack eof");
-        //                             return;
-        //                         }
-        //                         Ok(n) => {
-        //                             debug!("stack->tcp:{:02X?}", &buf[..n]);
-        //                             match stream_writer.write(&buf[..n]).await {
-        //                                 Ok(_) => (),
-        //                                 Err(e) => {
-        //                                     warn!("send pkt to tcp failed: {}", e);
-        //                                     return;
-        //                                 }
-        //                             }
-        //                         }
-        //                         Err(err) => {
-        //                             warn!("read stack failed {:?}", err);
-        //                             return;
-        //                         }
-        //                     }
-        //                 }
-        //             });
-        //             let t2s = Box::pin(async move {
-        //                 let mut packet_header_buf = vec![0; 6];
-        //                 let mut packet_buf = vec![0u8; mtu];
-        //                 loop {
-        //                     match stream_reader.read_exact(&mut packet_header_buf).await {
-        //                         Ok(n) => {
-        //                             if n < 6 {
-        //                                 warn!("read <4 bytes, n={}", n);
-        //                                 return;
-        //                             }
-        //                             let ver = packet_header_buf[0]>>4;
-        //                             let pkt_len =  match ver {
-        //                                 4=> {
-        //                                     packet_header_buf[2] as usize * 256 + packet_header_buf[3] as usize
-        //                                 },
-        //                                 6=> {
-        //                                     let payload_len = packet_header_buf[4] as usize * 256 + packet_header_buf[5] as usize;
-        //                                     payload_len + 40
-        //                                 }
-        //                                 _=> {
-        //                                     warn!("packet ver wrong ver={}", ver);
-        //                                     return;
-        //                                 }
-        //                             };
-        //                             let need_to_read = pkt_len-6;
-        //                             match stream_reader.read_exact(&mut packet_buf[..need_to_read]).await {
-        //                                 Ok(n) => {
-        //                                     if n < need_to_read {
-        //                                         warn!("read packet body <len={}", n);
-        //                                         return;
-        //                                     }
-        //                                     let pkt = [&packet_header_buf[..], &packet_buf[..n]].concat();
-        //                                     debug!("tcp->stack:{:02X?}", &pkt[..]);
-        //                                     match stack_writer.write(&pkt[..]).await {
-        //                                         Ok(_) => (),
-        //                                         Err(e) => {
-        //                                             warn!("write pkt to stack failed: {}", e);
-        //                                             return;
-        //                                         }
-        //                                     }
-        //                                 }
-        //                                 Err(e) => {
-        //                                     warn!("read packet body from tcp failed {:?}", e);
-        //                                     return;
-        //                                 }
-        //                             }
-        //                         }
-        //                         Err(e) => {
-        //                             warn!("read packet head from tcp failed {:?}", e);
-        //                             return;
-        //                         }
-        //                     }
-        //                 }
-        //             });
-        //
-        //             info!("packet inbound started");
-        //             futures::future::select(t2s, s2t).await;
-        //             info!("packet inbound exited");
-        //         }
-        //         Err(e) => {
-        //             error!("accept connection failed: {}", e);
-        //             break;
-        //         }
-        //     }
-        // }
+        loop {
+            match listener.accept().await {
+                Ok((mut stream, _)) => {
+                    let dispatcher = dispatcher.clone();
+                    let nat_manager = nat_manager.clone();
+                    let inbound_tag = inbound.clone().tag;
+                    let (stack, mut tcp_listener, udp_socket) = NetStack::new();
+                    let (mut stack_sink, mut stack_stream) = stack.split();
+                    let mtu = 1504;
+                    let (mut stream_reader, mut stream_writer) = stream.split();
+                    let mut futs: Vec<Pin<Box<dyn Send + Future<Output=()>>>> = Vec::new();
+                    futs.push(Box::pin(async move {
+                        while let Some(pkt) = stack_stream.next().await {
+                            if let Ok(pkt) = pkt {
+                                debug!("stack->tcp:{:02X?}", &pkt[..]);
+                                match stream_writer.write(&pkt[..]).await {
+                                    Ok(_) => (),
+                                    Err(e) => {
+                                        warn!("send pkt to tcp failed: {}", e);
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    }));
+
+                    futs.push(Box::pin(async move {
+                        let mut packet_header_buf = vec![0; 6];
+                        let mut packet_buf = vec![0u8; mtu];
+                        loop {
+                            match stream_reader.read_exact(&mut packet_header_buf).await {
+                                Ok(n) => {
+                                    if n < 6 {
+                                        warn!("read <4 bytes, n={}", n);
+                                        return;
+                                    }
+                                    let ver = packet_header_buf[0] >> 4;
+                                    let pkt_len = match ver {
+                                        4 => {
+                                            packet_header_buf[2] as usize * 256 + packet_header_buf[3] as usize
+                                        }
+                                        6 => {
+                                            let payload_len = packet_header_buf[4] as usize * 256 + packet_header_buf[5] as usize;
+                                            payload_len + 40
+                                        }
+                                        _ => {
+                                            warn!("packet ver wrong ver={}", ver);
+                                            return;
+                                        }
+                                    };
+                                    let need_to_read = pkt_len - 6;
+                                    match stream_reader.read_exact(&mut packet_buf[..need_to_read]).await {
+                                        Ok(n) => {
+                                            if n < need_to_read {
+                                                warn!("read packet body <len={}", n);
+                                                return;
+                                            }
+                                            let pkt = [&packet_header_buf[..], &packet_buf[..n]].concat();
+                                            debug!("tcp->stack:{:02X?}", &pkt[..]);
+                                            match stack_sink.send(pkt).await {
+                                                Ok(_) => {}
+                                                Err(e) => {
+                                                    warn!("write pkt to stack failed: {}", e);
+                                                    return;
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            warn!("read packet body from tcp failed {:?}", e);
+                                            return;
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    warn!("read packet head from tcp failed {:?}", e);
+                                    return;
+                                }
+                            }
+                        }
+                    }));
+
+                    // Extracts TCP connections from stack and sends them to the dispatcher.
+                    let inbound_tag_cloned = inbound_tag.clone();
+                    let fakedns_cloned = fakedns.clone();
+                    futs.push(Box::pin(async move {
+                        while let Some((stream1, local_addr, remote_addr)) = tcp_listener.next().await {
+                            tokio::spawn(handle_inbound_stream(
+                                stream1,
+                                local_addr,
+                                remote_addr,
+                                inbound_tag_cloned.clone(),
+                                dispatcher.clone(),
+                                fakedns_cloned.clone(),
+                            ));
+                        }
+                    }));
+
+                    // Receive and send UDP packets between netstack and NAT manager. The NAT
+                    // manager would maintain UDP sessions and send them to the dispatcher.
+                    let fakedns_cloned = fakedns.clone();
+                    futs.push(Box::pin(async move {
+                        handle_inbound_datagram(udp_socket, inbound_tag, nat_manager, fakedns_cloned.clone()).await
+                    }));
+
+                    info!("packet inbound started");
+                    futures::future::select_all(futs /*vec![handle_stream, handle_datagram]*/).await;
+                    info!("packet inbound exited");
+                }
+                Err(e) => {
+                    error!("accept connection failed: {}", e);
+                    break;
+                }
+            }
+        }
     }))
 }
