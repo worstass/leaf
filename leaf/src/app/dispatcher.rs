@@ -81,9 +81,9 @@ impl Dispatcher {
         }
     }
 
-    pub async fn dispatch_tcp<T>(&self, mut sess: Session, lhs: T)
-        where
-            T: 'static + AsyncRead + AsyncWrite + Unpin + Send + Sync,
+    pub async fn dispatch_stream<T>(&self, mut sess: Session, lhs: T)
+    where
+        T: 'static + AsyncRead + AsyncWrite + Unpin + Send + Sync,
     {
         let mut lhs: Box<dyn ProxyStream> =
             if !sess.destination.is_domain() && sess.destination.port() == 443 {
@@ -171,7 +171,7 @@ impl Dispatcher {
 
         let handshake_start = tokio::time::Instant::now();
         let stream =
-            match crate::proxy::connect_tcp_outbound(&sess, self.dns_client.clone(), &h).await {
+            match crate::proxy::connect_stream_outbound(&sess, self.dns_client.clone(), &h).await {
                 Ok(s) => s,
                 Err(e) => {
                     debug!(
@@ -185,7 +185,7 @@ impl Dispatcher {
                     return;
                 }
             };
-        let th = match h.tcp() {
+        let th = match h.stream() {
             Ok(th) => th,
             Err(e) => {
                 log::warn!(
@@ -268,7 +268,10 @@ impl Dispatcher {
         }
     }
 
-    pub async fn dispatch_udp(&self, mut sess: Session) -> io::Result<Box<dyn OutboundDatagram>> {
+    pub async fn dispatch_datagram(
+        &self,
+        mut sess: Session,
+    ) -> io::Result<Box<dyn OutboundDatagram>> {
         let outbound = {
             let router = self.router.read().await;
             match router.pick_route(&sess).await {
@@ -306,8 +309,8 @@ impl Dispatcher {
 
         let handshake_start = tokio::time::Instant::now();
         let transport =
-            crate::proxy::connect_udp_outbound(&sess, self.dns_client.clone(), &h).await?;
-        match h.udp()?.handle(&sess, transport).await {
+            crate::proxy::connect_datagram_outbound(&sess, self.dns_client.clone(), &h).await?;
+        match h.datagram()?.handle(&sess, transport).await {
             #[allow(unused_mut)]
             Ok(mut d) => {
                 let elapsed = tokio::time::Instant::now().duration_since(handshake_start);

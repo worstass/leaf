@@ -1,3 +1,3 @@
 mod tcp;
 
-pub use tcp::Handler as TcpHandler;
+pub use tcp::Handler as StreamHandler;
