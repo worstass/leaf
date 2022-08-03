@@ -126,10 +126,14 @@ pub extern "C" fn leaf_run(rt_id: u16, config_path: *const c_char, #[cfg(feature
 }
 
 #[no_mangle]
-pub extern "C" fn leaf_run_with_config_string(rt_id: u16, config: *const c_char) -> i32 {
+pub extern "C" fn leaf_run_with_config_string(rt_id: u16, config: *const c_char, #[cfg(feature = "callback")] callback: *const Callback,) -> i32 {
     if let Ok(config) = unsafe { CStr::from_ptr(config).to_str() } {
         let opts = leaf::StartOptions {
             config: leaf::Config::Str(config.to_string()),
+            // MARKER BEGIN
+            #[cfg(feature = "callback")]
+            callback: Some(Box::new(callback::FfiCallback::new(callback))),
+            // MARKER END
             #[cfg(feature = "auto-reload")]
             auto_reload: false,
             runtime_opt: leaf::RuntimeOption::SingleThread,

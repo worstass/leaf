@@ -1,28 +1,75 @@
 #!/usr/bin/env bash
 
-set -e
+set -eEu
 
 realpath() {
-    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
 BASE=`dirname "$0"`
 PROJECT_BASE=`realpath $BASE/..`
-ARCHIVES_DIR="$PROJECT_BASE/build/apple/$BUILD_TYPE/archives"
-mkdir -p $ARCHIVES_DIR
+if [ -n "$CONFIGURATION" ]; then CONFIG=$CONFIGURATION; else CONFIG="Debug"; fi
+OUTPUT_DIR="${PROJECT_BASE}/build/apple/${CONFIG}"
+mkdir -p ${OUTPUT_DIR}
 
-MACOS_ARCHIVE="$ARCHIVES_DIR/leaf-macos.macos.xcarchive"
-IOS_ARCHIVE="$ARCHIVES_DIR/leaf-ios.ios.xcarchive"
-IOS_SIM_ARCHIVE="$ARCHIVES_DIR/leaf-ios.iossim.xcarchive"
-MAC_CATALYST_ARCHIVE="$ARCHIVES_DIR/leaf-ios.macos.xcarchive"
+if [ "$CONFIG" == "Release" ]; then
+  cargo_build_flags="--release"
+  build_type="release"
+elif [ "$CONFIG" == "Debug" ]; then
+  cargo_build_flags=""
+  build_type="debug"
+else
+  echo "Unknown configuration type"
+fi
 
-xcodebuild archive -scheme leaf-macos -archivePath $MACOS_ARCHIVE SKIP_INSTALL=NO
-xcodebuild archive -scheme leaf-ios -destination "generic/platform=iOS" -archivePath $IOS_ARCHIVE SKIP_INSTALL=NO
-xcodebuild archive -scheme leaf-ios -destination "generic/platform=iOS Simulator" -archivePath $IOS_SIM_ARCHIVE SKIP_INSTALL=NO
-xcodebuild archive -scheme leaf-ios -destination "generic/platform=macOS,variant=Mac Catalyst" -archivePath $MAC_CATALYST_ARCHIVE SKIP_INSTALL=NO
+# iOS
+echo -e "Building for iOS [1/5]"
+cd $PROJECT_BASE/leaf-ffi && cargo build $cargo_build_flags --target "aarch64-apple-ios"
+
+# MacOS
+echo -e "Building for macOS (Apple Silicon) [2/5]"
+cd $PROJECT_BASE/leaf-ffi && cargo build $cargo_build_flags --target "aarch64-apple-darwin"
+echo -e "Building for macOS (Intel) [3/5]"
+cd $PROJECT_BASE/leaf-ffi && cargo build $cargo_build_flags --target "x86_64-apple-darwin"
+
+# iOS Simulator
+echo -e "Building for iOS Simulator (Apple Silicon) [4/5]"
+cd $PROJECT_BASE/leaf-ffi && cargo build $cargo_build_flags --target "aarch64-apple-ios-sim"
+echo -e "Building for iOS Simulator (Intel) [5/5]"
+cd $PROJECT_BASE/leaf-ffi && cargo build $cargo_build_flags --target "x86_64-apple-ios"
+
+echo -e "\nCreating XCFramework"
+# MacOS
+lipo -create \
+  "${PROJECT_BASE}/target/x86_64-apple-darwin/${build_type}/libleaf.a" \
+  "${PROJECT_BASE}/target/aarch64-apple-darwin/${build_type}/libleaf.a" \
+  -output "${OUTPUT_DIR}/libleaf_macos.a"
+lipo -info "${OUTPUT_DIR}/libleaf_macos.a"
+
+# iOS Simulator
+lipo -create \
+  "${PROJECT_BASE}/target/x86_64-apple-ios/${build_type}/libleaf.a" \
+  "${PROJECT_BASE}/target/aarch64-apple-ios-sim/${build_type}/libleaf.a" \
+  -output "${OUTPUT_DIR}/libleaf_iossimulator.a"
+lipo -info "${OUTPUT_DIR}/libleaf_iossimulator.a"
+
+# iOS
+lipo -create \
+  "${PROJECT_BASE}/target/aarch64-apple-ios/${build_type}/libleaf.a" \
+  -output "${OUTPUT_DIR}/libleaf_ios.a"
+lipo -info "${OUTPUT_DIR}/libleaf_ios.a"
+
+mkdir -p "${OUTPUT_DIR}/headers"
+cp "${PROJECT_BASE}/leaf-ffi/leaf-c.h" "${OUTPUT_DIR}/headers/leaf.h"
+
+if [ -d "${OUTPUT_DIR}/leaf.xcframework" ]; then rm -rf "${OUTPUT_DIR}/leaf.xcframework"; fi
+
+export BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 xcodebuild -create-xcframework \
-    -framework "$MACOS_ARCHIVE/Products/Library/Frameworks/leaf.framework" \
-    -framework "$IOS_ARCHIVE/Products/Library/Frameworks/leaf.framework" \
-    -framework "$IOS_SIM_ARCHIVE/Products/Library/Frameworks/leaf.framework" \
-    -framework "$MAC_CATALYST_ARCHIVE/Products/Library/Frameworks/leaf.framework" \
-    -output "$PROJECT_BASE/build/apple/leaf.xcframework"
+  -library "${OUTPUT_DIR}/libleaf_macos.a" \
+  -headers "${OUTPUT_DIR}/headers" \
+  -library "${OUTPUT_DIR}/libleaf_iossimulator.a" \
+  -headers "${OUTPUT_DIR}/headers" \
+  -library "${OUTPUT_DIR}/libleaf_ios.a" \
+  -headers "${OUTPUT_DIR}/headers" \
+  -output "${OUTPUT_DIR}/leaf.xcframework"

@@ -14,12 +14,13 @@ PROJECT_BASE=`realpath $BASE/..`
 macosx_platform_targets="aarch64-apple-darwin x86_64-apple-darwin"
 iphoneos_platform_targets="aarch64-apple-ios"
 iphonesimulator_platform_targets="x86_64-apple-ios aarch64-apple-ios-sim"
-maccatalyst_platform_targets="x86_64-apple-ios-macabi aarch64-apple-ios-macabi"
+#maccatalyst_platform_targets="x86_64-apple-ios-macabi aarch64-apple-ios-macabi"
+#maccatalyst_platform_targets=""
 
 if [ "$scheme" == "macos" ]; then
   targets="$macosx_platform_targets"
 elif [ "$scheme" == "ios" ]; then
-  targets="$iphoneos_platform_targets $iphonesimulator_platform_targets $maccatalyst_platform_targets"
+  targets="$iphoneos_platform_targets $iphonesimulator_platform_targets" #$maccatalyst_platform_targets"
 else
   echo "Unknown scheme type: $scheme"
   exit
@@ -36,7 +37,7 @@ else
 fi
 
 for target in $targets; do
-  if [[ $target == *macabi ]]; then flags="-Z build-std=panic_abort,std"; else flags=""; fi
+  #if [[ $target == *macabi ]]; then flags="-Z build-std=panic_abort,std"; else flags=""; fi
   echo "Build for target: ${target}"
   cd $PROJECT_BASE/leaf-ffi && cargo build $flags --target $target $cargo_build_flags
 done
@@ -56,8 +57,9 @@ if [ "$scheme" == "macos" ]; then
     done
   done
 elif [ "$scheme" == "ios" ]; then
-  for subfix in 'a' 'dylib'; do
-    for platform in iphoneos iphonesimulator maccatalyst; do
+#  for subfix in 'a' 'dylib'; do
+  for subfix in 'a' ; do
+    for platform in iphoneos iphonesimulator; do #maccatalyst; do
       tgs=${platform}_platform_targets
       targets=${!tgs}
       libs=""
