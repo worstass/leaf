@@ -1,4 +1,4 @@
-module Leaf_Private {
+module LeafLib {
    header "leaf-c.h"
    export *
 }

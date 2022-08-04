@@ -8,13 +8,21 @@ realpath() {
 
 BASE=`dirname "$0"`
 PROJECT_BASE=`realpath $BASE/..`
-ARCHIVES_DIR="$PROJECT_BASE/build/apple/$BUILD_TYPE/archives"
+if [ -n "$CONFIGURATION" ]; then CONFIG=$CONFIGURATION; else CONFIG="Debug"; fi
+if [ "$CONFIG" == "Release" ]; then
+  build_type="Release"
+elif [ "$CONFIG" == "Debug" ]; then
+  build_type="Debug"
+else
+  echo "Unknown configuration type"
+fi
+
+ARCHIVES_DIR="$PROJECT_BASE/build/apple/$build_type/archives"
 mkdir -p $ARCHIVES_DIR
 
 MACOS_ARCHIVE="$ARCHIVES_DIR/leaf.macos.xcarchive"
 IOS_ARCHIVE="$ARCHIVES_DIR/leaf.ios.xcarchive"
 IOS_SIM_ARCHIVE="$ARCHIVES_DIR/leaf.iossim.xcarchive"
-#MAC_CATALYST_ARCHIVE="$ARCHIVES_DIR/leaf-ios.macos.xcarchive"
 
 xcodebuild archive -scheme leaf-macos -destination "generic/platform=OS X" -archivePath $MACOS_ARCHIVE SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES
 xcodebuild archive -scheme leaf-ios -destination "generic/platform=iOS" -archivePath $IOS_ARCHIVE SKIP_INSTALL=NO BUILD_LIBRARY_FOR_DISTRIBUTION=YES

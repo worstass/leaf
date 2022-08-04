@@ -11,10 +11,6 @@
 		FA86CFB4289ADA200065A24A /* leaf-c.h in Headers */ = {isa = PBXBuildFile; fileRef = FA86CFB1289ADA200065A24A /* leaf-c.h */; };
 		FA86CFB5289ADA200065A24A /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA86CFB2289ADA200065A24A /* leaf.swift */; };
 		FA86CFB6289ADA200065A24A /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA86CFB2289ADA200065A24A /* leaf.swift */; };
-		FADB382327848ACF005A3852 /* debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382227848ACF005A3852 /* debug.xcconfig */; };
-		FADB382427848ACF005A3852 /* debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382227848ACF005A3852 /* debug.xcconfig */; };
-		FADB382627848BEE005A3852 /* release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382527848BEE005A3852 /* release.xcconfig */; };
-		FADB382727848BEE005A3852 /* release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = FADB382527848BEE005A3852 /* release.xcconfig */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -172,8 +168,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FADB382627848BEE005A3852 /* release.xcconfig in Resources */,
-				FADB382327848ACF005A3852 /* debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -181,8 +175,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FADB382727848BEE005A3852 /* release.xcconfig in Resources */,
-				FADB382427848ACF005A3852 /* debug.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

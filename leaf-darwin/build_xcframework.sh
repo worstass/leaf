@@ -60,7 +60,8 @@ lipo -create \
 lipo -info "${OUTPUT_DIR}/libleaf_ios.a"
 
 mkdir -p "${OUTPUT_DIR}/headers"
-cp "${PROJECT_BASE}/leaf-ffi/leaf-c.h" "${OUTPUT_DIR}/headers/leaf.h"
+cp "${PROJECT_BASE}/leaf-ffi/leaf-c.h" "${OUTPUT_DIR}/headers"
+cp "${PROJECT_BASE}/leaf-darwin/module.modulemap" "${OUTPUT_DIR}/headers"
 
 if [ -d "${OUTPUT_DIR}/leaf.xcframework" ]; then rm -rf "${OUTPUT_DIR}/leaf.xcframework"; fi
 
