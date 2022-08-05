@@ -6,15 +6,15 @@ realpath() {
     [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
-mode=debug
+build_type="debug"
 
 if [ "$1" == "release" ]; then
-	mode=release
+	build_type="release"
 fi
 
 BASE=$(dirname "$0")
 PROJECT_BASE=$(realpath "$BASE"/../)
-BUILD_DIR="$PROJECT_BASE/build/android/$mode"
+BUILD_DIR="$PROJECT_BASE/build/android/$build_type"
 HOST_OS=$(uname -s | tr "[:upper:]" "[:lower:]")
 HOST_ARCH=$(uname -m | tr "[:upper:]" "[:lower:]")
 if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
@@ -24,50 +24,49 @@ fi
 
 api=30
 ndk_version=22.1.7171670
-#android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
-android_tools="$NDK_HOME/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
+
+api=33
+ndk_version=25.0.8775105
+
+android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
 
 export PATH=$android_tools:$PATH
-export CC_x86_64_linux_android=$android_tools/x86_64-linux-android30-clang
-#export AR_x86_64_linux_android=$android_tools/x86_64-linux-android30-ar
+export CC_x86_64_linux_android=$android_tools/x86_64-linux-android$api-clang
 export AR_x86_64_linux_android=$android_tools/llvm-ar
-#export CARGO_TARGET_X86_64_LINUX_ANDROID_AR=$android_tools/x86_64-linux-android30-ar
 export CARGO_TARGET_X86_64_LINUX_ANDROID_AR=$android_tools/llvm-ar
-export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$android_tools/x86_64-linux-android30-clang
-export CC_aarch64_linux_android=$android_tools/aarch64-linux-android30-clang
-#export AR_aarch64_linux_android=$android_tools/aarch64-linux-android30-ar
+export CARGO_TARGET_X86_64_LINUX_ANDROID_LINKER=$android_tools/x86_64-linux-android$api-clang
+export CC_aarch64_linux_android=$android_tools/aarch64-linux-android$api-clang
 export AR_aarch64_linux_android=$android_tools/llvm-ar
-#export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$android_tools/aarch64-linux-android30-ar
 export CARGO_TARGET_AARCH64_LINUX_ANDROID_AR=$android_tools/llvm-ar
-export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$android_tools/aarch64-linux-android30-clang
+export CARGO_TARGET_AARCH64_LINUX_ANDROID_LINKER=$android_tools/aarch64-linux-android$api-clang
 
 for target in x86_64-linux-android aarch64-linux-android; do
     case $target in
         'x86_64-linux-android')
             mkdir -p "$BUILD_DIR/jni/x86_64"
-            case $mode in
+            case $build_type in
               'release')
                 cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-                cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/x86_64/"
+#                cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/x86_64/"
                 ;;
               *)
                 cargo build --target $target --manifest-path "$BASE/Cargo.toml"
-                cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/x86_64/"
                 ;;
             esac
+            cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/x86_64/"
             ;;
         'aarch64-linux-android')
             mkdir -p "$BUILD_DIR/jni/arm64-v8a"
-            case $mode in
+            case $build_type in
               'release')
                 cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-                cp "$PROJECT_BASE/target/$target/release/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
+#                cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
                 ;;
               *)
                 cargo build --target $target --manifest-path "$BASE/Cargo.toml"
-                cp "$PROJECT_BASE/target/$target/debug/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
                 ;;
             esac
+            cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
 			      ;;
         *)
             echo "Unknown target $target"
