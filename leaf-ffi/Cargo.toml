@@ -18,7 +18,6 @@ default-ring = [
     "leaf/default-ring",
 
     # MARKER BEGIN
-#    "stats",
     "callback",
     # MARKER- END
 ]
@@ -27,7 +26,6 @@ default-openssl = [
     "leaf/default-openssl",
 
     # MARKER BEGIN
-#    "stats",
     "callback",
     # MARKER- END
 ]
@@ -35,7 +33,6 @@ default-openssl = [
 auto-reload = ["leaf/auto-reload"]
 
 # MARKER BEGIN
-#stats = ["leaf/stats"]
 callback = ["leaf/callback"]
 # MARKER- END
 

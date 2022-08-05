@@ -71,7 +71,6 @@ all-endpoints = [
     "outbound-chain",
     # "outbound-select",
 
-#    "stats", # MARKER BEGIN - END
     "callback", # MARKER BEGIN - END
 ]
 

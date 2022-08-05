@@ -38,13 +38,12 @@ default = [
     # quinn supports only rustls as tls backend for now
 #    "leaf/inbound-quic",
 #    "leaf/outbound-quic",
+    "leaf/stat",
     "auto-reload",
-#    "stats",
     "callback",
 ]
 
 auto-reload = ["leaf/auto-reload"]
-#stats = ["leaf/stats"]
 callback = ["leaf/callback"]
 
 [dependencies]
