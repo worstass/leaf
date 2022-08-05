@@ -25,8 +25,8 @@ fi
 api=30
 ndk_version=22.1.7171670
 
-api=33
-ndk_version=25.0.8775105
+#api=33
+#ndk_version=25.0.8775105
 
 android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
 
