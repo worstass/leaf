@@ -14,7 +14,7 @@ use log::*;
 use rand::Rng;
 
 use crate::{Runner, RuntimeId};
-// use crate::app::stats::Stats;
+use crate::app::stat::Stats;
 
 lazy_static! {
     pub static ref CALLBACKS: Mutex<Arc<HashMap<RuntimeId, Box<dyn Callback>>>> =
@@ -53,7 +53,7 @@ impl Callback for ConsoleCallback {
     }
 }
 
-pub fn fake_callback_runner(cb: Box<dyn Callback>) -> Runner {
+pub fn fake_callback_runner(cb: Arc<Box<dyn Callback>>) -> Runner {
     Box::pin(async move {
         let mut up_total = 0;
         let mut down_total = 0;
@@ -75,26 +75,26 @@ pub fn fake_callback_runner(cb: Box<dyn Callback>) -> Runner {
     })
 }
 
-// pub fn stats_callback_runner(cb: Arc<Box<dyn Callback>>, stats: Arc<Stats>) -> Runner {
-//     Box::pin(async move {
-//         let mut last_up_total = 0;
-//         let mut last_down_total = 0;
-//         let mut end = std::time::Instant::now();
-//         loop {
-//             tokio::time::sleep(Duration::from_secs(1)).await;
-//             let begin = std::time::Instant::now();
-//             let elapsed = begin - end;
-//             let mut rng = rand::thread_rng();
-//             let up_total = (&stats.uplink_counter.clone().amt).load(Ordering::Acquire);
-//             let down_total = (&stats.downlink_counter.clone().amt).load(Ordering::Acquire);
-//             let mut up = up_total - last_up_total;
-//             let mut down = down_total - last_down_total;
-//             let up_rate = (up as f32) / (elapsed.as_secs() as f32);
-//             let down_rate = (down as f32) / (elapsed.as_secs() as f32);
-//             last_up_total = up_total;
-//             last_down_total = down_total;
-//             cb.report_traffic(up_rate, down_rate, up_total, down_total);
-//             end = begin;
-//         }
-//     })
-// }
+pub fn stat_callback_runner(cb: Arc<Box<dyn Callback>>, stats: Arc<Stats>) -> Runner {
+    Box::pin(async move {
+        let mut last_up_total = 0;
+        let mut last_down_total = 0;
+        let mut end = std::time::Instant::now();
+        loop {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            let begin = std::time::Instant::now();
+            let elapsed = begin - end;
+            let mut rng = rand::thread_rng();
+            let up_total = (&stats.uplink_counter.clone().amt).load(Ordering::Acquire);
+            let down_total = (&stats.downlink_counter.clone().amt).load(Ordering::Acquire);
+            let mut up = up_total - last_up_total;
+            let mut down = down_total - last_down_total;
+            let up_rate = (up as f32) / (elapsed.as_secs() as f32);
+            let down_rate = (down as f32) / (elapsed.as_secs() as f32);
+            last_up_total = up_total;
+            last_down_total = down_total;
+            cb.report_traffic(up_rate, down_rate, up_total, down_total);
+            end = begin;
+        }
+    })
+}

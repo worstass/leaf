@@ -9,7 +9,7 @@ use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 // MARKER BEGIN
 use std::sync::Arc;
-#[cfg(feature = "stats")] use crate::app::stats::Stats;
+#[cfg(feature = "stat")] use crate::app::stat::Stats;
 // MARKER END
 
 #[derive(Debug)]
@@ -141,7 +141,7 @@ struct CopyBidirectional<'a, A: ?Sized, B: ?Sized> {
     b_to_a_delay: Option<Pin<Box<tokio::time::Sleep>>>,
     a_to_b_timeout_duration: Duration,
     b_to_a_timeout_duration: Duration,
-    // #[cfg(feature = "stats")] stats: Option<Arc<Stats>>, // MARKER BEGIN - END
+    #[cfg(feature = "stat")] stats: Option<Arc<Stats>>, // MARKER BEGIN - END
 }
 
 impl<'a, A, B> Future for CopyBidirectional<'a, A, B>
@@ -164,7 +164,7 @@ where
             b_to_a_delay,
             a_to_b_timeout_duration,
             b_to_a_timeout_duration,
-            // #[cfg(feature = "stats")] stats, // MARKER BEGIN - END
+            #[cfg(feature = "stat")] stats, // MARKER BEGIN - END
         } = &mut *self;
 
         let mut a = Pin::new(a);
@@ -177,12 +177,12 @@ where
                     match res {
                         Poll::Ready(Ok(count)) => {
                             *a_to_b = TransferState::ShuttingDown(count);
-                            // // MARKER BEGIN
-                            // if let Some(s) = stats.clone() {
-                            //    let mut cntr = s.uplink_counter.clone();
-                            //    (*cntr).amt.fetch_add(count as u64, std::sync::atomic::Ordering::SeqCst);
-                            // }
-                            // // MARKER END
+                            // MARKER BEGIN
+                            if let Some(s) = stats.clone() {
+                               let mut cntr = s.uplink_counter.clone();
+                               (*cntr).amt.fetch_add(count as u64, std::sync::atomic::Ordering::SeqCst);
+                            }
+                            // MARKER END
                             continue;
                         }
                         Poll::Ready(Err(err)) => return Poll::Ready(Err(err)),
@@ -223,12 +223,12 @@ where
                     match res {
                         Poll::Ready(Ok(count)) => {
                             *b_to_a = TransferState::ShuttingDown(count);
-                            // // MARKER BEGIN
-                            // if let Some(s) = stats.clone() {
-                            //     let mut cntr = s.downlink_counter.clone();
-                            //     (*cntr).amt.fetch_add(count as u64, std::sync::atomic::Ordering::SeqCst);
-                            // }
-                            // // MARKER END
+                            // MARKER BEGIN
+                            if let Some(s) = stats.clone() {
+                                let mut cntr = s.downlink_counter.clone();
+                                (*cntr).amt.fetch_add(count as u64, std::sync::atomic::Ordering::SeqCst);
+                            }
+                            // MARKER END
                             continue;
                         }
                         Poll::Ready(Err(err)) => return Poll::Ready(Err(err)),
@@ -279,7 +279,7 @@ pub async fn copy_buf_bidirectional_with_timeout<A, B>(
     size: usize,
     a_to_b_timeout_duration: Duration,
     b_to_a_timeout_duration: Duration,
-    // #[cfg(feature = "stats")] stats: Option<Arc<Stats>>, // MARKER BEGIN - END
+    #[cfg(feature = "stat")] stats: Option<Arc<Stats>>, // MARKER BEGIN - END
 ) -> Result<(u64, u64), std::io::Error>
 where
     A: AsyncRead + AsyncWrite + Unpin + ?Sized,
@@ -296,7 +296,7 @@ where
         b_to_a_delay: None,
         a_to_b_timeout_duration,
         b_to_a_timeout_duration,
-        // #[cfg(feature = "stats")] stats, // MARKER BEGIN - END
+        #[cfg(feature = "stat")] stats, // MARKER BEGIN - END
     }
     .await
 }

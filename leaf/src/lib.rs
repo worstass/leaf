@@ -49,7 +49,7 @@ mod sys;
 #[cfg(feature = "callback")]
 use callback::{
     Callback,
-    fake_callback_runner
+    fake_callback_runner, stat_callback_runner,
 };
 use crate::callback::{ConsoleCallback, STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, STATE_LOCAL_STOPPED, STATE_LOCAL_STOPPING,
                       // stats_callback_runner
@@ -434,7 +434,8 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         dns_client.clone(),
     )));
     // MARKER BEGIN
-    // let stats = Arc::new(crate::app::stats::Stats::new());
+    #[cfg(feature = "stat")]
+    let stats = Arc::new(crate::app::stat::Stats::new());
     // MARKER END
     #[cfg(feature = "stat")]
     let stat_manager = Arc::new(RwLock::new(StatManager::new()));
@@ -444,7 +445,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         outbound_manager.clone(),
         router.clone(),
         dns_client.clone(),
-        // stats.clone(), // MARKER BEGIN -  END
+        #[cfg(feature = "stat")] stats.clone(), // MARKER BEGIN -  END
         #[cfg(feature = "stat")]
         stat_manager.clone(),
     ));
@@ -511,7 +512,9 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     #[cfg(feature = "callback")]
     if let Some(ref _cb) = cb {
-        // runners.push(stats_callback_runner(_cb.clone(), stats));
+        // runners.push(fake_callback_runner(_cb.clone()));
+        runners.push(stat_callback_runner(_cb.clone(), stats.clone()));
+
     }
     // MARKER END
 

@@ -8,7 +8,7 @@ use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
 
-#[cfg(feature = "stats")] use super::stats::Stats; // MARKER BEGIN - END
+#[cfg(feature = "stat")] use super::stat::Stats; // MARKER BEGIN - END
 
 use crate::{
     app::SyncDnsClient,
@@ -58,7 +58,7 @@ pub struct Dispatcher {
     outbound_manager: Arc<RwLock<OutboundManager>>,
     router: Arc<RwLock<Router>>,
     dns_client: SyncDnsClient,
-    // #[cfg(feature = "stats")] stats: Arc<Stats>, // MARKER BEGIN - END
+    #[cfg(feature = "stat")] stats: Arc<Stats>, // MARKER BEGIN - END
     #[cfg(feature = "stat")]
     stat_manager: SyncStatManager,
 }
@@ -68,14 +68,14 @@ impl Dispatcher {
         outbound_manager: Arc<RwLock<OutboundManager>>,
         router: Arc<RwLock<Router>>,
         dns_client: SyncDnsClient,
-        // #[cfg(feature = "stats")] stats: Arc<Stats>, // MARKER BEGIN - END
+        #[cfg(feature = "stat")] stats: Arc<Stats>, // MARKER BEGIN - END
         #[cfg(feature = "stat")] stat_manager: SyncStatManager,
     ) -> Self {
         Dispatcher {
             outbound_manager,
             router,
             dns_client,
-            // #[cfg(feature = "stats")] stats, // MARKER BEGIN - END,
+            #[cfg(feature = "stat")] stats, // MARKER BEGIN - END,
             #[cfg(feature = "stat")]
             stat_manager,
         }
@@ -248,7 +248,7 @@ impl Dispatcher {
                     *option::LINK_BUFFER_SIZE * 1024,
                     Duration::from_secs(*option::TCP_UPLINK_TIMEOUT),
                     Duration::from_secs(*option::TCP_DOWNLINK_TIMEOUT),
-                    // #[cfg(feature = "stats")] Some(self.stats.clone()), // MARKER BEGIN - END
+                    #[cfg(feature = "stat")] Some(self.stats.clone()), // MARKER BEGIN - END
                 )
                     .await
                 {
