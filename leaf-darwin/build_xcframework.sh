@@ -9,7 +9,7 @@ realpath() {
 BASE=`dirname "$0"`
 PROJECT_BASE=`realpath $BASE/..`
 if [ -n "$CONFIGURATION" ]; then CONFIG=$CONFIGURATION; else CONFIG="Debug"; fi
-OUTPUT_DIR="${PROJECT_BASE}/build/apple/${CONFIG}"
+OUTPUT_DIR="${PROJECT_BASE}/build/apple"
 mkdir -p ${OUTPUT_DIR}
 
 if [ "$CONFIG" == "Release" ]; then
