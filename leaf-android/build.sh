@@ -46,11 +46,10 @@ for target in x86_64-linux-android aarch64-linux-android; do
             mkdir -p "$BUILD_DIR/jni/x86_64"
             case $build_type in
               'release')
-                cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-#                cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/x86_64/"
+                cd $BASE && cargo build --target $target --release
                 ;;
               *)
-                cargo build --target $target --manifest-path "$BASE/Cargo.toml"
+                cd $BASE && cargo build --target $target
                 ;;
             esac
             cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/x86_64/"
@@ -59,11 +58,10 @@ for target in x86_64-linux-android aarch64-linux-android; do
             mkdir -p "$BUILD_DIR/jni/arm64-v8a"
             case $build_type in
               'release')
-                cargo build --target $target --manifest-path "$BASE/Cargo.toml" --release
-#                cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
+                cd $BASE && cargo build --target $target --release
                 ;;
               *)
-                cargo build --target $target --manifest-path "$BASE/Cargo.toml"
+                cd $BASE && cargo build --target $target
                 ;;
             esac
             cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"
@@ -74,7 +72,7 @@ for target in x86_64-linux-android aarch64-linux-android; do
     esac
 done
 
-javac "$BASE"/Leaf.java -d "$BUILD_DIR"
+javac $BASE/Leaf.java -d "$BUILD_DIR"
 pushd "$BUILD_DIR" > /dev/null
 jar cvf classes.jar leaf/*.class
 popd > /dev/null

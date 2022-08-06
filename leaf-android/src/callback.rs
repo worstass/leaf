@@ -2,6 +2,7 @@ use std::fmt::{Debug, Formatter};
 use jni::JNIEnv;
 use jni::objects::{GlobalRef, JObject};
 use leaf::callback::Callback;
+use crate::jint;
 
 pub struct JniCallback<'a> {
     env: JNIEnv<'a>,
@@ -29,7 +30,7 @@ unsafe impl<'a> Sync for JniCallback<'a> {}
 
 impl<'a> Callback for JniCallback<'a> {
     fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, tx_total: u64, rx_total: u64) {
-        self.env.call_method(self.obj, "reportTraffic", "(V)FFJJ", &[
+        self.env.call_method(self.obj, "reportTraffic", "(FFJJ)V", &[
             tx_rate.into(),
             rx_rate.into(),
             (tx_total as i64).into(),
@@ -38,8 +39,7 @@ impl<'a> Callback for JniCallback<'a> {
     }
 
     fn report_state(self: &Self, state: i32) {
-        self.env.call_method(self.obj, "reportState", "(V)I", &[
-            state.into(),
-        ]).unwrap();
+        let s: jint = state as jint;
+        self.env.call_method(self.obj, "reportState", "(I)V", &[s.into(), ]).unwrap();
     }
 }
