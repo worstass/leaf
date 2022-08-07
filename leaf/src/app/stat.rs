@@ -3,7 +3,7 @@ use std::io;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 
 use futures::ready;
 use tokio::io::{AsyncBufRead, AsyncWrite};
@@ -23,13 +23,13 @@ impl Stats {
 }
 
 pub struct Counter {
-    pub amt: AtomicU64,
+    pub amt: AtomicI64,
 }
 
 impl Counter {
     pub fn new() -> Self {
         return Self {
-            amt: AtomicU64::new(0),
+            amt: AtomicI64::new(0),
         };
     }
 }
@@ -37,7 +37,7 @@ impl Counter {
 struct CountedCopyBuf<'a, R: ?Sized, W: ?Sized> {
     reader: &'a mut R,
     writer: &'a mut W,
-    amt: u64,
+    amt: i64,
     cnt: Option<Arc<Counter>>,
 }
 
@@ -46,7 +46,7 @@ impl<R, W> Future for CountedCopyBuf<'_, R, W>
         R: AsyncBufRead + Unpin + ?Sized,
         W: AsyncWrite + Unpin + ?Sized,
 {
-    type Output = io::Result<u64>;
+    type Output = io::Result<i64>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
@@ -61,16 +61,16 @@ impl<R, W> Future for CountedCopyBuf<'_, R, W>
             if i == 0 {
                 return Poll::Ready(Err(std::io::ErrorKind::WriteZero.into()));
             }
-            self.amt += i as u64;
+            self.amt += i as i64;
             if let Some(s) = self.cnt.clone() {
-                (*s).amt.fetch_add(i as u64, Ordering::SeqCst);
+                (*s).amt.fetch_add(i as i64, Ordering::SeqCst);
             }
             Pin::new(&mut *self.reader).consume(i);
         }
     }
 }
 
-pub async fn copy_buf<'a, R, W>(reader: &'a mut R, writer: &'a mut W, cnt: Option<Arc<Counter>>) -> io::Result<u64>
+pub async fn copy_buf<'a, R, W>(reader: &'a mut R, writer: &'a mut W, cnt: Option<Arc<Counter>>) -> io::Result<i64>
     where
         R: AsyncBufRead + Unpin + ?Sized,
         W: AsyncWrite + Unpin + ?Sized,

@@ -3,7 +3,7 @@ use std::fmt::{Debug, Formatter};
 use std::mem::size_of;
 use leaf::callback::Callback as Inner;
 use std::option::Option;
-use std::os::raw::{c_float, c_ulonglong};
+use std::os::raw::{c_float, c_longlong};
 use std::ptr::null;
 use libc::{c_int, free};
 
@@ -12,8 +12,8 @@ pub struct Callback {
     report_traffic: Option<extern "C" fn(
         tx_rate: c_float,
         rx_rate: c_float,
-        tx_total: c_ulonglong,
-        rx_total: c_ulonglong,
+        tx_total: c_longlong,
+        rx_total: c_longlong,
     ) -> ()>,
     report_state: Option<extern "C" fn(
         state: c_int,
@@ -25,8 +25,8 @@ pub extern "C" fn create_callback(
     report_traffic: Option<extern "C" fn(
         tx_rate: c_float,
         rx_rate: c_float,
-        tx_total: c_ulonglong,
-        rx_total: c_ulonglong,
+        tx_total: c_longlong,
+        rx_total: c_longlong,
     ) -> ()>,
     report_state: Option<extern "C" fn(
         state: c_int,
@@ -63,10 +63,10 @@ unsafe impl Send for FfiCallback {}
 unsafe impl Sync for FfiCallback {}
 
 impl Inner for FfiCallback {
-    fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, rx_total: u64, tx_total: u64) {
+    fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, rx_total: i64, tx_total: i64) {
         unsafe {
             let f = (*self.inner).report_traffic.unwrap();
-            f(tx_rate as c_float, rx_rate as c_float, rx_total as c_ulonglong, tx_total as c_ulonglong);
+            f(tx_rate as c_float, rx_rate as c_float, rx_total as c_longlong, tx_total as c_longlong);
         }
     }
 

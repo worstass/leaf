@@ -180,7 +180,7 @@ where
                             // MARKER BEGIN
                             if let Some(s) = stats.clone() {
                                let mut cntr = s.uplink_counter.clone();
-                               (*cntr).amt.fetch_add(count as u64, std::sync::atomic::Ordering::SeqCst);
+                               (*cntr).amt.fetch_add(count as i64, std::sync::atomic::Ordering::SeqCst);
                             }
                             // MARKER END
                             continue;
@@ -226,7 +226,7 @@ where
                             // MARKER BEGIN
                             if let Some(s) = stats.clone() {
                                 let mut cntr = s.downlink_counter.clone();
-                                (*cntr).amt.fetch_add(count as u64, std::sync::atomic::Ordering::SeqCst);
+                                (*cntr).amt.fetch_add(count as i64, std::sync::atomic::Ordering::SeqCst);
                             }
                             // MARKER END
                             continue;
