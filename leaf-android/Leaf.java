@@ -2,7 +2,7 @@ package leaf;
 
 public class Leaf {
     public interface Callback {
-        void reportTraffic(float txRate, float rxRate, long txTotal, long rxTotal);
+        void reportTraffic(int txRate, int rxRate, long txTotal, long rxTotal);
         void reportState(int state);
     }
 

@@ -37,7 +37,7 @@ Direct = direct
         System.out.println("leaf state: %d".formatted(state));
     }
 
-    public void reportTraffic(float txRate, float rxRate, long txTotal, long rxTotal) {
-        System.out.println("txRate: %d, rxRate: $d, txTotal: %d, rxTotal: %d".formatted(txRate, rxRate, txTotal, rxTotal));
+    public void reportTraffic(int txRate, int rxRate, long txTotal, long rxTotal) {
+        System.out.println("txRate: %d, rxRate: %d, txTotal: %d, rxTotal: %d".formatted(txRate, rxRate, txTotal, rxTotal));
     }
 }
