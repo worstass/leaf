@@ -46,10 +46,10 @@ for target in x86_64-linux-android aarch64-linux-android; do
             mkdir -p "$BUILD_DIR/jni/x86_64"
             case $build_type in
               'release')
-                cd $BASE && cargo build --target $target --release
+                cd $BASE && cargo build --target $target --no-default-features --features "leaf/default-openssl,leaf/stat,callback,auto-reload" --release
                 ;;
               *)
-                cd $BASE && cargo build --target $target
+                cd $BASE && cargo build --target $target --no-default-features --features "leaf/default-openssl,leaf/stat,callback,auto-reload"
                 ;;
             esac
             cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/x86_64/"
@@ -58,10 +58,10 @@ for target in x86_64-linux-android aarch64-linux-android; do
             mkdir -p "$BUILD_DIR/jni/arm64-v8a"
             case $build_type in
               'release')
-                cd $BASE && cargo build --target $target --release
+                cd $BASE && cargo build --target $target --no-default-features --features "leaf/default-openssl,leaf/stat,callback,auto-reload" --release
                 ;;
               *)
-                cd $BASE && cargo build --target $target
+                cd $BASE && cargo build --target $target --no-default-features --features "leaf/default-openssl,leaf/stat,callback,auto-reload"
                 ;;
             esac
             cp "$PROJECT_BASE/target/$target/$build_type/libleaf.so" "$BUILD_DIR/jni/arm64-v8a/"

@@ -10,13 +10,16 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
         config::Log_Level::WARN => log::LevelFilter::Warn,
         config::Log_Level::ERROR => log::LevelFilter::Error,
     };
-
     let mut dispatch = fern::Dispatch::new()
         .format(move |out, message, record| {
             if *crate::option::LOG_NO_COLOR {
+                #[cfg(not(target_os = "android"))]
+                let d = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                #[cfg(target_os = "android")]
+                let d = "";
                 out.finish(format_args!(
                     "[{date}][{level}] {message}",
-                    date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                    date = d,
                     level = record.level(),
                     message = message,
                 ))
@@ -30,6 +33,10 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
                     .trace(Color::BrightBlack);
 
                 let colors_level = colors_line.info(Color::Green);
+                #[cfg(not(target_os = "android"))]
+                let d = chrono::Local::now().format("%Y-%m-%d %H:%M:%S");
+                #[cfg(target_os = "android")]
+                let d = "";
                 out.finish(format_args!(
                     // "{color_line}[{date}][{level}{color_line}][{target}] {message}\x1B[0m",
                     "{color_line}[{date}][{level}{color_line}] {message}\x1B[0m",
@@ -37,7 +44,7 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
                         "\x1B[{}m",
                         colors_line.get_color(&record.level()).to_fg_str()
                     ),
-                    date = chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
+                    date = d,
                     // target = record.target(),
                     level = colors_level.color(record.level()),
                     message = message,
