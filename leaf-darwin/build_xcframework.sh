@@ -39,12 +39,14 @@ echo -e "Building for iOS Simulator (Intel) [5/5]"
 cd $PROJECT_BASE/leaf-ffi && cargo build $cargo_build_flags --target "x86_64-apple-ios"
 
 echo -e "\nCreating XCFramework"
-# MacOS
-lipo -create \
-  "${PROJECT_BASE}/target/x86_64-apple-darwin/${build_type}/libleaf.a" \
-  "${PROJECT_BASE}/target/aarch64-apple-darwin/${build_type}/libleaf.a" \
-  -output "${OUTPUT_DIR}/libleaf_macos.a"
-lipo -info "${OUTPUT_DIR}/libleaf_macos.a"
+# MacOS library
+for subfix in 'a' 'dylib'; do
+  lipo -create \
+    "${PROJECT_BASE}/target/x86_64-apple-darwin/${build_type}/libleaf.$subfix" \
+    "${PROJECT_BASE}/target/aarch64-apple-darwin/${build_type}/libleaf.$subfix" \
+    -output "${OUTPUT_DIR}/libleaf_macos.$subfix"
+  lipo -info "${OUTPUT_DIR}/libleaf_macos.$subfix"
+done
 
 # iOS Simulator
 lipo -create \
