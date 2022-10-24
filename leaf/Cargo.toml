@@ -145,6 +145,7 @@ socket2 = "0.4"
 directories = "4.0"
 async-ffi = "0.2"
 libloading = "0.7"
+async-recursion = "1.0"
 
 # config-json
 serde_json = { version = "1.0", features = ["raw_value"], optional = true }
@@ -237,7 +238,7 @@ notify = { version = "5.0.0-pre.13", optional = true }
 #tun = { git = "https://github.com/eycorsican/rust-tun.git", branch = "upgrade", features = ["async"], optional = true }
 [target.'cfg(any(target_os = "ios", target_os = "android", target_os = "macos", target_os = "linux", target_os = "windows"))'.dependencies]
 tun = { path = "../rust-tun", features = ["async"], optional = true }
-#netstack-lwip = { git = "https://github.com/eycorsican/netstack-lwip.git", tag = "v0.3.2", optional = true }
+#netstack-lwip = { git = "https://github.com/eycorsican/netstack-lwip.git", tag = "v0.3.3", optional = true }
 netstack-lwip = { path = "../netstack-lwip", optional = true }
 
 # MARKER BEGIN
