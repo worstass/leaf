@@ -34,7 +34,7 @@ use tun::{AsyncDevice, TunPacket, TunPacketCodec};
 use crate::app::nat_manager::UdpPacket;
 use crate::config::TunInboundSettings;
 
-use crate::config::PacketInboundSettings_Sink;
+// use crate::config::PacketInboundSettings_Sink;
 use crate::proxy::tun::netstack;
 use crate::session::{DatagramSource, Network, Session, SocksAddr};
 
