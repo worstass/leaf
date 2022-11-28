@@ -1,5 +1,5 @@
 import Foundation
-import LeafLib
+@_exported import LeafLib
 
 public func runWithOptions(
     rtId: UInt16,

@@ -7,15 +7,16 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		FA86CFB3289ADA200065A24A /* leaf-c.h in Headers */ = {isa = PBXBuildFile; fileRef = FA86CFB1289ADA200065A24A /* leaf-c.h */; };
-		FA86CFB4289ADA200065A24A /* leaf-c.h in Headers */ = {isa = PBXBuildFile; fileRef = FA86CFB1289ADA200065A24A /* leaf-c.h */; };
-		FA86CFB5289ADA200065A24A /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA86CFB2289ADA200065A24A /* leaf.swift */; };
-		FA86CFB6289ADA200065A24A /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA86CFB2289ADA200065A24A /* leaf.swift */; };
+		FA25449229350ECA000BFCCE /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA25449129350EC0000BFCCE /* leaf.swift */; };
+		FA25449329350ECB000BFCCE /* leaf.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA25449129350EC0000BFCCE /* leaf.swift */; };
+		FA86CFB3289ADA200065A24A /* leaf-c.h in Headers */ = {isa = PBXBuildFile; fileRef = FA86CFB1289ADA200065A24A /* leaf-c.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		FA86CFB4289ADA200065A24A /* leaf-c.h in Headers */ = {isa = PBXBuildFile; fileRef = FA86CFB1289ADA200065A24A /* leaf-c.h */; settings = {ATTRIBUTES = (Public, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		FA2544102934F8A8000BFCCE /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		FA25449129350EC0000BFCCE /* leaf.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = leaf.swift; sourceTree = "<group>"; };
 		FA86CFB1289ADA200065A24A /* leaf-c.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "leaf-c.h"; sourceTree = "<group>"; };
-		FA86CFB2289ADA200065A24A /* leaf.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = leaf.swift; sourceTree = "<group>"; };
 		FADB37F9278477F3005A3852 /* leaf.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = leaf.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FADB380527847805005A3852 /* leaf.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = leaf.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		FADB381527848318005A3852 /* build.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = build.sh; sourceTree = "<group>"; };
@@ -44,8 +45,9 @@
 		FA59C32E2782EFBF0077B2EE = {
 			isa = PBXGroup;
 			children = (
+				FA25449129350EC0000BFCCE /* leaf.swift */,
+				FA2544102934F8A8000BFCCE /* module.modulemap */,
 				FA86CFB1289ADA200065A24A /* leaf-c.h */,
-				FA86CFB2289ADA200065A24A /* leaf.swift */,
 				FADB382827848BF8005A3852 /* configs */,
 				FADB381527848318005A3852 /* build.sh */,
 				FADB37F9278477F3005A3852 /* leaf.framework */,
@@ -260,7 +262,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FA86CFB5289ADA200065A24A /* leaf.swift in Sources */,
+				FA25449229350ECA000BFCCE /* leaf.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -268,7 +270,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				FA86CFB6289ADA200065A24A /* leaf.swift in Sources */,
+				FA25449329350ECB000BFCCE /* leaf.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
