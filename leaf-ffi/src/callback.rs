@@ -63,10 +63,10 @@ unsafe impl Send for FfiCallback {}
 unsafe impl Sync for FfiCallback {}
 
 impl Inner for FfiCallback {
-    fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, rx_total: u64, tx_total: u64) {
+    fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, tx_total: u64, rx_total: u64) {
         unsafe {
             let f = (*self.inner).report_traffic.unwrap();
-            f(tx_rate as c_float, rx_rate as c_float, rx_total as c_longlong, tx_total as c_longlong);
+            f(tx_rate as c_float, rx_rate as c_float, tx_total as c_longlong, rx_total as c_longlong);
         }
     }
 
