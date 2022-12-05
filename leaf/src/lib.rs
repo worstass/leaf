@@ -49,7 +49,7 @@ mod sys;
 #[cfg(feature = "callback")]
 use callback::{
     Callback,
-    fake_callback_runner, stat_callback_runner,
+    stat_callback_runner,
 };
 use crate::callback::{ConsoleCallback, STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, STATE_LOCAL_STOPPED, STATE_LOCAL_STOPPING,
                       // stats_callback_runner
@@ -522,7 +522,6 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     #[cfg(feature = "callback")]
     if let Some(ref _cb) = cb {
-        // runners.push(fake_callback_runner(_cb.clone()));
         runners.push(stat_callback_runner(_cb.clone(), stats.clone()));
 
     }

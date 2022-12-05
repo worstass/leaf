@@ -61,7 +61,7 @@ impl InboundStreamHandler for Handler {
         &'a self,
         mut sess: Session,
         stream: Box<dyn ProxyStream>,
-    ) -> std::io::Result<InboundTransport<AnyStream, AnyInboundDatagram>> {
+    ) -> std::io::Result<AnyInboundTransport> {
         let http = Http::new();
         let proxy_service = ProxyService::new();
         let conn = http
@@ -101,10 +101,6 @@ impl InboundStreamHandler for Handler {
 
         sess.destination = destination;
 
-        Ok(InboundTransport::Stream(
-            // Box::new(SimpleProxyStream(parts.io)),
-            Box::new(BufHeadProxyStream::new(parts.io, bytes::Bytes::new())), // MARKER BEGIN - END
-            sess,
-        ))
+        Ok(InboundTransport::Stream(Box::new(parts.io), sess))
     }
 }
