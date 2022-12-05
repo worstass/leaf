@@ -73,6 +73,7 @@ pub struct Proxy {
     pub tls_cert: Option<String>,
     pub ws_path: Option<String>,
     pub ws_host: Option<String>,
+    pub alpn: Option<String>, // MARKER BEGIN - END
 
     // trojan
     pub sni: Option<String>,
@@ -102,6 +103,7 @@ impl Default for Proxy {
             tls_cert: None,
             ws_path: None,
             ws_host: None,
+            alpn: None, // MARKER BEGIN - END
             sni: None,
             username: None,
             amux: Some(false),
@@ -397,6 +399,7 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
                 "password" => {
                     proxy.password = Some(v.to_string());
                 }
+                "alpn" => proxy.alpn = Some(v.to_string()), // MARKER BEGIN - END
                 "ws" => proxy.ws = if v == "true" { Some(true) } else { Some(false) },
                 "tls" => proxy.tls = if v == "true" { Some(true) } else { Some(false) },
                 "tls-cert" => {
@@ -954,6 +957,11 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                             tls_settings.certificate = path;
                         }
                     }
+                    // MARKER BEGIN
+                    if let Some(ext_alpn) = &ext_proxy.alpn {
+                        tls_settings.alpn = vec![ext_alpn.clone()];
+                    }
+                    // MARKER END
                     let tls_settings = tls_settings.write_to_bytes().unwrap();
                     tls_outbound.settings = tls_settings;
                     tls_outbound.tag = format!("{}_tls_xxx", ext_proxy.tag.clone());
