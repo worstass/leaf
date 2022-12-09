@@ -45,11 +45,11 @@ impl ConsoleCallback {
 
 impl Callback for ConsoleCallback {
     fn report_traffic(self: &Self, tx_rate: f32, rx_rate: f32, rx_total: u64, tx_total: u64) {
-        info!("traffic: up_rate: {} down_rate {} up_total: {} down_total {}", tx_rate, rx_rate, rx_total, tx_total);
+        debug!("traffic: up_rate: {} down_rate {} up_total: {} down_total {}", tx_rate, rx_rate, rx_total, tx_total);
     }
 
     fn report_state(self: &Self, state: i32) {
-        info!("engine state: {}", state)
+        debug!("engine state: {}", state)
     }
 }
 

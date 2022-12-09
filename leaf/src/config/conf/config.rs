@@ -10,6 +10,8 @@ use regex::Regex;
 
 use crate::config::{external_rule, internal, packet_inbound_settings};
 
+use super::extra; // MARKER BEGIN - END
+
 #[derive(Debug, Default)]
 pub struct Tun {
     pub name: Option<String>,
@@ -399,7 +401,6 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
                 "password" => {
                     proxy.password = Some(v.to_string());
                 }
-                "alpn" => proxy.alpn = Some(v.to_string()), // MARKER BEGIN - END
                 "ws" => proxy.ws = if v == "true" { Some(true) } else { Some(false) },
                 "tls" => proxy.tls = if v == "true" { Some(true) } else { Some(false) },
                 "tls-cert" => {
@@ -938,6 +939,11 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
                     outbounds.push(outbound);
+
+                    // MARKER BEGIN
+                    outbounds.pop();
+                    extra::ss_reconfigure(ext_proxy, ext_protocol, &mut outbounds);
+                    // MARKER END
                 }
                 "trojan" => {
                     // tls
@@ -957,11 +963,6 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                             tls_settings.certificate = path;
                         }
                     }
-                    // MARKER BEGIN
-                    if let Some(ext_alpn) = &ext_proxy.alpn {
-                        tls_settings.alpn = vec![ext_alpn.clone()];
-                    }
-                    // MARKER END
                     let tls_settings = tls_settings.write_to_bytes().unwrap();
                     tls_outbound.settings = tls_settings;
                     tls_outbound.tag = format!("{}_tls_xxx", ext_proxy.tag.clone());
