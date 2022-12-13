@@ -13,6 +13,7 @@
       <sourceFolder url="file://$MODULE_DIR$/leaf/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/rust-tun/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/rust-tun/src" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/netstack-lwip/src" isTestSource="false" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />
