@@ -220,7 +220,7 @@ pub fn new(
                     futs.push(Box::pin(async move {
                         while let Some(pkt) = stack_stream.next().await {
                             if let Ok(pkt) = pkt {
-                                debug!("stack->tcp:{:02X?}", &pkt[..]);
+                                trace!("stack->tcp:{:02X?}", &pkt[..]);
                                 match stream_writer.write(&pkt[..]).await {
                                     Ok(_) => (),
                                     Err(e) => {
@@ -264,7 +264,7 @@ pub fn new(
                                                 return;
                                             }
                                             let pkt = [&packet_header_buf[..], &packet_buf[..n]].concat();
-                                            debug!("tcp->stack:{:02X?}", &pkt[..]);
+                                            trace!("tcp->stack:{:02X?}", &pkt[..]);
                                             match stack_sink.send(pkt).await {
                                                 Ok(_) => {}
                                                 Err(e) => {
