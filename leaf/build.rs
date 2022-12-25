@@ -43,6 +43,13 @@ fn generate_mobile_bindings() {
 }
 
 fn main() {
+    #[cfg(any(
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "tvos",
+        target_os = "watchos"
+    ))]
+    println!("cargo:rustc-link-lib=framework=Foundation");
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     if os == "ios" || os == "macos" || os == "android" {
         generate_mobile_bindings();

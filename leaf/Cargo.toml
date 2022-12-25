@@ -244,7 +244,7 @@ netstack-lwip = { path = "../netstack-lwip", optional = true }
 # MARKER BEGIN
 # Packet
 #smoltcp = "0.8.0"
-[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+[target.'cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))'.dependencies]
 net-route = "0.2"
 # MARKER END
 

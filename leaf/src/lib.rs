@@ -44,8 +44,6 @@ pub mod mobile;
 // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
 #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux", target_os = "windows")))]
 mod sys;
-#[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-mod extra;
 
 #[cfg(feature = "callback")] pub mod callback; // MARKER BEGIN - END
 #[cfg(feature = "callback")]
