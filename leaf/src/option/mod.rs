@@ -154,6 +154,7 @@ lazy_static! {
         get_env_var_or_else("ASSET_LOCATION", || {
             let mut file = std::env::current_exe().unwrap();
             file.pop();
+            #[cfg(target_os = "macos")] file.push("Resources"); // MARKER BEGIN - END
             file.to_str().unwrap().to_string()
         })
     };

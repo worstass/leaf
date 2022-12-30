@@ -8,6 +8,7 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use lazy_static::lazy_static;
+use log::info;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
@@ -51,10 +52,16 @@ use callback::{
     Callback,
     stat_callback_runner,
 };
-use crate::callback::{ConsoleCallback, STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, STATE_LOCAL_STOPPED, STATE_LOCAL_STOPPING,
-                      // stats_callback_runner
+#[cfg(feature = "callback")]
+use crate::callback::{
+    ConsoleCallback,
+    STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, STATE_LOCAL_STOPPED, STATE_LOCAL_STOPPING,
 };
-// MARKER BEGIN - END
+use crate::config::external_rule::load_file_or_default;
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+mod nslog;
+// MARKER END
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -378,20 +385,6 @@ pub struct StartOptions {
 
 pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     println!("start with options:\n{:#?}", opts);
-    // MARKER BEGIN
-    #[cfg(feature = "callback")]
-    let cb = match opts.callback {
-        None => {
-            let _cb: Box<dyn Callback> = Box::new(ConsoleCallback::new());
-            Some(Arc::new(_cb))
-        },
-        Some(_cb) => Some(Arc::new(_cb)),
-    };
-    #[cfg(feature = "callback")]
-    if let Some(ref _cb) = cb {
-        _cb.clone().report_state(STATE_LOCAL_STARTING)
-    }
-    // MARKER END
     let (reload_tx, mut reload_rx) = mpsc::channel(1);
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
 
@@ -416,6 +409,30 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     ONCE.call_once(move || {
         app::logger::setup_logger(log).expect("setup logger failed");
     });
+
+    // MARKER BEGIN
+    let b = std::env::current_exe().unwrap().to_str().unwrap().to_string();
+    info!("current_exe: {}", b);
+    match load_file_or_default("site:geolocation-!cn", "geo.mmdb") {
+        Ok(_) => {
+            info!("load geo file ok")
+        }
+        Err(_) => {
+            info!("load geo file error")
+        }
+    }
+
+    #[cfg(feature = "callback")]
+    let cb = match opts.callback {
+        None => {
+            let _cb: Box<dyn Callback> = Box::new(ConsoleCallback::new());
+            Arc::new(_cb)
+        },
+        Some(_cb) => Arc::new(_cb),
+    };
+    #[cfg(feature = "callback")]
+    cb.report_state(STATE_LOCAL_STARTING);
+    // MARKER END
 
     let rt = new_runtime(&opts.runtime_opt)?;
     let _g = rt.enter();
@@ -519,9 +536,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     }
 
     #[cfg(feature = "callback")]
-    if let Some(ref _cb) = cb {
-        runners.push(stat_callback_runner(_cb.clone(), stats.clone()));
-    }
+    runners.push(stat_callback_runner(cb.clone(), stats.clone()));
     // MARKER END
 
     let runtime_manager = RuntimeManager::new(
@@ -607,17 +622,13 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     #[cfg(feature = "callback")]
-    if let Some(ref _cb) = cb {
-        _cb.clone().report_state(STATE_LOCAL_STARTED)
-    }
+    cb.report_state(STATE_LOCAL_STARTED);
     // MARKER END
     rt.block_on(futures::future::select_all(tasks));
 
     // MARKER BEGIN
     #[cfg(feature = "callback")]
-    if let Some(ref _cb) = cb {
-        _cb.clone().report_state(STATE_LOCAL_STOPPING)
-    }
+    cb.report_state(STATE_LOCAL_STOPPING);
     // MARKER END
 
     // MARKER BEGIN
@@ -639,9 +650,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     // MARKER BEGIN
     #[cfg(feature = "callback")]
-    if let Some(ref _cb) = cb {
-        _cb.clone().report_state(STATE_LOCAL_STOPPED)
-    }
+    cb.report_state(STATE_LOCAL_STOPPED);
     // MARKER END
 
     Ok(())

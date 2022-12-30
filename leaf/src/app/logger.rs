@@ -78,6 +78,13 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
                 );
                 dispatch = dispatch.chain(console_output);
             }
+            #[cfg(any(target_os = "ios", target_os = "macos"))]
+            {
+                dispatch = dispatch.chain(fern::Output::writer(
+                    Box::new(crate::nslog::NsLogWriter::default()),
+                    "\n",
+                ))
+            }
         }
         config::log::Output::FILE => {
             let f = fern::log_file(&config.output_file)?;

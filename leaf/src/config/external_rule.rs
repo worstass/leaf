@@ -95,7 +95,7 @@ pub fn add_external_rule(rule: &mut internal::router::Rule, ext_external: &str) 
                     domain_rule.value = value;
                     rule.domains.push(domain_rule);
                 }
-                println!(
+                log::info!(
                     "loaded {} domain rules from [{}] for tag [{}]",
                     rule.domains.len(),
                     file,
