@@ -792,6 +792,7 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
             if let Some(ext_type) = &ext_packet.r#type {
                 settings.sink = match ext_type.as_str() {
                     "tcp" => packet_inbound_settings::Sink::TCP.into(),
+                    "udp" => packet_inbound_settings::Sink::UDP.into(),
                     "fd"  => packet_inbound_settings::Sink::FD.into(),
                     "pipe"  => packet_inbound_settings::Sink::PIPE.into(),
                     _ =>  packet_inbound_settings::Sink::PIPE.into(),
