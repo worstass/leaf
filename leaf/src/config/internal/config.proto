@@ -78,7 +78,8 @@ message PacketInboundSettings {
 	enum Sink {
 		FD = 0;
 		TCP = 1;
-		PIPE = 2;
+		UDP = 2;
+		PIPE = 3;
 	}
 	Sink sink = 1;
 	int32 fd = 2;
