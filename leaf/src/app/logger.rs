@@ -80,10 +80,10 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
             }
             #[cfg(any(target_os = "ios", target_os = "macos"))]
             {
-                dispatch = dispatch.chain(fern::Output::writer(
-                    Box::new(crate::nslog::NsLogWriter::default()),
-                    "\n",
-                ))
+                // dispatch = dispatch.chain(fern::Output::writer(
+                //     Box::new(crate::nslog::NsLogWriter::default()),
+                //     "\n",
+                // ))
             }
         }
         config::log::Output::FILE => {

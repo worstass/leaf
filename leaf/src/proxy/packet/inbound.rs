@@ -88,7 +88,8 @@ async fn handle_inbound_datagram(
     let ls = Arc::new(ls);
 
     // The channel for sending back datagrams from NAT manager to netstack.
-    let (l_tx, mut l_rx): (TokioSender<UdpPacket>, TokioReceiver<UdpPacket>) = tokio_channel(32);
+    let (l_tx, mut l_rx): (TokioSender<UdpPacket>, TokioReceiver<UdpPacket>) =
+        tokio_channel(*crate::option::UDP_DOWNLINK_CHANNEL_SIZE);
 
     // Receive datagrams from NAT manager and send back to netstack.
     let fakedns_cloned = fakedns.clone();
@@ -215,7 +216,10 @@ pub fn new(
                             let dispatcher = dispatcher.clone();
                             let nat_manager = nat_manager.clone();
                             let inbound_tag = inbound.clone().tag;
-                            let (stack, mut tcp_listener, udp_socket) = NetStack::new();
+                            let (stack, mut tcp_listener, udp_socket) = NetStack::with_buffer_size(
+                                *crate::option::NETSTACK_OUTPUT_CHANNEL_SIZE,
+                                *crate::option::NETSTACK_UDP_UPLINK_CHANNEL_SIZE,
+                            );
                             let (mut stack_sink, mut stack_stream) = stack.split();
                             let mtu = 1512;
                             let (mut stream_reader, mut stream_writer) = stream.split();
@@ -223,7 +227,8 @@ pub fn new(
                             futs.push(Box::pin(async move {
                                 while let Some(pkt) = stack_stream.next().await {
                                     if let Ok(pkt) = pkt {
-                                        trace!("stack->tcp:{:02X?}", &pkt[..]);
+                                        // trace!("stack->tcp:{:02X?}", &pkt[..]);
+                                        debug!("stack->tcp: {} bytes", pkt.len());
                                         match stream_writer.write(&pkt[..]).await {
                                             Ok(_) => (),
                                             Err(e) => {
@@ -267,7 +272,8 @@ pub fn new(
                                                         return;
                                                     }
                                                     let pkt = [&packet_header_buf[..], &packet_buf[..n]].concat();
-                                                    trace!("tcp->stack:{:02X?}", &pkt[..]);
+                                                    // trace!("tcp->stack:{:02X?}", &pkt[..]);
+                                                    debug!("tcp->stack: {} bytes", pkt.len());
                                                     match stack_sink.send(pkt).await {
                                                         Ok(_) => {}
                                                         Err(e) => {
@@ -346,7 +352,8 @@ pub fn new(
                     futs.push(Box::pin(async move {
                         while let Some(pkt) = stack_stream.next().await {
                             if let Ok(pkt) = pkt {
-                                trace!("stack->udp:{:02X?}", &pkt[..]);
+                                // trace!("stack->udp:{:02X?}", &pkt[..]);
+                                debug!("stack->udp: {} bytes", pkt.len());
                                 match s.send(&pkt[..]).await {
                                     Ok(_) => (),
                                     Err(e) => {
@@ -364,7 +371,8 @@ pub fn new(
                             match r.recv(&mut packet_buf).await {
                                 Ok(n) => {
                                     let pkt = [&packet_buf[..n]].concat();
-                                    trace!("udp->stack:{:02X?}", &pkt[..]);
+                                    // trace!("udp->stack:{:02X?}", &pkt[..]);
+                                    debug!("udp->stack: {} bytes", pkt.len());
                                     match stack_sink.send(pkt).await {
                                         Ok(_) => {}
                                         Err(e) => {
