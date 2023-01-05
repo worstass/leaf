@@ -58,7 +58,7 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
 
     match config.output.unwrap() {
         config::log::Output::CONSOLE => {
-            #[cfg(any(target_os = "ios", target_os = "android"))]
+            #[cfg(any(target_os = "ios", target_os = "android", target_os = "macos"))] // MARKER BEGIN - END
             {
                 let console_output = fern::Output::writer(
                     Box::new(crate::mobile::logger::ConsoleWriter::default()),
@@ -66,7 +66,7 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
                 );
                 dispatch = dispatch.chain(console_output);
             }
-            #[cfg(not(any(target_os = "ios", target_os = "android")))]
+            #[cfg(not(any(target_os = "ios", target_os = "android", target_os = "macos")))] // MARKER BEGIN - END
             {
                 dispatch = dispatch.chain(fern::Output::stdout("\n"));
             }
@@ -77,13 +77,6 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
                     "\n",
                 );
                 dispatch = dispatch.chain(console_output);
-            }
-            #[cfg(any(target_os = "ios", target_os = "macos"))]
-            {
-                // dispatch = dispatch.chain(fern::Output::writer(
-                //     Box::new(crate::nslog::NsLogWriter::default()),
-                //     "\n",
-                // ))
             }
         }
         config::log::Output::FILE => {

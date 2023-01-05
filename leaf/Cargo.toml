@@ -246,10 +246,6 @@ netstack-lwip = { path = "../netstack-lwip", optional = true }
 #smoltcp = "0.8.0"
 [target.'cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))'.dependencies]
 net-route = "0.2"
-[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
-rust-macios = "0.4.1"
-objc = "0.2.7"
-objc_id = "0.1.1"
 # MARKER END
 
 #[target.'cfg(any(target_os = "macos", target_os = "linux"))'.dependencies]

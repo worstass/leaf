@@ -58,9 +58,6 @@ use crate::callback::{
     STATE_LOCAL_STARTED, STATE_LOCAL_STARTING, STATE_LOCAL_STOPPED, STATE_LOCAL_STOPPING,
 };
 use crate::config::external_rule::load_file_or_default;
-
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-mod nslog;
 // MARKER END
 
 #[derive(Error, Debug)]
