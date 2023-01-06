@@ -10,12 +10,18 @@ fn get_cache_file_path() -> Result<PathBuf> {
     let cache_loc = if !(&*crate::option::CACHE_LOCATION).is_empty() {
         Path::new(&*crate::option::CACHE_LOCATION).to_owned()
     } else {
+        // MARKER BEGIN
+        #[cfg(target_vendor = "uwp")]
+        return Err(anyhow!("no home directory"));
+        #[cfg(not(target_vendor = "uwp"))]
         let proj_dirs = if let Some(d) = directories::ProjectDirs::from("com", "github", "leaf") {
             d
         } else {
             return Err(anyhow!("no home directory"));
         };
+        #[cfg(not(target_vendor = "uwp"))]
         proj_dirs.cache_dir().to_owned()
+        // MARKER BEGIN
     };
     if !cache_loc.exists() {
         std::fs::create_dir_all(&cache_loc)?;
