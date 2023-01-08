@@ -79,9 +79,9 @@ pub extern "C" fn leaf_run_with_options(
             // MARKER BEGIN
             #[cfg(feature = "callback")]
             match callback {
-                Some(p)=> Some(Box::new(callback::FfiCallback::new(p))),
+                Some(p) => Some(Box::new(callback::FfiCallback::new(p))),
                 None => None
-            }, //Some(Box::new(callback::FfiCallback::new(callback))),
+            },
             // MARKER BEGIN
             #[cfg(feature = "auto-reload")]
             auto_reload,
@@ -114,10 +114,9 @@ pub extern "C" fn leaf_run(rt_id: u16, config_path: *const c_char, #[cfg(feature
             // MARKER BEGIN
             #[cfg(feature = "callback")]
             callback: match callback {
-                Some(p)=> Some(Box::new(callback::FfiCallback::new(p))),
+                Some(p) => Some(Box::new(callback::FfiCallback::new(p))),
                 None => None
             },
-         //   Some(Box::new(callback::FfiCallback::new(callback))),
             // MARKER END
             #[cfg(feature = "auto-reload")]
             auto_reload: false,
@@ -139,10 +138,10 @@ pub extern "C" fn leaf_run_with_config_string(rt_id: u16, config: *const c_char,
             config: leaf::Config::Str(config.to_string()),
             // MARKER BEGIN
             #[cfg(feature = "callback")]
-            callback:  match callback {
-                Some(p)=> Some(Box::new(callback::FfiCallback::new(p))),
+            callback: match callback {
+                Some(p) => Some(Box::new(callback::FfiCallback::new(p))),
                 None => None
-            },// Some(Box::new(callback::FfiCallback::new(callback))),
+            },
             // MARKER END
             #[cfg(feature = "auto-reload")]
             auto_reload: false,

@@ -53,7 +53,9 @@ typedef struct Callback {
   void (*report_state)(int state);
 } Callback;
 
+#ifdef __cplusplus
 extern "C" {
+#endif
     /**
      * Starts leaf with options, on a successful start this function blocks the current
      * thread.
@@ -122,4 +124,6 @@ extern "C" {
      * @return Returns ERR_OK on success, i.e no syntax error.
      */
     int32_t leaf_test_config(const char* config_path);
+#ifdef __cplusplus
 }
+#endif
