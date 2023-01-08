@@ -5,11 +5,7 @@ use anyhow::Result;
 
 pub fn get_default_ipv4_gateway() -> Result<String> {
     let cols = get_default_ipv4_route_entry().unwrap();
-    // let cols: Vec<&str> = line
-    //     .split_whitespace()
-    //     .map(str::trim)
-    //     .collect();
-    assert!(cols.len() == 6);
+    assert_eq!(cols.len(), 6);
     Ok(cols[5].to_string())
 }
 
@@ -50,7 +46,7 @@ pub fn get_default_interface() -> Result<String> {
             cols[0] == if_idx.as_str()
         )
         .unwrap();
-    assert!(cols.len() == 5);
+    assert_eq!(cols.len(), 5);
     Ok(cols[4].to_string())
 }
 
@@ -217,7 +213,7 @@ fn get_interface_index(interface: &str) -> Result<String> {
 
 fn get_default_ipv4_interface_index() -> Result<String> {
     let cols = get_default_ipv4_route_entry().unwrap();
-    assert!(cols.len() == 6);
+    assert_eq!(cols.len(), 6);
     Ok(cols[4].to_string())
 }
 

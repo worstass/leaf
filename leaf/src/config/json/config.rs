@@ -292,10 +292,11 @@ pub fn to_internal(json: &mut Config) -> Result<internal::Config> {
             }
             match inbound.protocol.as_str() {
                 #[cfg(any(
-                    target_os = "ios",
+                    // target_os = "ios", // MARKER BEGIN - END
                     target_os = "android",
                     target_os = "macos",
-                    target_os = "linux"
+                    target_os = "linux",
+                    target_os = "windows",  // MARKER BEGIN - END
                 ))]
                 "tun" => {
                     if ext_inbound.settings.is_none() {

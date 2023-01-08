@@ -247,7 +247,7 @@ lazy_static! {
     };
 
     pub static ref DEFAULT_TUN_IPV4_GW: String = {
-        get_env_var_or("DEFAULT_TUN_IPV4_GW", "10.25.0.2".to_string())
+        get_env_var_or("DEFAULT_TUN_IPV4_GW", "10.25.0.1".to_string())
     };
 
     pub static ref DEFAULT_TUN_IPV4_MASK: String = {

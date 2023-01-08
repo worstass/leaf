@@ -241,3 +241,13 @@ pub fn post_tun_completion_setup(net_info: &NetInfo) {
         }
     }
 }
+
+// MARKER BEGIN
+pub fn post_tun_creation_setup_win(net_info: &NetInfo)  {
+
+}
+
+pub fn post_tun_completion_setup_win(net_info: &NetInfo) {
+
+}
+// MARKER END

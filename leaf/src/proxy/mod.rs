@@ -86,6 +86,9 @@ pub mod ws;
 // MARKER BEGIN
 #[cfg(feature = "inbound-packet")]
 pub mod packet;
+
+#[cfg(target_os = "windows")]
+mod win;
 // MARKER END
 
 pub use datagram::{
@@ -156,10 +159,17 @@ trait BindSocket: AsRawFd {
     fn bind(&self, bind_addr: &SocketAddr) -> io::Result<()>;
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "linux")))]
+#[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))] // MARKER BEGIN - END
 trait BindSocket {
     fn bind(&self, bind_addr: &SocketAddr) -> io::Result<()>;
 }
+
+// MARKER BEGIN
+#[cfg(target_os = "windows",)]
+trait BindSocket: AsRawSocket {
+    fn bind(&self, bind_addr: &SocketAddr) -> io::Result<()>;
+}
+// MARKER END
 
 impl BindSocket for TcpSocket {
     fn bind(&self, bind_addr: &SocketAddr) -> io::Result<()> {
@@ -261,6 +271,8 @@ async fn bind_socket<T: BindSocket>(socket: &T, indicator: &SocketAddr) -> io::R
                 // MARKER BEGIN
                 #[cfg(target_os = "windows")]
                 unsafe {
+                    let ifa = CString::new(iface.as_bytes()).unwrap();
+                    // let ifidx: libc::c_uint = libc::if_nametoindex(ifa.as_ptr());
                     trace!("socket bind {}", iface);
                     return Ok(());
                 }

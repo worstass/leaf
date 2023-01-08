@@ -244,7 +244,7 @@ pub fn new(
         futs.push(Box::pin(async move {
             while let Some(pkt) = stack_stream.next().await {
                 if let Ok(pkt) = pkt {
-                    // trace!("stack->tun:{:02X?}", &pkt[..]);
+                    trace!("stack->tun: {} bytes", pkt.len());
                     tun_sink.send(TunPacket::new(pkt)).await.unwrap();
                 }
             }
@@ -254,7 +254,7 @@ pub fn new(
         futs.push(Box::pin(async move {
             while let Some(pkt) = tun_stream.next().await {
                 if let Ok(pkt) = pkt {
-                    // trace!("tun->stack:{:02X?}", pkt.get_bytes());
+                    trace!("tun->stack: {} bytes", pkt.get_bytes().len());
                     stack_sink.send(pkt.into_bytes().into()).await.unwrap();
                 }
             }

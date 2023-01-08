@@ -481,14 +481,14 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         .map_err(Error::Config)?;
     runners.append(&mut inbound_net_runners);
 
-    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux", target_os = "windows")))] // MARKER BEGIN - END
     let net_info = if inbound_manager.has_tun_listener() && inbound_manager.tun_auto() {
         sys::get_net_info()
     } else {
         sys::NetInfo::default()
     };
 
-    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
+    #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux", target_os = "windows")))] // MARKER BEGIN - END
     {
         if let sys::NetInfo {
             default_interface: Some(iface),
@@ -509,7 +509,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         any(
             // target_os = "ios", // MARKER BEGIN - END
             target_os = "android",
-            target_os = "macos", // MARKER BEGIN - END
+            target_os = "macos", target_os = "windows", // MARKER BEGIN - END
             target_os = "linux",
         )
     ))]
@@ -519,12 +519,8 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
     sys::post_tun_creation_setup(&net_info);
-
-    #[cfg(all(feature = "inbound-tun", target_os = "windows"))]
-    if let Ok(r) = inbound_manager.get_tun_runner() {
-        runners.push(r);
-    }
-
+    #[cfg(target_os = "windows")]
+    sys::post_tun_creation_setup_win(&net_info);
 
     // MARKER BEGIN
     #[cfg(feature = "inbound-packet")]
@@ -631,8 +627,13 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
     // MARKER BEGIN
     // #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
     // sys::post_tun_completion_setup(&net_info);
-    #[cfg(all(feature = "inbound-tun", any(/*target_os = "windows",*/ target_os = "macos", target_os = "linux")))]
-    if inbound_manager.tun_auto() { sys::post_tun_completion_setup(&net_info); }
+    #[cfg(all(feature = "inbound-tun", any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    if inbound_manager.tun_auto() {
+        #[cfg(not(target_os = "windows"))]
+        sys::post_tun_completion_setup(&net_info);
+        #[cfg(target_os = "windows")]
+        sys::post_tun_completion_setup_win(&net_info);
+    }
 
     drop(inbound_manager);
 
