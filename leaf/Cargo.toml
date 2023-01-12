@@ -124,7 +124,7 @@ auto-reload = ["notify"]
 ctrlc = ["tokio/signal"]
 
 # MARKER BEGIN
-#stats = []  # MARKER BEGIN - END
+netstack-smoltcp = []
 callback = []
 # MARKER END
 
@@ -243,7 +243,7 @@ netstack-lwip = { path = "../netstack-lwip", optional = true }
 
 # MARKER BEGIN
 # Packet
-#smoltcp = "0.8.0"
+netstack-smoltcp = { path = "../netstack-smoltcp" }
 [target.'cfg(any(target_os = "windows", target_os = "linux", target_os = "macos"))'.dependencies]
 net-route = "0.2"
 [target.'cfg(target_os = "windows")'.dependencies]

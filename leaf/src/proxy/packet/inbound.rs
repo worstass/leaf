@@ -19,7 +19,7 @@ use crate::{
     option, Runner,
 };
 
-use crate::proxy::tun::netstack::NetStack;
+use super::netstack::{self, NetStack};
 
 use tokio::sync::mpsc::{Receiver as TokioReceiver, Sender as TokioSender};
 use tokio::sync::mpsc::channel as tokio_channel;
@@ -35,8 +35,6 @@ use crate::app::nat_manager::UdpPacket;
 use crate::config::packet_inbound_settings::Sink;
 use crate::config::TunInboundSettings;
 
-// use crate::config::PacketInboundSettings_Sink;
-use crate::proxy::tun::netstack;
 use crate::session::{DatagramSource, Network, Session, SocksAddr};
 
 async fn handle_inbound_stream(
@@ -52,7 +50,7 @@ async fn handle_inbound_stream(
         source: local_addr,
         local_addr: remote_addr.clone(),
         destination: SocksAddr::Ip(remote_addr.clone()),
-        inbound_tag: inbound_tag,
+        inbound_tag,
         ..Default::default()
     };
     // Whether to override the destination according to Fake DNS.
@@ -228,7 +226,7 @@ pub fn new(
                                 while let Some(pkt) = stack_stream.next().await {
                                     if let Ok(pkt) = pkt {
                                         // trace!("stack->tcp:{:02X?}", &pkt[..]);
-                                        debug!("stack->tcp: {} bytes", pkt.len());
+                                        trace!("stack->tcp: {} bytes", pkt.len());
                                         match stream_writer.write(&pkt[..]).await {
                                             Ok(_) => (),
                                             Err(e) => {
@@ -273,7 +271,7 @@ pub fn new(
                                                     }
                                                     let pkt = [&packet_header_buf[..], &packet_buf[..n]].concat();
                                                     // trace!("tcp->stack:{:02X?}", &pkt[..]);
-                                                    debug!("tcp->stack: {} bytes", pkt.len());
+                                                    trace!("tcp->stack: {} bytes", pkt.len());
                                                     match stack_sink.send(pkt).await {
                                                         Ok(_) => {}
                                                         Err(e) => {
@@ -337,7 +335,10 @@ pub fn new(
                     let dispatcher = dispatcher.clone();
                     let nat_manager = nat_manager.clone();
                     let inbound_tag = inbound.clone().tag;
-                    let (stack, mut tcp_listener, udp_socket) = NetStack::new();
+                    let (stack, mut tcp_listener, udp_socket) = NetStack::with_buffer_size(
+                        *crate::option::NETSTACK_OUTPUT_CHANNEL_SIZE,
+                        *crate::option::NETSTACK_UDP_UPLINK_CHANNEL_SIZE,
+                    );
                     let (mut stack_sink, mut stack_stream) = stack.split();
 
                     let listen_addr = format!("127.0.0.1:{}", port);

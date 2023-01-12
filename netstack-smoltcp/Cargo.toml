@@ -1,0 +1,18 @@
+[package]
+name = "netstack-smoltcp"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+smoltcp = "0.8"
+tokio = { version = "1", features = ["sync", "io-util", "net", "time", "rt", "rt-multi-thread"] }
+futures-util = "0.3"
+futures = "0.3"
+log = "0.4"
+#anyhow = "1.0"
+bytes = "1"
+#
+
+[build-dependencies]
+#cc = "1.0"
+#bindgen = "0.59"

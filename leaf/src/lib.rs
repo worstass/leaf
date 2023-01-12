@@ -517,10 +517,15 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         runners.push(r);
     }
 
+    // MARKER BEGIN
     #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
-    sys::post_tun_creation_setup(&net_info);
-    #[cfg(target_os = "windows")]
-    sys::post_tun_creation_setup_win(&net_info);
+    if inbound_manager.tun_auto() {
+        #[cfg(not(target_os = "windows"))]
+        sys::post_tun_creation_setup(&net_info);
+        #[cfg(target_os = "windows")]
+        sys::post_tun_creation_setup_win(&net_info);
+    }
+    // MARKER END
 
     // MARKER BEGIN
     #[cfg(feature = "inbound-packet")]

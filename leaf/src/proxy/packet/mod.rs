@@ -1,8 +1,6 @@
-use tokio::io::{AsyncRead, AsyncWrite};
-
 pub mod inbound;
 
-// mod stack;
-// mod endpoint;
-
-
+#[cfg(not(feature = "netstack-smoltcp"))]
+use netstack_lwip as netstack;
+#[cfg(feature = "netstack-smoltcp")]
+use netstack_smoltcp as netstack;

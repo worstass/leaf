@@ -28,7 +28,10 @@ default-openssl = [
 ]
 
 auto-reload = ["leaf/auto-reload"]
-callback = ["leaf/callback"] # MARKER BEGIN - END
+# MARKER BEGIN
+callback = ["leaf/callback"]
+netstack-smoltcp = ["leaf/netstack-smoltcp"]
+# MARKER END
 
 [dependencies]
 leaf = { path = "../leaf", default-features = false, optional = true }
