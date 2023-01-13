@@ -43,14 +43,22 @@ fn generate_mobile_bindings() {
 }
 
 fn main() {
-    #[cfg(any(
-        target_os = "ios",
-        target_os = "macos",
-        target_os = "tvos",
-        target_os = "watchos"
-    ))]
-    println!("cargo:rustc-link-lib=framework=Foundation");
+    // #[cfg(any(
+    //     target_os = "ios",
+    //     target_os = "macos",
+    //     target_os = "tvos",
+    //     target_os = "watchos"
+    // ))]
+    // println!("cargo:rustc-link-lib=framework=Foundation");
     let os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    // MARKER BEGIN
+    if os == "ios" || os == "macos" || os == "tvos" || os == "watchos" {
+        println!("cargo:rustc-link-lib=framework=Foundation");
+    }
+    // if os == "android" {
+    //     println!("cargo:rustc-link-arg=-nostdlibs");
+    // }
+    // MARKER END
     if os == "ios" || os == "macos" || os == "android" {
         generate_mobile_bindings();
     }
