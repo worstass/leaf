@@ -22,11 +22,8 @@ if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
     HOST_ARCH=x86_64
 fi
 
-api=30
-ndk_version=22.1.7171670
-
-#api=33
-#ndk_version=25.1.8937393
+api=33
+ndk_version=25.1.8937393
 
 android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
 
