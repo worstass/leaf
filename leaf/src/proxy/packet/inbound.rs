@@ -38,7 +38,7 @@ use crate::config::TunInboundSettings;
 use crate::session::{DatagramSource, Network, Session, SocksAddr};
 
 async fn handle_inbound_stream(
-    stream: netstack::TcpStream,
+    stream: netstack::TcpStream<'static>,
     local_addr: SocketAddr,
     remote_addr: SocketAddr,
     inbound_tag: String,

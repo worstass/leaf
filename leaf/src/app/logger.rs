@@ -66,6 +66,14 @@ pub fn setup_logger(config: &config::Log) -> Result<()> {
                 );
                 dispatch = dispatch.chain(console_output);
             }
+            #[cfg(target_os = "windows")]
+            {
+                let console_output = fern::Output::writer(
+                    Box::new(crate::win::logger::ConsoleWriter::default()),
+                    "\n",
+                );
+                dispatch = dispatch.chain(console_output);
+            }
             #[cfg(not(any(target_os = "ios", target_os = "android", target_os = "macos")))] // MARKER BEGIN - END
             {
                 dispatch = dispatch.chain(fern::Output::stdout("\n"));

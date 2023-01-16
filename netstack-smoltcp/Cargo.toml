@@ -9,6 +9,7 @@ tokio = { version = "1", features = ["sync", "io-util", "net", "time", "rt", "rt
 futures-util = "0.3"
 futures = "0.3"
 log = "0.4"
+flume = "0.10"
 #anyhow = "1.0"
 bytes = "1"
 #

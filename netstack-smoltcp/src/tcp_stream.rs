@@ -3,29 +3,36 @@ use std::io;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::os::raw;
 use std::pin::Pin;
+use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use log::trace;
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::io::{AsyncBufReadExt};
 use bytes::BytesMut;
+use smoltcp::iface::Interface;
+use smoltcp::socket::TcpSocket;
 
 fn broken_pipe() -> io::Error {
     io::Error::new(io::ErrorKind::BrokenPipe, "broken pipe")
 }
 
-pub struct TcpStream {
+pub struct TcpStream<'a> {
+    sock: &'a mut TcpSocket<'a>,
     src_addr: SocketAddr,
     dest_addr: SocketAddr,
     // inner: Box<TcpStreamImpl>,
     write_buf: BytesMut,
+
+    // iface: Arc<Mutex<Interface<'_, DeviceT>>>,
 }
 
-impl TcpStream {
-    pub(crate) fn new() -> Self {
+impl<'a> TcpStream<'a> {
+    pub(crate) fn new(sock: &'a mut TcpSocket<'a>) -> Self {
         let src_addr = SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 1111);
         let dest_addr =    SocketAddr::new(IpAddr::V4(Ipv4Addr::UNSPECIFIED), 2222);
 
         let stream = TcpStream {
+            sock,
             src_addr,
             dest_addr,
             // pcb: pcb as usize,
@@ -45,9 +52,9 @@ impl TcpStream {
 
 }
 
-impl AsyncRead for TcpStream {
+impl<'a> AsyncRead for TcpStream<'a> {
     fn poll_read(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context,
         buf: &mut ReadBuf,
     ) -> Poll<io::Result<()>> {
@@ -84,9 +91,9 @@ impl AsyncRead for TcpStream {
     }
 }
 
-impl AsyncWrite for TcpStream {
+impl<'a> AsyncWrite for TcpStream<'a> {
     fn poll_write(
-        mut self: Pin<&mut Self>,
+        self: Pin<&mut Self>,
         cx: &mut Context,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
@@ -94,14 +101,19 @@ impl AsyncWrite for TcpStream {
         // AsyncWrite::poll_write(Pin::new(&mut self.inner), cx, buf)
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
         todo!()
         // AsyncWrite::poll_flush(Pin::new(&mut self.inner), cx)
     }
 
-    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context) -> Poll<io::Result<()>> {
         todo!()
         // AsyncWrite::poll_shutdown(Pin::new(&mut self.inner), cx)
     }
 }
 
+impl<'a> Drop for TcpStream<'a> {
+    fn drop(&mut self) {
+        todo!()
+    }
+}

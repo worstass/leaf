@@ -1,6 +1,7 @@
 use std::io;
 use std::net::SocketAddr;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
 use futures::{Stream, StreamExt};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -8,7 +9,18 @@ use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 type UdpPkt = (Vec<u8>, SocketAddr, SocketAddr);
 
+
+pub(crate) struct  UdpSocketInner {
+
+}
+
+impl UdpSocketInner {
+    pub fn new(buffer_size: usize) -> Self{
+        Self {}
+    }
+}
 pub struct UdpSocket {
+    inner: Arc<UdpSocketInner>,
     // pcb: usize,
     waker: Option<Waker>,
     tx: Sender<UdpPkt>,
@@ -17,9 +29,10 @@ pub struct UdpSocket {
 
 
 impl UdpSocket {
-    pub(crate) fn new(buffer_size: usize) -> Box<Self> {
+    pub(crate) fn new(inner: Arc<UdpSocketInner>,  buffer_size: usize) -> Box<Self> {
         let (tx, rx): (Sender<UdpPkt>, Receiver<UdpPkt>) = channel(buffer_size);
         let socket = Box::new(Self {
+            inner,
             waker: None,
             tx,
             rx,
