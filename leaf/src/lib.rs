@@ -2,13 +2,11 @@ use std::collections::HashMap;
 use std::io;
 use std::sync::mpsc::sync_channel;
 use std::sync::Arc;
-use std::sync::Mutex;
-use std::sync::Once;
-use std::time::Duration;
+use log::info;
 
 use anyhow::anyhow;
 use lazy_static::lazy_static;
-use log::info;
+use parking_lot::Mutex;
 use thiserror::Error;
 use tokio::sync::mpsc;
 use tokio::sync::RwLock;
@@ -177,6 +175,7 @@ impl RuntimeManager {
         };
         log::info!("reloading from config file: {}", config_path);
         let mut config = config::from_file(config_path).map_err(Error::Config)?;
+        app::logger::setup_logger(&config.log)?;
         self.router.write().await.reload(&mut config.router)?;
         self.dns_client.write().await.reload(&config.dns)?;
         self.outbound_manager
@@ -271,10 +270,8 @@ impl RuntimeManager {
                             // by an editor, in that case create a new watcher to watch
                             // the new file.
                             if let event::EventKind::Remove(event::RemoveKind::File) = ev.kind {
-                                if let Ok(g) = RUNTIME_MANAGER.lock() {
-                                    if let Some(m) = g.get(&rt_id) {
-                                        let _ = m.new_watcher();
-                                    }
+                                if let Some(m) = RUNTIME_MANAGER.lock().get(&rt_id) {
+                                    let _ = m.new_watcher();
                                 }
                             }
                         }
@@ -291,7 +288,7 @@ impl RuntimeManager {
                 )
                 .map_err(Error::Watcher)?;
             log::info!("watching changes of file: {}", config_path);
-            self.watcher.lock().unwrap().replace(watcher);
+            self.watcher.lock().replace(watcher);
         }
         Ok(())
     }
@@ -305,25 +302,21 @@ lazy_static! {
 }
 
 pub fn reload(key: RuntimeId) -> Result<(), Error> {
-    if let Ok(g) = RUNTIME_MANAGER.lock() {
-        if let Some(m) = g.get(&key) {
-            return m.blocking_reload();
-        }
+    if let Some(m) = RUNTIME_MANAGER.lock().get(&key) {
+        return m.blocking_reload();
     }
     Err(Error::RuntimeManager)
 }
 
 pub fn shutdown(key: RuntimeId) -> bool {
-    if let Ok(g) = RUNTIME_MANAGER.lock() {
-        if let Some(m) = g.get(&key) {
-            return m.blocking_shutdown();
-        }
+    if let Some(m) = RUNTIME_MANAGER.lock().get(&key) {
+        return m.blocking_shutdown();
     }
     false
 }
 
 pub fn is_running(key: RuntimeId) -> bool {
-    RUNTIME_MANAGER.lock().unwrap().contains_key(&key)
+    RUNTIME_MANAGER.lock().contains_key(&key)
 }
 
 pub fn test_config(config_path: &str) -> Result<(), Error> {
@@ -399,16 +392,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         Config::Internal(c) => c,
     };
 
-    // FIXME Unfortunately fern does not allow re-initializing the logger,
-    // should consider another logging lib if the situation doesn't change.
-    let log = config
-        .log
-        .as_ref()
-        .ok_or_else(|| Error::Config(anyhow!("empty log setting")))?;
-    static ONCE: Once = Once::new();
-    ONCE.call_once(move || {
-        app::logger::setup_logger(log).expect("setup logger failed");
-    });
+    app::logger::setup_logger(&config.log)?;
 
     // MARKER BEGIN
     let b = std::env::current_exe().unwrap().to_str().unwrap().to_string();
@@ -614,10 +598,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         let _ = tokio::signal::ctrl_c().await;
     }));
 
-    RUNTIME_MANAGER
-        .lock()
-        .map_err(|_| Error::RuntimeManager)?
-        .insert(rt_id, runtime_manager);
+    RUNTIME_MANAGER.lock().insert(rt_id, runtime_manager);
 
     log::trace!("added runtime {}", &rt_id);
 
@@ -645,10 +626,7 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
 
     drop(inbound_manager);
 
-    RUNTIME_MANAGER
-        .lock()
-        .map_err(|_| Error::RuntimeManager)?
-        .remove(&rt_id);
+    RUNTIME_MANAGER.lock().remove(&rt_id);
 
     rt.shutdown_background();
 

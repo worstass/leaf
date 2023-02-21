@@ -125,7 +125,7 @@ impl InboundManager {
                 #[cfg(feature = "inbound-trojan")]
                 "trojan" => {
                     let settings =
-                        config::TrojanInboundSettings::parse_from_bytes(&inbound.settings).unwrap();
+                        config::TrojanInboundSettings::parse_from_bytes(&inbound.settings)?;
                     let stream = Arc::new(trojan::inbound::StreamHandler::new(
                         settings.passwords.to_vec(),
                     ));
@@ -139,8 +139,7 @@ impl InboundManager {
                 #[cfg(feature = "inbound-ws")]
                 "ws" => {
                     let settings =
-                        config::WebSocketInboundSettings::parse_from_bytes(&inbound.settings)
-                            .unwrap();
+                        config::WebSocketInboundSettings::parse_from_bytes(&inbound.settings)?;
                     let stream = Arc::new(ws::inbound::StreamHandler::new(settings.path.clone()));
                     let handler = Arc::new(proxy::inbound::Handler::new(
                         tag.clone(),
@@ -152,11 +151,12 @@ impl InboundManager {
                 #[cfg(feature = "inbound-quic")]
                 "quic" => {
                     let settings =
-                        config::QuicInboundSettings::parse_from_bytes(&inbound.settings).unwrap();
+                        config::QuicInboundSettings::parse_from_bytes(&inbound.settings)?;
                     let datagram = Arc::new(quic::inbound::DatagramHandler::new(
                         settings.certificate.clone(),
                         settings.certificate_key.clone(),
-                    ));
+                        settings.alpn.clone(),
+                    )?);
                     let handler = Arc::new(proxy::inbound::Handler::new(
                         tag.clone(),
                         None,
@@ -166,8 +166,7 @@ impl InboundManager {
                 }
                 #[cfg(feature = "inbound-tls")]
                 "tls" => {
-                    let settings =
-                        config::TlsInboundSettings::parse_from_bytes(&inbound.settings).unwrap();
+                    let settings = config::TlsInboundSettings::parse_from_bytes(&inbound.settings)?;
                     let stream = Arc::new(tls::inbound::StreamHandler::new(
                         settings.certificate.clone(),
                         settings.certificate_key.clone(),

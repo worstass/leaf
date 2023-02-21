@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use futures::TryFutureExt;
+use rustls::OwnedTrustAnchor;
 use tokio::sync::Mutex;
 
 use crate::{app::SyncDnsClient, proxy::*, session::Session};
@@ -39,6 +40,7 @@ impl Manager {
         address: String,
         port: u16,
         server_name: Option<String>,
+        alpns: Vec<String>,
         certificate: Option<String>,
         dns_client: SyncDnsClient,
     ) -> Self {
@@ -67,18 +69,31 @@ impl Manager {
                     panic!("read certificate {} failed: {}", cert_path, e);
                 }
             }
+        } else {
+            roots.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+                OwnedTrustAnchor::from_subject_spki_name_constraints(
+                    ta.subject,
+                    ta.spki,
+                    ta.name_constraints,
+                )
+            }));
         }
 
-        let client_crypto = rustls::ClientConfig::builder()
+        let mut client_crypto = rustls::ClientConfig::builder()
             .with_safe_defaults()
             .with_root_certificates(roots)
             .with_no_client_auth();
+        for alpn in alpns {
+            client_crypto.alpn_protocols.push(alpn.as_bytes().to_vec());
+        }
 
         let mut client_config = quinn::ClientConfig::new(Arc::new(client_crypto));
         let mut transport_config = quinn::TransportConfig::default();
         transport_config.max_idle_timeout(Some(quinn::IdleTimeout::from(quinn::VarInt::from_u32(
             300_000,
         )))); // ms
+        transport_config
+            .congestion_controller_factory(Arc::new(quinn::congestion::BbrConfig::default()));
         client_config.transport = Arc::new(transport_config);
 
         Manager {
@@ -186,11 +201,12 @@ impl Handler {
         address: String,
         port: u16,
         server_name: Option<String>,
+        alpns: Vec<String>,
         certificate: Option<String>,
         dns_client: SyncDnsClient,
     ) -> Self {
         Self {
-            manager: Manager::new(address, port, server_name, certificate, dns_client),
+            manager: Manager::new(address, port, server_name, alpns, certificate, dns_client),
         }
     }
 
