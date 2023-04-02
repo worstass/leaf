@@ -2,7 +2,10 @@
 <Package
         xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
-        IgnorableNamespaces="uap">
+        xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
+        xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+        xmlns:iot2="http://schemas.microsoft.com/appx/manifest/iot/windows10/2"
+        IgnorableNamespaces="uap uap5 desktop4 iot2">
     <Identity
             Name="0f8c5510-182f-4208-a48e-4215050a0453"
             Publisher="CN=Publisher"
@@ -19,11 +22,27 @@
         <Resource Language="en-us" />
     </Resources>
     <Applications>
-        <Application Id="App" Executable="leaf.exe" EntryPoint="Leaf.App">
+        <Application Id="App"
+                     Executable="leaf.exe"
+                     EntryPoint="Leaf.App"
+                     desktop4:Subsystem="console"
+                     desktop4:SupportsMultipleInstances="true"
+                     iot2:Subsystem="console"
+                     iot2:SupportsMultipleInstances="true" >
             <uap:VisualElements DisplayName="Leaf" Description="Description"
                                 Square150x150Logo="Square150x150Logo.png" Square44x44Logo="Square44x44Logo.png" BackgroundColor="transparent">
                 <uap:SplashScreen Image="SplashScreen.png" />
             </uap:VisualElements>
+            <Extensions>
+                <uap5:Extension
+                        Category="windows.appExecutionAlias"
+                        Executable="leaf.exe"
+                        EntryPoint="Leaf.App">
+                    <uap5:AppExecutionAlias desktop4:Subsystem="console">
+                        <uap5:ExecutionAlias Alias="leaf.exe" />
+                    </uap5:AppExecutionAlias>
+                </uap5:Extension>
+            </Extensions>
         </Application>
     </Applications>
 </Package>

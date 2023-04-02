@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use async_recursion::async_recursion;
 use log::*;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
 
@@ -29,7 +29,7 @@ use super::router::Router;
 fn log_request(
     sess: &Session,
     outbound_tag: &str,
-    outbound_tag_color: colored::Color,
+    outbound_tag_color: &colored::Color,
     handshake_time: Option<u128>,
 ) {
     let hs = handshake_time.map_or("failed".to_string(), |hs| format!("{}ms", hs));
@@ -43,7 +43,7 @@ fn log_request(
             "[{}] [{}] [{}] [{}] {}",
             &sess.inbound_tag,
             sess.network.to_string().color(network_color),
-            outbound_tag.color(outbound_tag_color),
+            outbound_tag.color(*outbound_tag_color),
             hs,
             &sess.destination,
         );
@@ -86,6 +86,7 @@ impl Dispatcher {
         where
             T: 'static + AsyncRead + AsyncWrite + Unpin + Send + Sync,
     {
+        log::debug!("dispatching {}:{}", &sess.network, &sess.destination);
         let mut lhs: Box<dyn ProxyStream> = if *option::DOMAIN_SNIFFING
             && !sess.destination.is_domain()
             && sess.destination.port() == 443
@@ -144,12 +145,6 @@ impl Dispatcher {
                         tag
                     } else {
                         warn!("can not find any handlers");
-                        if let Err(e) = lhs.shutdown().await {
-                            debug!(
-                                "tcp downlink {} <- {} error: {}",
-                                &sess.source, &sess.destination, e,
-                            );
-                        }
                         return;
                     }
                 }
@@ -163,14 +158,14 @@ impl Dispatcher {
         } else {
             // FIXME use  the default handler
             warn!("handler not found");
-            if let Err(e) = lhs.shutdown().await {
-                debug!(
-                    "tcp downlink {} <- {} error: {}",
-                    &sess.source, &sess.destination, e,
-                );
-            }
             return;
         };
+        log::debug!(
+            "handling {}:{} with {}",
+            &sess.network,
+            &sess.destination,
+            h.tag()
+        );
 
         let handshake_start = tokio::time::Instant::now();
         let stream =
@@ -255,18 +250,7 @@ impl Dispatcher {
                     &h.tag(),
                     e
                 );
-
                 log_request(&sess, h.tag(), h.color(), None);
-
-                if let Err(e) = lhs.shutdown().await {
-                    debug!(
-                        "tcp downlink {} <- {} error: {} [{}]",
-                        &sess.source,
-                        &sess.destination,
-                        e,
-                        &h.tag()
-                    );
-                }
             }
         }
     }
@@ -276,6 +260,7 @@ impl Dispatcher {
         &self,
         mut sess: Session,
     ) -> io::Result<Box<dyn OutboundDatagram>> {
+        log::debug!("dispatching {}:{}", &sess.network, &sess.destination);
         let outbound = {
             let router = self.router.read().await;
             match router.pick_route(&sess).await {
@@ -314,6 +299,12 @@ impl Dispatcher {
         let handshake_start = tokio::time::Instant::now();
         let transport =
             crate::proxy::connect_datagram_outbound(&sess, self.dns_client.clone(), &h).await?;
+        log::debug!(
+            "handling {}:{} with {}",
+            &sess.network,
+            &sess.destination,
+            h.tag()
+        );
         match h.datagram()?.handle(&sess, transport).await {
             #[allow(unused_mut)]
             Ok(mut d) => {

@@ -119,7 +119,7 @@ pub trait Tag {
 }
 
 pub trait Color {
-    fn color(&self) -> colored::Color;
+    fn color(&self) -> &colored::Color;
 }
 
 #[derive(Debug)]
@@ -130,7 +130,21 @@ pub enum OutboundBind {
 
 #[cfg(target_os = "android")]
 async fn protect_socket(fd: RawFd) -> io::Result<()> {
-    // TODO Warns about empty protect path?
+    if crate::mobile::callback::android::is_protect_socket_callback_set() {
+        let start = std::time::Instant::now();
+        crate::mobile::callback::android::protect_socket(fd).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::Other,
+                format!("failed to protect outbound socket {}: {:?}", fd, e),
+            )
+        })?;
+        log::debug!(
+            "protected socket {} in {} µs",
+            fd,
+            start.elapsed().as_micros()
+        );
+        return Ok(());
+    }
     if let Some(addr) = &*option::SOCKET_PROTECT_SERVER {
         let mut stream = TcpStream::connect(addr).await?;
         stream.write_i32(fd as i32).await?;
@@ -140,6 +154,7 @@ async fn protect_socket(fd: RawFd) -> io::Result<()> {
                 format!("failed to protect outbound socket {}", fd),
             ));
         }
+        return Ok(());
     }
     if !option::SOCKET_PROTECT_PATH.is_empty() {
         let mut stream = UnixStream::connect(&*option::SOCKET_PROTECT_PATH).await?;
@@ -150,6 +165,7 @@ async fn protect_socket(fd: RawFd) -> io::Result<()> {
                 format!("failed to protect outbound socket {}", fd),
             ));
         }
+        return Ok(());
     }
     Ok(())
 }
@@ -197,6 +213,7 @@ impl TcpListener {
     pub async fn accept(&self) -> io::Result<(TcpStream, SocketAddr)> {
         let (stream, addr) = self.inner.accept().await?;
         apply_socket_opts(&stream)?;
+        stream.set_linger(Some(Duration::ZERO))?;
         Ok((stream, addr))
     }
 }
@@ -365,7 +382,7 @@ pub enum DialOrder {
 }
 
 // A single TCP dial.
-async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<(AnyStream, SocketAddr)> {
+async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<DialResult> {
     let socket = match dial_addr {
         SocketAddr::V4(..) => TcpSocket::new_v4()?,
         SocketAddr::V6(..) => TcpSocket::new_v6()?,
@@ -393,7 +410,10 @@ async fn tcp_dial_task(dial_addr: SocketAddr) -> io::Result<(AnyStream, SocketAd
         &dial_addr,
         elapsed.as_millis()
     );
-    Ok((Box::new(stream), dial_addr))
+    Ok(DialResult {
+        stream: Box::new(stream),
+        addr: dial_addr,
+    })
 }
 
 pub async fn connect_stream_outbound(
@@ -451,6 +471,11 @@ pub async fn connect_datagram_outbound(
     }
 }
 
+struct DialResult {
+    stream: AnyStream,
+    addr: SocketAddr,
+}
+
 // Dials a TCP stream.
 pub async fn new_tcp_stream(
     dns_client: SyncDnsClient,
@@ -486,10 +511,12 @@ pub async fn new_tcp_stream(
         if !tasks.is_empty() {
             match select_ok(tasks.into_iter()).await {
                 Ok(v) => {
-                    #[rustfmt::skip]
-                    dns_client.read().await.optimize_cache(address.to_owned(), v.0.1.ip()).await;
-                    #[rustfmt::skip]
-                    return Ok(v.0.0);
+                    dns_client
+                        .read()
+                        .await
+                        .optimize_cache(address.to_owned(), v.0.addr.ip())
+                        .await;
+                    return Ok(v.0.stream);
                 }
                 Err(e) => {
                     last_err = Some(io::Error::new(
