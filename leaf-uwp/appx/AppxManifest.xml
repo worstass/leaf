@@ -7,7 +7,7 @@
         xmlns:iot2="http://schemas.microsoft.com/appx/manifest/iot/windows10/2"
         IgnorableNamespaces="uap uap5 desktop4 iot2">
     <Identity
-            Name="0f8c5510-182f-4208-a48e-4215050a0453"
+            Name="LeafVpn"
             Publisher="CN=Publisher"
             Version="1.0.0.0" />
     <Properties>
