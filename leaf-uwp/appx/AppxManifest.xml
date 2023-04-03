@@ -7,8 +7,8 @@
         xmlns:iot2="http://schemas.microsoft.com/appx/manifest/iot/windows10/2"
         IgnorableNamespaces="uap uap5 desktop4 iot2">
     <Identity
-            Name="LeafVpn"
-            Publisher="CN=Publisher"
+            Name="Leaf"
+            Publisher="CN=Leaf"
             Version="1.0.0.0" />
     <Properties>
         <DisplayName>Leaf</DisplayName>
@@ -22,7 +22,7 @@
         <Resource Language="en-us" />
     </Resources>
     <Applications>
-        <Application Id="App"
+        <Application Id="Leaf"
                      Executable="leaf.exe"
                      EntryPoint="Leaf.App"
                      desktop4:Subsystem="console"
