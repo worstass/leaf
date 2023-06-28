@@ -25,3 +25,4 @@ debug = true
 
 [patch.crates-io]
 mio = { path = "mio" }
+ring = { git = "https://github.com/sj6219/ring", branch = "0.16.20_alpha" }

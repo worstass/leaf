@@ -8,7 +8,27 @@ edition = "2021"
 #path = "src/lib.rs"
 #crate-type = ["staticlib", "cdylib"]
 
+[features]
+default = ["default-ring"]
+
+default-ring = [
+    "leaf/default-ring", "leaf/ctrlc", "auto-reload",
+    "callback",  # MARKER BEGIN - END
+]
+
+default-openssl = [
+    "leaf/default-openssl", "leaf/ctrlc", "auto-reload",
+    "callback",  # MARKER BEGIN - END
+]
+
+auto-reload = ["leaf/auto-reload"]
+# MARKER BEGIN
+callback = ["leaf/callback"]
+netstack-smoltcp = ["leaf/netstack-smoltcp"]
+# MARKER END
+
 [dependencies]
 leaf = { path = "../leaf", default-features = false, optional = true }
 tokio = { version = "1", features = ["rt"] }
 futures = "0.3"
+argh = "0.1"

@@ -1,25 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Package
         xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+        xmlns:mp="http://schemas.microsoft.com/appx/2014/phone/manifest"
         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
         xmlns:uap5="http://schemas.microsoft.com/appx/manifest/uap/windows10/5"
-        xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
         xmlns:iot2="http://schemas.microsoft.com/appx/manifest/iot/windows10/2"
-        IgnorableNamespaces="uap uap5 desktop4 iot2">
+        xmlns:desktop4="http://schemas.microsoft.com/appx/manifest/desktop/windows10/4"
+        IgnorableNamespaces="uap mp uap5 iot2 desktop4">
     <Identity
-            Name="0f8c5510-182f-4208-a48e-4215050a0453"
-            Publisher="CN=Publisher"
-            Version="1.0.0.0" />
+            Name="Leaf"
+            Publisher="CN=Leaf"
+            Version="1.0.0.0"/>
     <Properties>
         <DisplayName>Leaf</DisplayName>
         <PublisherDisplayName>Publisher</PublisherDisplayName>
         <Logo>StoreLogo.png</Logo>
     </Properties>
     <Dependencies>
-        <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0" />
+        <TargetDeviceFamily Name="Windows.Universal" MinVersion="10.0.0.0" MaxVersionTested="10.0.0.0"/>
     </Dependencies>
     <Resources>
-        <Resource Language="en-us" />
+        <Resource Language="en-us"/>
     </Resources>
     <Applications>
         <Application Id="App"
@@ -28,18 +29,21 @@
                      desktop4:Subsystem="console"
                      desktop4:SupportsMultipleInstances="true"
                      iot2:Subsystem="console"
-                     iot2:SupportsMultipleInstances="true" >
-            <uap:VisualElements DisplayName="Leaf" Description="Description"
-                                Square150x150Logo="Square150x150Logo.png" Square44x44Logo="Square44x44Logo.png" BackgroundColor="transparent">
-                <uap:SplashScreen Image="SplashScreen.png" />
+                     iot2:SupportsMultipleInstances="true">
+            <uap:VisualElements DisplayName="Leaf"
+                                Description="Description"
+                                Square150x150Logo="Square150x150Logo.png"
+                                Square44x44Logo="Square44x44Logo.png"
+                                BackgroundColor="transparent">
+                <uap:SplashScreen Image="SplashScreen.png"/>
+                <uap:DefaultTile/>
             </uap:VisualElements>
             <Extensions>
-                <uap5:Extension
-                        Category="windows.appExecutionAlias"
-                        Executable="leaf.exe"
-                        EntryPoint="Leaf.App">
+                <uap5:Extension Category="windows.appExecutionAlias"
+                                Executable="leaf.exe"
+                                EntryPoint="Leaf.App">
                     <uap5:AppExecutionAlias desktop4:Subsystem="console">
-                        <uap5:ExecutionAlias Alias="leaf.exe" />
+                        <uap5:ExecutionAlias Alias="leaf.exe"/>
                     </uap5:AppExecutionAlias>
                 </uap5:Extension>
             </Extensions>

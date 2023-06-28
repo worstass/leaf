@@ -1,3 +1,6 @@
+// fn main() {
+//     println!("hello")
+// }
 use std::process::exit;
 
 use argh::FromArgs;
