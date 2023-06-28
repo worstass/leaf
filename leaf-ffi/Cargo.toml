@@ -2,7 +2,7 @@
 name = "leaf-ffi"
 version = "0.1.0"
 authors = ["eycorsican <eric.y.corsican@gmail.com>"]
-edition = "2021"
+edition = "2018"
 
 [lib]
 name = "leaf"
@@ -44,3 +44,4 @@ libc = "0.2.1"
 
 [build-dependencies]
 bindgen = "0.57"
+

@@ -13,5 +13,7 @@ mod network_listener;
 mod tun_listener;
 
 #[cfg(feature = "inbound-packet")] mod packet_listener; // MARKER BEGIN - END
+#[cfg(feature = "inbound-cat")]
+mod cat_listener;
 
 pub mod manager;

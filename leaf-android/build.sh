@@ -23,7 +23,7 @@ if [ "${HOST_OS}" == "darwin" ] && [ "${HOST_ARCH}" == "arm64" ]; then
 fi
 
 api=33
-ndk_version=25.1.8937393
+ndk_version=25.2.9519653
 
 android_tools="$NDK_HOME/$ndk_version/toolchains/llvm/prebuilt/$HOST_OS-$HOST_ARCH/bin"
 

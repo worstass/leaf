@@ -641,6 +641,122 @@ impl ::protobuf::Message for TunInboundSettings {
 }
 
 #[derive(PartialEq,Clone,Default,Debug)]
+// @@protoc_insertion_point(message:CatInboundSettings)
+pub struct CatInboundSettings {
+    // message fields
+    // @@protoc_insertion_point(field:CatInboundSettings.network)
+    pub network: ::std::string::String,
+    // @@protoc_insertion_point(field:CatInboundSettings.address)
+    pub address: ::std::string::String,
+    // @@protoc_insertion_point(field:CatInboundSettings.port)
+    pub port: u32,
+    // special fields
+    // @@protoc_insertion_point(special_field:CatInboundSettings.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a CatInboundSettings {
+    fn default() -> &'a CatInboundSettings {
+        <CatInboundSettings as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl CatInboundSettings {
+    pub fn new() -> CatInboundSettings {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for CatInboundSettings {
+    const NAME: &'static str = "CatInboundSettings";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.network = is.read_string()?;
+                },
+                18 => {
+                    self.address = is.read_string()?;
+                },
+                24 => {
+                    self.port = is.read_uint32()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.network.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.network);
+        }
+        if !self.address.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.address);
+        }
+        if self.port != 0 {
+            my_size += ::protobuf::rt::uint32_size(3, self.port);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.network.is_empty() {
+            os.write_string(1, &self.network)?;
+        }
+        if !self.address.is_empty() {
+            os.write_string(2, &self.address)?;
+        }
+        if self.port != 0 {
+            os.write_uint32(3, self.port)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> CatInboundSettings {
+        CatInboundSettings::new()
+    }
+
+    fn clear(&mut self) {
+        self.network.clear();
+        self.address.clear();
+        self.port = 0;
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static CatInboundSettings {
+        static instance: CatInboundSettings = CatInboundSettings {
+            network: ::std::string::String::new(),
+            address: ::std::string::String::new(),
+            port: 0,
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+#[derive(PartialEq,Clone,Default,Debug)]
 // @@protoc_insertion_point(message:ShadowsocksInboundSettings)
 pub struct ShadowsocksInboundSettings {
     // message fields
@@ -2055,6 +2171,122 @@ impl ::protobuf::Message for ShadowsocksOutboundSettings {
 }
 
 #[derive(PartialEq,Clone,Default,Debug)]
+// @@protoc_insertion_point(message:ObfsOutboundSettings)
+pub struct ObfsOutboundSettings {
+    // message fields
+    // @@protoc_insertion_point(field:ObfsOutboundSettings.method)
+    pub method: ::std::string::String,
+    // @@protoc_insertion_point(field:ObfsOutboundSettings.host)
+    pub host: ::std::string::String,
+    // @@protoc_insertion_point(field:ObfsOutboundSettings.path)
+    pub path: ::std::string::String,
+    // special fields
+    // @@protoc_insertion_point(special_field:ObfsOutboundSettings.special_fields)
+    pub special_fields: ::protobuf::SpecialFields,
+}
+
+impl<'a> ::std::default::Default for &'a ObfsOutboundSettings {
+    fn default() -> &'a ObfsOutboundSettings {
+        <ObfsOutboundSettings as ::protobuf::Message>::default_instance()
+    }
+}
+
+impl ObfsOutboundSettings {
+    pub fn new() -> ObfsOutboundSettings {
+        ::std::default::Default::default()
+    }
+}
+
+impl ::protobuf::Message for ObfsOutboundSettings {
+    const NAME: &'static str = "ObfsOutboundSettings";
+
+    fn is_initialized(&self) -> bool {
+        true
+    }
+
+    fn merge_from(&mut self, is: &mut ::protobuf::CodedInputStream<'_>) -> ::protobuf::Result<()> {
+        while let Some(tag) = is.read_raw_tag_or_eof()? {
+            match tag {
+                10 => {
+                    self.method = is.read_string()?;
+                },
+                18 => {
+                    self.host = is.read_string()?;
+                },
+                26 => {
+                    self.path = is.read_string()?;
+                },
+                tag => {
+                    ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
+                },
+            };
+        }
+        ::std::result::Result::Ok(())
+    }
+
+    // Compute sizes of nested messages
+    #[allow(unused_variables)]
+    fn compute_size(&self) -> u64 {
+        let mut my_size = 0;
+        if !self.method.is_empty() {
+            my_size += ::protobuf::rt::string_size(1, &self.method);
+        }
+        if !self.host.is_empty() {
+            my_size += ::protobuf::rt::string_size(2, &self.host);
+        }
+        if !self.path.is_empty() {
+            my_size += ::protobuf::rt::string_size(3, &self.path);
+        }
+        my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
+        self.special_fields.cached_size().set(my_size as u32);
+        my_size
+    }
+
+    fn write_to_with_cached_sizes(&self, os: &mut ::protobuf::CodedOutputStream<'_>) -> ::protobuf::Result<()> {
+        if !self.method.is_empty() {
+            os.write_string(1, &self.method)?;
+        }
+        if !self.host.is_empty() {
+            os.write_string(2, &self.host)?;
+        }
+        if !self.path.is_empty() {
+            os.write_string(3, &self.path)?;
+        }
+        os.write_unknown_fields(self.special_fields.unknown_fields())?;
+        ::std::result::Result::Ok(())
+    }
+
+    fn special_fields(&self) -> &::protobuf::SpecialFields {
+        &self.special_fields
+    }
+
+    fn mut_special_fields(&mut self) -> &mut ::protobuf::SpecialFields {
+        &mut self.special_fields
+    }
+
+    fn new() -> ObfsOutboundSettings {
+        ObfsOutboundSettings::new()
+    }
+
+    fn clear(&mut self) {
+        self.method.clear();
+        self.host.clear();
+        self.path.clear();
+        self.special_fields.clear();
+    }
+
+    fn default_instance() -> &'static ObfsOutboundSettings {
+        static instance: ObfsOutboundSettings = ObfsOutboundSettings {
+            method: ::std::string::String::new(),
+            host: ::std::string::String::new(),
+            path: ::std::string::String::new(),
+            special_fields: ::protobuf::SpecialFields::new(),
+        };
+        &instance
+    }
+}
+
+#[derive(PartialEq,Clone,Default,Debug)]
 // @@protoc_insertion_point(message:TrojanOutboundSettings)
 pub struct TrojanOutboundSettings {
     // message fields
@@ -2180,6 +2412,8 @@ pub struct TlsOutboundSettings {
     pub alpn: ::std::vec::Vec<::std::string::String>,
     // @@protoc_insertion_point(field:TlsOutboundSettings.certificate)
     pub certificate: ::std::string::String,
+    // @@protoc_insertion_point(field:TlsOutboundSettings.insecure)
+    pub insecure: bool,
     // special fields
     // @@protoc_insertion_point(special_field:TlsOutboundSettings.special_fields)
     pub special_fields: ::protobuf::SpecialFields,
@@ -2216,6 +2450,9 @@ impl ::protobuf::Message for TlsOutboundSettings {
                 26 => {
                     self.certificate = is.read_string()?;
                 },
+                32 => {
+                    self.insecure = is.read_bool()?;
+                },
                 tag => {
                     ::protobuf::rt::read_unknown_or_skip_group(tag, is, self.special_fields.mut_unknown_fields())?;
                 },
@@ -2237,6 +2474,9 @@ impl ::protobuf::Message for TlsOutboundSettings {
         if !self.certificate.is_empty() {
             my_size += ::protobuf::rt::string_size(3, &self.certificate);
         }
+        if self.insecure != false {
+            my_size += 1 + 1;
+        }
         my_size += ::protobuf::rt::unknown_fields_size(self.special_fields.unknown_fields());
         self.special_fields.cached_size().set(my_size as u32);
         my_size
@@ -2251,6 +2491,9 @@ impl ::protobuf::Message for TlsOutboundSettings {
         };
         if !self.certificate.is_empty() {
             os.write_string(3, &self.certificate)?;
+        }
+        if self.insecure != false {
+            os.write_bool(4, self.insecure)?;
         }
         os.write_unknown_fields(self.special_fields.unknown_fields())?;
         ::std::result::Result::Ok(())
@@ -2272,6 +2515,7 @@ impl ::protobuf::Message for TlsOutboundSettings {
         self.server_name.clear();
         self.alpn.clear();
         self.certificate.clear();
+        self.insecure = false;
         self.special_fields.clear();
     }
 
@@ -2280,6 +2524,7 @@ impl ::protobuf::Message for TlsOutboundSettings {
             server_name: ::std::string::String::new(),
             alpn: ::std::vec::Vec::new(),
             certificate: ::std::string::String::new(),
+            insecure: false,
             special_fields: ::protobuf::SpecialFields::new(),
         };
         &instance

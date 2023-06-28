@@ -377,6 +377,7 @@ pub struct StartOptions {
 }
 
 pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
+    #[cfg(debug_assertions)]
     println!("start with options:\n{:#?}", opts);
     let (reload_tx, mut reload_rx) = mpsc::channel(1);
     let (shutdown_tx, mut shutdown_rx) = mpsc::channel(1);
@@ -504,6 +505,11 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         runners.push(r);
     }
 
+    #[cfg(feature = "inbound-cat")]
+    if let Ok(r) = inbound_manager.get_cat_runner() {
+        runners.push(r);
+    }
+
     // MARKER BEGIN
     #[cfg(all(feature = "inbound-tun", any(target_os = "macos", target_os = "linux")))]
     if inbound_manager.tun_auto() {
@@ -598,7 +604,10 @@ pub fn start(rt_id: RuntimeId, opts: StartOptions) -> Result<(), Error> {
         let _ = tokio::signal::ctrl_c().await;
     }));
 
-    RUNTIME_MANAGER.lock().unwrap().insert(rt_id, runtime_manager);
+    RUNTIME_MANAGER
+        .lock()
+        .unwrap()
+        .insert(rt_id, runtime_manager);
 
     log::trace!("added runtime {}", &rt_id);
 

@@ -42,6 +42,12 @@ message TunInboundSettings {
 	repeated string fake_dns_include = 8;
 }
 
+message CatInboundSettings {
+	string network = 1;
+	string address = 2;
+	uint32 port = 3;
+}
+
 message ShadowsocksInboundSettings {
 	string method = 1;
 	string password = 2;
@@ -120,6 +126,12 @@ message ShadowsocksOutboundSettings {
 	string password = 4;
 }
 
+message ObfsOutboundSettings {
+	string method = 1; // TODO use enum
+	string host = 2;
+	string path = 3;
+}
+
 message TrojanOutboundSettings {
 	string address = 1;
 	uint32 port = 2;
@@ -130,6 +142,7 @@ message TlsOutboundSettings {
 	string server_name = 1;
 	repeated string alpn = 2;
 	string certificate = 3;
+	bool insecure = 4;
 }
 
 message WebSocketOutboundSettings {

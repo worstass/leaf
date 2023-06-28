@@ -33,6 +33,9 @@ use crate::proxy::chain;
 
 use super::network_listener::NetworkInboundListener;
 
+#[cfg(feature = "inbound-cat")]
+use super::cat_listener::CatInboundListener;
+
 #[cfg(all(
     feature = "inbound-tun",
     any(
@@ -67,6 +70,8 @@ pub struct InboundManager {
     #[cfg(feature = "inbound-packet")]
     packet_listener: Option<PacketInboundListener>,
     // MARKER END
+    #[cfg(feature = "inbound-cat")]
+    cat_listener: Option<CatInboundListener>,
     tun_auto: bool,
 }
 
@@ -267,6 +272,8 @@ impl InboundManager {
         #[cfg(feature = "inbound-packet")]
         let mut packet_listener: Option<PacketInboundListener> = None;
         // MARKER END
+        #[cfg(feature = "inbound-cat")]
+        let mut cat_listener: Option<CatInboundListener> = None;
 
         let mut tun_auto = false;
 
@@ -305,6 +312,16 @@ impl InboundManager {
                     packet_listener.replace(listener);
                 }
                 // MARKER END
+
+                #[cfg(feature = "inbound-cat")]
+                "cat" => {
+                    let listener = CatInboundListener {
+                        inbound: inbound.clone(),
+                        dispatcher: dispatcher.clone(),
+                        nat_manager: nat_manager.clone(),
+                    };
+                    cat_listener.replace(listener);
+                }
                 _ => {
                     if inbound.port != 0 {
                         if let Some(h) = handlers.get(&tag) {
@@ -339,6 +356,8 @@ impl InboundManager {
             #[cfg(feature = "inbound-packet")]
             packet_listener,
             // MARKER END
+            #[cfg(feature = "inbound-cat")]
+            cat_listener,
             tun_auto,
         })
     }
@@ -366,6 +385,14 @@ impl InboundManager {
             return listener.listen();
         }
         Err(anyhow!("no tun inbound"))
+    }
+
+    #[cfg(feature = "inbound-cat")]
+    pub fn get_cat_runner(&self) -> Result<Runner> {
+        if let Some(listener) = &self.cat_listener {
+            return listener.listen();
+        }
+        Err(anyhow!("no cat inbound"))
     }
 
     #[cfg(all(

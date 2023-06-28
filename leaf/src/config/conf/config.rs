@@ -70,9 +70,15 @@ pub struct Proxy {
     // shadowsocks, trojan
     pub password: Option<String>,
 
+    // simple-obfs
+    pub obfs_type: Option<String>,
+    pub obfs_host: Option<String>,
+    pub obfs_path: Option<String>,
+
     pub ws: Option<bool>,
     pub tls: Option<bool>,
     pub tls_cert: Option<String>,
+    pub tls_insecure: Option<bool>,
     pub ws_path: Option<String>,
     pub ws_host: Option<String>,
     pub alpn: Option<String>, // MARKER BEGIN - END
@@ -100,9 +106,13 @@ impl Default for Proxy {
             port: None,
             encrypt_method: Some("chacha20-ietf-poly1305".to_string()),
             password: None,
+            obfs_type: None,
+            obfs_host: None,
+            obfs_path: None,
             ws: Some(false),
             tls: Some(false),
             tls_cert: None,
+            tls_insecure: Some(false),
             ws_path: None,
             ws_host: None,
             alpn: None, // MARKER BEGIN - END
@@ -401,10 +411,22 @@ pub fn from_lines(lines: Vec<io::Result<String>>) -> Result<Config> {
                 "password" => {
                     proxy.password = Some(v.to_string());
                 }
+                "obfs" => {
+                    proxy.obfs_type = Some(v.to_string());
+                }
+                "obfs-host" => {
+                    proxy.obfs_host = Some(v.to_string());
+                }
+                "obfs-path" => {
+                    proxy.obfs_path = Some(v.to_string());
+                }
                 "ws" => proxy.ws = if v == "true" { Some(true) } else { Some(false) },
                 "tls" => proxy.tls = if v == "true" { Some(true) } else { Some(false) },
                 "tls-cert" => {
                     proxy.tls_cert = Some(v.to_string());
+                }
+                "tls-insecure" => {
+                    proxy.tls_insecure = if v == "true" { Some(true) } else { Some(false) }
                 }
                 "ws-path" => {
                     proxy.ws_path = Some(v.to_string());
@@ -943,6 +965,37 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                     if let Some(ext_password) = &ext_proxy.password {
                         settings.password = ext_password.clone();
                     }
+                    if let Some(obfs) = &ext_proxy.obfs_type {
+                        outbound.tag = format!("{}_ss_xxx", ext_proxy.tag.clone());
+                        // obfs
+                        let mut obfs_outbound = internal::Outbound::new();
+                        obfs_outbound.protocol = "obfs".to_string();
+                        let mut obfs_settings = internal::ObfsOutboundSettings::new();
+                        obfs_settings.method = obfs.clone();
+                        if let Some(ext_obfs_host) = &ext_proxy.obfs_host {
+                            obfs_settings.host = ext_obfs_host.clone();
+                        }
+                        obfs_settings.path =
+                            ext_proxy.obfs_path.as_deref().unwrap_or("/").to_string();
+                        let obfs_settings = obfs_settings.write_to_bytes().unwrap();
+                        obfs_outbound.settings = obfs_settings;
+                        obfs_outbound.tag = format!("{}_obfs_xxx", ext_proxy.tag.clone());
+
+                        // chain
+                        let mut chain_outbound = internal::Outbound::new();
+                        chain_outbound.tag = ext_proxy.tag.clone();
+                        let mut chain_settings = internal::ChainOutboundSettings::new();
+                        chain_settings.actors.push(obfs_outbound.tag.clone());
+                        chain_settings.actors.push(outbound.tag.clone());
+                        let chain_settings = chain_settings.write_to_bytes().unwrap();
+                        chain_outbound.settings = chain_settings;
+                        chain_outbound.protocol = "chain".to_string();
+
+                        // always push chain first, in case there isn't final rule,
+                        // the chain outbound will be the default one to use
+                        outbounds.push(chain_outbound);
+                        outbounds.push(obfs_outbound);
+                    }
                     let settings = settings.write_to_bytes().unwrap();
                     outbound.settings = settings;
                     outbounds.push(outbound);
@@ -970,6 +1023,7 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                             tls_settings.certificate = path;
                         }
                     }
+                    tls_settings.insecure = ext_proxy.tls_insecure.unwrap_or_default();
                     let tls_settings = tls_settings.write_to_bytes().unwrap();
                     tls_outbound.settings = tls_settings;
                     tls_outbound.tag = format!("{}_tls_xxx", ext_proxy.tag.clone());
@@ -1030,6 +1084,7 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                     if let Some(ext_sni) = &ext_proxy.sni {
                         quic_settings.server_name = ext_sni.clone();
                     }
+                    quic_settings.alpn = vec!["http/1.1".to_string()];
                     if let Some(ext_tls_cert) = &ext_proxy.tls_cert {
                         let cert = Path::new(ext_tls_cert);
                         if cert.is_absolute() {
@@ -1115,6 +1170,7 @@ pub fn to_internal(conf: &mut Config) -> Result<internal::Config> {
                             tls_settings.certificate = path;
                         }
                     }
+                    tls_settings.insecure = ext_proxy.tls_insecure.unwrap_or_default();
                     let tls_settings = tls_settings.write_to_bytes().unwrap();
                     tls_outbound.settings = tls_settings;
                     tls_outbound.tag = format!("{}_tls_xxx", ext_proxy.tag.clone());
